@@ -2,6 +2,8 @@
 #define TCS34717_H
 
 #include "stm32f3xx_hal.h"
+// Used to set the interrupt threshold in midrange
+// To trigger interrupt when data is ready
 #define TCS347171_LIM					0x7FFF
 // TCS34717 register addresses
 #define TCS347171_ENABLE_REG  0x00
@@ -28,7 +30,7 @@
 #define TCS34717_I2C_ADDRESS	0x29 << 1  // Replace 0x29 with the actual 7-bit address of your sensor
 #define TCS3471_COMMAND_BIT		0x80  // Bit 7 set to 1 to indicate a command
 
-// COMMAND register structure
+// COMMAND register structure 
 typedef struct __attribute__((packed)) {
     union {
         uint8_t Value;
@@ -40,7 +42,7 @@ typedef struct __attribute__((packed)) {
     } Val;
 } TCS34717_COMMAND_t;
 
-// ENABLE register structure
+// 0x00 ENABLE register structure
 typedef struct __attribute__((packed)) {
     union {
         uint8_t Value;
@@ -55,7 +57,7 @@ typedef struct __attribute__((packed)) {
     } Val;
 } TCS34717_ENABLE_t;
 
-// Enum for RGBC integration time (ATIME)
+// 0x01 Enum for RGBC integration time (ATIME)
 typedef enum {
     TCS34717_ATIME_2_4ms   = 0xFF,
     TCS34717_ATIME_24ms    = 0xF6,
@@ -64,14 +66,14 @@ typedef enum {
     TCS34717_ATIME_700ms   = 0x00
 } TCS34717_ATIME_t;
 
-// Enum for wait time (WTIME)
+// 0x03 Enum for wait time (WTIME)
 typedef enum {
     TCS34717_WTIME_2_4ms   = 0xFF,
     TCS34717_WTIME_204ms   = 0xAB,
     TCS34717_WTIME_614ms   = 0x00
 } TCS34717_WTIME_t;
 
-// RGBC interrupt threshold structure
+// 0x04 - 0x07 RGBC interrupt threshold structure
 typedef struct __attribute__((packed)) {
     union {
         uint8_t Buffer[4]; // Interrupt threshold data buffer
@@ -80,9 +82,9 @@ typedef struct __attribute__((packed)) {
             uint16_t AIH; // ALS Interrupt High Threshold
         };
     };
-} TCS34717_RGBC_Interrupt_Threshold_t;
+} TCS34717_INT_t;
 
-// Enum for persistence register (PERS)
+// 0x0C Enum for persistence register (PERS)
 typedef enum {
     APERS_EVERY_RGBC_CYCLE = 0x0,
     APERS_1_CLEAR_OUT_OF_RANGE = 0x1,
@@ -100,15 +102,15 @@ typedef enum {
     APERS_50_CONSECUTIVE_OUT_OF_RANGE = 0xD,
     APERS_55_CONSECUTIVE_OUT_OF_RANGE = 0xE,
     APERS_60_CONSECUTIVE_OUT_OF_RANGE = 0xF
-} TCS34717_APERS_t;
+} TCS34717_PERS_t;
 
-// Enum for configuration register (CONFIG)
+// 0x0D Enum for configuration register (CONFIG)
 typedef enum {
     TCS34717_WLONG_DISABLE = 0x00,
     TCS34717_WLONG_ENABLE = 0x02
-} TCS34717_WLONG_t;
+} TCS34717_CONFIG_t;
 
-// Enum for control register (CONTROL)
+// 0x0F Enum for control register (CONTROL)
 typedef enum {
     TCS34717_AGAIN_1X = 0x00,
     TCS34717_AGAIN_4X = 0x01,
@@ -116,7 +118,7 @@ typedef enum {
     TCS34717_AGAIN_60X = 0x03
 } TCS34717_AGAIN_t;
 
-// STATUS register structure
+// 0x013 STATUS register structure
 typedef struct __attribute__((packed)) {
     union {
         uint8_t Value;
@@ -129,7 +131,7 @@ typedef struct __attribute__((packed)) {
     } Val;
 } TCS34717_STATUS_t;
 
-// RGBC channel data structure
+// 0x14 - 0x1B RGBC channel data structure
 typedef struct __attribute__((packed)) {
     union {
         uint8_t Buffer[8]; // Full RGBC data buffer
@@ -142,6 +144,19 @@ typedef struct __attribute__((packed)) {
     };
 } TCS34717_CRGB_t;
 
+typedef struct __attribute__((packed)) {
+    TCS34717_ENABLE_t ENABLE;          				// 0x00 Enable register
+    TCS34717_ATIME_t ATIME;										// 0x01 Integration time register
+    TCS34717_WTIME_t WTIME;										// 0x03 Wait time register
+    TCS34717_INT_t INT;												// 0x04- 0x07 Interrupt threshold registers
+    TCS34717_PERS_t PERS;											// 0x0C Persistence register
+    TCS34717_CONFIG_t CONFIG;                 // 0x0D Configuration register
+    TCS34717_AGAIN_t CONTROL;          				// 0x0F Control register for gain
+    uint8_t ID;                        				// 0x12 Device ID register
+    TCS34717_STATUS_t STATUS;          				// 0x13 Status register
+    TCS34717_CRGB_t RGBC_DATA;         				// 0x14 - 0x1B RGBC channel data
+} TCS34717_Registers_t;
+
 // Function prototypes
 void TCS34717_Init(void);
 HAL_StatusTypeDef TCS34717_getCRGB(TCS34717_CRGB_t *rgbcData);
@@ -151,6 +166,6 @@ HAL_StatusTypeDef TCS34717_Disable(void);
 HAL_StatusTypeDef TCS34717_SetGain(TCS34717_AGAIN_t gain);
 HAL_StatusTypeDef TCS34717_SetIntegrationTime(uint8_t time);
 HAL_StatusTypeDef TCS34717_SetWaitTime(uint8_t wait_time);
-HAL_StatusTypeDef TCS34717_SetPersistence(TCS34717_APERS_t persistence);
+HAL_StatusTypeDef TCS34717_SetPersistence(TCS34717_PERS_t persistence);
 
 #endif // TCS34717_H
