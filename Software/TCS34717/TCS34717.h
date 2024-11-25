@@ -2,7 +2,7 @@
 #define TCS34717_H
 
 #include "stm32f3xx_hal.h"
-
+#define TCS347171_LIM					0x7FFF
 // TCS34717 register addresses
 #define TCS347171_ENABLE_REG  0x00
 #define TCS347171_ATIME_REG   0x01
@@ -74,17 +74,12 @@ typedef enum {
 // RGBC interrupt threshold structure
 typedef struct __attribute__((packed)) {
     union {
+        uint8_t Buffer[4]; // Interrupt threshold data buffer
         struct {
-            uint16_t AIL; // 0x04-0x05: RGBC clear channel low threshold
-            uint16_t AIH; // 0x06-0x07: RGBC clear channel high threshold
-        } Combined;
-        struct {
-            uint8_t AILTL; // 0x04: Low threshold low byte
-            uint8_t AILTH; // 0x05: Low threshold high byte
-            uint8_t AIHTL; // 0x06: High threshold low byte
-            uint8_t AIHTH; // 0x07: High threshold high byte
-        } ByteField;
-    } Val;
+            uint16_t AIL; // ALS Interrupt Low Threshold
+            uint16_t AIH; // ALS Interrupt High Threshold
+        };
+    };
 } TCS34717_RGBC_Interrupt_Threshold_t;
 
 // Enum for persistence register (PERS)
@@ -136,24 +131,26 @@ typedef struct __attribute__((packed)) {
 
 // RGBC channel data structure
 typedef struct __attribute__((packed)) {
-	uint16_t CDATA; // 0x14-0x15: Clear data
-	uint16_t RDATA; // 0x16-0x17: Red data
-	uint16_t GDATA; // 0x18-0x19: Green data
-	uint16_t BDATA; // 0x1A-0x1B: Blue data
+    union {
+        uint8_t Buffer[8]; // Full RGBC data buffer
+        struct __attribute__((packed)) {
+            uint16_t CDATA; // 0x14-0x15: Clear data
+            uint16_t RDATA; // 0x16-0x17: Red data
+            uint16_t GDATA; // 0x18-0x19: Green data
+            uint16_t BDATA; // 0x1A-0x1B: Blue data
+        };
+    };
 } TCS34717_CRGB_t;
 
 // Function prototypes
-uint8_t TCS34717_Read(uint8_t addr, uint8_t *buffer, uint16_t num_bytes);
-uint8_t TCS34717_Write(uint8_t addr, uint8_t *buffer, uint16_t num_bytes);
-uint8_t TCS34717_SetBits(uint8_t addr, uint8_t bits);
-uint8_t TCS34717_ClearBits(uint8_t addr, uint8_t bits);
-HAL_StatusTypeDef TCS34717_ReadRGBCData(TCS34717_CRGB_t *rgbcData);
-void TCS34717_Enable(void);
-void TCS34717_Disable(void);
-void TCS34717_SetGain(TCS34717_AGAIN_t gain);
-void TCS34717_SetIntegrationTime(uint8_t time);
-void TCS34717_SetWaitTime(uint8_t wait_time);
-uint8_t TCS34717_IsDataValid(void);
-void TCS34717_SetPersistence(TCS34717_APERS_t persistence);
+void TCS34717_Init(void);
+HAL_StatusTypeDef TCS34717_getCRGB(TCS34717_CRGB_t *rgbcData);
+HAL_StatusTypeDef TCS34717_SetInterruptThresholds(uint16_t low, uint16_t high);
+HAL_StatusTypeDef TCS34717_Enable(void);
+HAL_StatusTypeDef TCS34717_Disable(void);
+HAL_StatusTypeDef TCS34717_SetGain(TCS34717_AGAIN_t gain);
+HAL_StatusTypeDef TCS34717_SetIntegrationTime(uint8_t time);
+HAL_StatusTypeDef TCS34717_SetWaitTime(uint8_t wait_time);
+HAL_StatusTypeDef TCS34717_SetPersistence(TCS34717_APERS_t persistence);
 
 #endif // TCS34717_H
