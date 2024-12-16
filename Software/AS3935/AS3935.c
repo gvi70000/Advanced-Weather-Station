@@ -1,7 +1,31 @@
 #include "as3935.h"
 #include "i2c.h"
 
-AS3935_REGS_t AS3935_REGS;
+static AS3935_REGS_t AS3935_Sensor;
+
+/**
+ * @brief Write data to a register of the AS3935 sensor.
+ *
+ * @param reg Register address to write to.
+ * @param data Pointer to the data buffer to be written.
+ * @param len Length of data to write.
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ */
+static HAL_StatusTypeDef AS3935_WriteRegister(uint8_t reg, uint8_t* data, uint8_t len) {
+    return WriteRegister(AS3935_I2C_ADDRESS, reg, data, len, &hi2c2);
+}
+
+/**
+ * @brief Read data from a register of the AS3935 sensor.
+ *
+ * @param reg Register address to read from.
+ * @param data Pointer to the data buffer to store the read data.
+ * @param len Length of data to read.
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ */
+static HAL_StatusTypeDef AS3935_ReadRegister(uint8_t reg, uint8_t* data, uint8_t len) {
+    return ReadRegister(AS3935_I2C_ADDRESS, reg, data, len, &hi2c2);
+}
 
 /**
  * @brief Initializes the AS3935 lightning sensor.
@@ -23,19 +47,19 @@ HAL_StatusTypeDef AS3935_Init(void) {
     }
 
     // Set default Noise Floor Level (0-7)
-    ReadRegister(AS3935_I2C_ADDRESS, THRESHOLD, &AS3935_REGS.NOISE.Val.Value, 1, &hi2c2);
-    AS3935_REGS.NOISE.Val.BitField.NF_LEV = 4; // Example: Set to level 4
-    WriteRegister(AS3935_I2C_ADDRESS, THRESHOLD, &AS3935_REGS.NOISE.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
+    AS3935_Sensor.NOISE.Val.BitField.NF_LEV = 4; // Example: Set to level 4
+    AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
 
     // Set AFE gain (e.g., indoor mode)
-    ReadRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
-    AS3935_REGS.POWER.Val.BitField.GAIN = 1; // Example: Gain = 1
-    WriteRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
+    AS3935_Sensor.POWER.Val.BitField.GAIN = 1; // Example: Gain = 1
+    AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
 
     // Set default lightning event threshold
-    ReadRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
-    AS3935_REGS.STATISTICS.Val.BitField.SREJ = 1; // Example: Minimum threshold
-    WriteRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
+    AS3935_Sensor.STATISTICS.Val.BitField.SREJ = 1; // Example: Minimum threshold
+    AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
 
     // Recalibrate oscillators
     if (!AS3935_CalibrateOscillators()) {
@@ -43,9 +67,9 @@ HAL_StatusTypeDef AS3935_Init(void) {
     }
 
     // Optional antenna frequency display
-    ReadRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
-    AS3935_REGS.IRQ.Val.BitField.DISP_LCO = 0; // Disable antenna display
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+    AS3935_Sensor.IRQ.Val.BitField.DISP_LCO = 0; // Disable antenna display
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 
     return HAL_OK; // Initialization successful
 }
@@ -57,9 +81,9 @@ HAL_StatusTypeDef AS3935_Init(void) {
  */
 void AS3935_PowerDown(void) {
     // Set power-down bit
-    ReadRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
-    AS3935_REGS.POWER.Val.BitField.POWER = 1; // Set power-down bit
-    WriteRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
+    AS3935_Sensor.POWER.Val.BitField.POWER = 1; // Set power-down bit
+    AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
 }
 
 /**
@@ -73,9 +97,9 @@ void AS3935_PowerDown(void) {
  */
 bool AS3935_WakeUp(void) {
     // Clear power-down bit
-    ReadRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
-    AS3935_REGS.POWER.Val.BitField.POWER = 0; // Clear power-down bit
-    WriteRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
+    AS3935_Sensor.POWER.Val.BitField.POWER = 0; // Clear power-down bit
+    AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
 
     HAL_Delay(2); // Wait 2ms for wake-up
 
@@ -84,8 +108,8 @@ bool AS3935_WakeUp(void) {
     HAL_Delay(2);
 
     // Verify calibration status
-    ReadRegister(AS3935_I2C_ADDRESS, CALIB_TRCO, &AS3935_REGS.TRCO.Val.Value, 1, &hi2c2);
-    return AS3935_REGS.TRCO.Val.BitField.TRCO_CALIB_DONE;
+    AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1);
+    return AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE;
 }
 
 /**
@@ -100,14 +124,14 @@ void AS3935_RecalibrateAfterPowerDown(void) {
     HAL_Delay(2); // Allow time for calibration to complete
 
     // Enable TRCO display on IRQ pin for validation
-    ReadRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
-    AS3935_REGS.IRQ.Val.BitField.DISP_TRCO = 1;
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+    AS3935_Sensor.IRQ.Val.BitField.DISP_TRCO = 1;
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
     HAL_Delay(2); // Allow time for TRCO display to stabilize
 
     // Disable TRCO display on IRQ pin
-    AS3935_REGS.IRQ.Val.BitField.DISP_TRCO = 0;
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_Sensor.IRQ.Val.BitField.DISP_TRCO = 0;
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }
 
 /**
@@ -125,10 +149,10 @@ bool AS3935_CalibrateOscillators(void) {
     HAL_Delay(2);
 
     // Read calibration status
-    ReadRegister(AS3935_I2C_ADDRESS, CALIB_TRCO, &AS3935_REGS.TRCO.Val.Value, 1, &hi2c2);
-    ReadRegister(AS3935_I2C_ADDRESS, CALIB_SRCO, &AS3935_REGS.SRCO.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1);
+    AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1);
 
-    return AS3935_REGS.TRCO.Val.BitField.TRCO_CALIB_DONE && AS3935_REGS.SRCO.Val.BitField.SRCO_CALIB_DONE;
+    return AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE && AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE;
 }
 
 /**
@@ -140,15 +164,15 @@ bool AS3935_CalibrateOscillators(void) {
  * @param oscillator The oscillator to display (5 = TRCO, 6 = SRCO, 7 = LCO).
  */
 void AS3935_DisplayOscillator(bool enable, uint8_t oscillator) {
-    ReadRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
     
     if (enable) {
-        AS3935_REGS.IRQ.Val.Value |= (1 << oscillator); // Enable display for the oscillator
+        AS3935_Sensor.IRQ.Val.Value |= (1 << oscillator); // Enable display for the oscillator
     } else {
-        AS3935_REGS.IRQ.Val.Value &= ~(1 << oscillator); // Disable display for the oscillator
+        AS3935_Sensor.IRQ.Val.Value &= ~(1 << oscillator); // Disable display for the oscillator
     }
 
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }
 
 /**
@@ -159,12 +183,12 @@ void AS3935_DisplayOscillator(bool enable, uint8_t oscillator) {
  * @param capacitance The desired tuning capacitance (0-15, representing steps of 8pF).
  */
 void AS3935_SetTuningCapacitance(uint8_t capacitance) {
-    ReadRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
     
     // Set the capacitance value (lower 4 bits)
-    AS3935_REGS.IRQ.Val.BitField.TUN_CAP = capacitance & 0x0F;
+    AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = capacitance & 0x0F;
     
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }
 
 /**
@@ -175,12 +199,12 @@ void AS3935_SetTuningCapacitance(uint8_t capacitance) {
  * @param divisionRatio The desired frequency division ratio (0-3).
  */
 void AS3935_SetFrequencyDivision(uint8_t divisionRatio) {
-    ReadRegister(AS3935_I2C_ADDRESS, INT_MASK_ANT, &AS3935_REGS.INT_FREQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
     
     // Set the division ratio (bits 6-7)
-    AS3935_REGS.INT_FREQ.Val.BitField.LCO_FDIV = divisionRatio & 0x03;
+    AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = divisionRatio & 0x03;
     
-    WriteRegister(AS3935_I2C_ADDRESS, INT_MASK_ANT, &AS3935_REGS.INT_FREQ.Val.Value, 1, &hi2c2);
+    AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
 }
 
 /**
@@ -189,15 +213,15 @@ void AS3935_SetFrequencyDivision(uint8_t divisionRatio) {
  * @param enable Set to true to enable antenna frequency display, false to disable.
  */
 void AS3935_EnableAntennaFrequencyDisplay(bool enable) {
-    ReadRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
     
     if (enable) {
-        AS3935_REGS.IRQ.Val.BitField.DISP_LCO = 1; // Enable antenna frequency display
+        AS3935_Sensor.IRQ.Val.BitField.DISP_LCO = 1; // Enable antenna frequency display
     } else {
-        AS3935_REGS.IRQ.Val.BitField.DISP_LCO = 0; // Disable antenna frequency display
+        AS3935_Sensor.IRQ.Val.BitField.DISP_LCO = 0; // Disable antenna frequency display
     }
 
-    WriteRegister(AS3935_I2C_ADDRESS, FREQ_DISP_IRQ, &AS3935_REGS.IRQ.Val.Value, 1, &hi2c2);
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }
 
 /**
@@ -208,8 +232,8 @@ void AS3935_EnableAntennaFrequencyDisplay(bool enable) {
  * @return AS3935_Distance_t Distance to the storm (in km).
  */
 AS3935_Distance_t AS3935_GetDistanceToStorm(void) {
-    ReadRegister(AS3935_I2C_ADDRESS, DISTANCE, &AS3935_REGS.DISTANCE, 1, &hi2c2);
-    return (AS3935_Distance_t)(AS3935_REGS.DISTANCE & AS3935_DISTANCE_MASK);
+    AS3935_ReadRegister(DISTANCE, &AS3935_Sensor.DISTANCE, 1);
+    return (AS3935_Distance_t)(AS3935_Sensor.DISTANCE & AS3935_DISTANCE_MASK);
 }
 
 /**
@@ -221,12 +245,12 @@ AS3935_Distance_t AS3935_GetDistanceToStorm(void) {
  */
 uint32_t AS3935_GetLightningEnergy(void) {
     // Read all energy bytes in one I2C transaction
-    ReadRegister(AS3935_I2C_ADDRESS, ENERGY_LIGHT_LSB, AS3935_REGS.ENERGY.ByteArray, 3, &hi2c2);
+    AS3935_ReadRegister(ENERGY_LIGHT_LSB, AS3935_Sensor.ENERGY.ByteArray, 3);
 
     // Mask the MMSB to ensure only the lower 20 bits are valid
-    AS3935_REGS.ENERGY.MMSB &= AS3935_LIGHTNING_ENERGY_MASK;
+    AS3935_Sensor.ENERGY.MMSB &= AS3935_LIGHTNING_ENERGY_MASK;
 
-    return AS3935_REGS.ENERGY.Value;
+    return AS3935_Sensor.ENERGY.Value;
 }
 
 /**
@@ -238,9 +262,9 @@ uint32_t AS3935_GetLightningEnergy(void) {
  * @param level Noise floor level (0-7).
  */
 void AS3935_SetNoiseFloorLevel(uint8_t level) {
-    ReadRegister(AS3935_I2C_ADDRESS, THRESHOLD, &AS3935_REGS.NOISE.Val.Value, 1, &hi2c2);
-    AS3935_REGS.NOISE.Val.BitField.NF_LEV = level & 0x07; // Mask to valid range
-    WriteRegister(AS3935_I2C_ADDRESS, THRESHOLD, &AS3935_REGS.NOISE.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
+    AS3935_Sensor.NOISE.Val.BitField.NF_LEV = level & 0x07; // Mask to valid range
+    AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
 }
 
 /**
@@ -249,8 +273,8 @@ void AS3935_SetNoiseFloorLevel(uint8_t level) {
  * @return uint8_t Current noise floor level (0-7).
  */
 uint8_t AS3935_ReadNoiseFloorLevel(void) {
-    ReadRegister(AS3935_I2C_ADDRESS, THRESHOLD, &AS3935_REGS.NOISE.Val.Value, 1, &hi2c2);
-    return AS3935_REGS.NOISE.Val.BitField.NF_LEV;
+    AS3935_ReadRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
+    return AS3935_Sensor.NOISE.Val.BitField.NF_LEV;
 }
 
 /**
@@ -259,9 +283,9 @@ uint8_t AS3935_ReadNoiseFloorLevel(void) {
  * @param mask Set to true to mask disturbers, false to unmask them.
  */
 void AS3935_MaskDisturber(bool mask) {
-    ReadRegister(AS3935_I2C_ADDRESS, INT_MASK_ANT, &AS3935_REGS.INT_FREQ.Val.Value, 1, &hi2c2);
-    AS3935_REGS.INT_FREQ.Val.BitField.MASK_DIST = mask ? 1 : 0;
-    WriteRegister(AS3935_I2C_ADDRESS, INT_MASK_ANT, &AS3935_REGS.INT_FREQ.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
+    AS3935_Sensor.INT_FREQ.Val.BitField.MASK_DIST = mask ? 1 : 0;
+    AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
 }
 
 /**
@@ -270,8 +294,8 @@ void AS3935_MaskDisturber(bool mask) {
  * @return uint8_t Interrupt status (lower 4 bits of INT_MASK_ANT register).
  */
 uint8_t AS3935_ReadInterruptStatus(void) {
-    ReadRegister(AS3935_I2C_ADDRESS, INT_MASK_ANT, &AS3935_REGS.INT_FREQ.Val.Value, 1, &hi2c2);
-    return AS3935_REGS.INT_FREQ.Val.BitField.INT;
+    AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
+    return AS3935_Sensor.INT_FREQ.Val.BitField.INT;
 }
 
 /**
@@ -280,9 +304,9 @@ uint8_t AS3935_ReadInterruptStatus(void) {
  * @param threshold Lightning event threshold (0-3).
  */
 void AS3935_SetLightningEventThreshold(uint8_t threshold) {
-    ReadRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
-    AS3935_REGS.STATISTICS.Val.BitField.SREJ = threshold & 0x03; // Mask to valid range
-    WriteRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
+    AS3935_Sensor.STATISTICS.Val.BitField.SREJ = threshold & 0x03; // Mask to valid range
+    AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
 }
 
 /**
@@ -291,12 +315,12 @@ void AS3935_SetLightningEventThreshold(uint8_t threshold) {
  * Sets and clears the CL_STAT bit in the LIGHTNING_REG register.
  */
 void AS3935_ClearStatistics(void) {
-    ReadRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
-    AS3935_REGS.STATISTICS.Val.BitField.CL_STAT = 1; // Set CL_STAT bit
-    WriteRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
+    AS3935_Sensor.STATISTICS.Val.BitField.CL_STAT = 1; // Set CL_STAT bit
+    AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
     HAL_Delay(1); // Ensure statistics are cleared
-    AS3935_REGS.STATISTICS.Val.BitField.CL_STAT = 0; // Clear CL_STAT bit
-    WriteRegister(AS3935_I2C_ADDRESS, LIGHTNING_REG, &AS3935_REGS.STATISTICS.Val.Value, 1, &hi2c2);
+    AS3935_Sensor.STATISTICS.Val.BitField.CL_STAT = 0; // Clear CL_STAT bit
+    AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
 }
 
 /**
@@ -307,7 +331,7 @@ void AS3935_ClearStatistics(void) {
  * @param command The direct command to send to the sensor.
  */
 void AS3935_SendDirectCommand(uint8_t command) {
-    WriteRegister(AS3935_I2C_ADDRESS, command, NULL, 0, &hi2c2);
+    AS3935_WriteRegister(command, NULL, 0);
 }
 
 /**
@@ -319,11 +343,11 @@ void AS3935_SendDirectCommand(uint8_t command) {
  */
 void AS3935_SetAFEGain(uint8_t gain) {
     // Read the current value of the AFE_GAIN register
-    ReadRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
+    AS3935_ReadRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
     
     // Update the gain value while preserving other bits
-    AS3935_REGS.POWER.Val.BitField.GAIN = gain & 0x1F; // Mask to valid range (5 bits)
+    AS3935_Sensor.POWER.Val.BitField.GAIN = gain & 0x1F; // Mask to valid range (5 bits)
     
     // Write the updated value back to the register
-    WriteRegister(AS3935_I2C_ADDRESS, AFE_GAIN, &AS3935_REGS.POWER.Val.Value, 1, &hi2c2);
+    AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
 }
