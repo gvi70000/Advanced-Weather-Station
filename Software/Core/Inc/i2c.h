@@ -48,6 +48,7 @@ void MX_I2C1_Init(void);
 void MX_I2C2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+void myI2C_Scan(void);
 HAL_StatusTypeDef WriteRegister(uint8_t device_address, uint8_t reg_address, uint8_t* data, uint16_t len, I2C_HandleTypeDef* hi2c);
 HAL_StatusTypeDef ReadRegister(uint8_t device_address, uint8_t reg_address, uint8_t* data, uint16_t len, I2C_HandleTypeDef* hi2c);
 /* USER CODE END Prototypes */
