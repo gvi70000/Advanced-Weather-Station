@@ -20,9 +20,9 @@
 #define TSL25911_REG_ENABLE     (0x00 | TSL25911_COMMAND_BIT) ///< Enable register
 #define TSL25911_REG_CONTROL    (0x01 | TSL25911_COMMAND_BIT) ///< Control register
 #define TSL25911_REG_AILTL      (0x04 | TSL25911_COMMAND_BIT) ///< ALS interrupt low threshold (low byte)
-#define TSL25911_REG_AILTH      0x05                         ///< ALS interrupt low threshold (high byte)
-#define TSL25911_REG_AIHTL      0x06                         ///< ALS interrupt high threshold (low byte)
-#define TSL25911_REG_AIHTH      0x07                         ///< ALS interrupt high threshold (high byte)
+#define TSL25911_REG_AILTH      (0x05 | TSL25911_COMMAND_BIT) ///< ALS interrupt low threshold (high byte)
+#define TSL25911_REG_AIHTL      (0x06 | TSL25911_COMMAND_BIT) ///< ALS interrupt high threshold (low byte)
+#define TSL25911_REG_AIHTH      (0x07 | TSL25911_COMMAND_BIT) ///< ALS interrupt high threshold (high byte)
 #define TSL25911_REG_NPAILTL    (0x08 | TSL25911_COMMAND_BIT) ///< No-persist ALS low threshold (low byte)
 #define TSL25911_REG_NPAILTH    0x09                         ///< No-persist ALS low threshold (high byte)
 #define TSL25911_REG_NPAIHTL    0x0A                         ///< No-persist ALS high threshold (low byte)
@@ -65,15 +65,15 @@ typedef struct __attribute__((packed)) {
  * @brief Enumeration for the ENABLE register states.
  */
 typedef enum {
-    TSL25911_STATE_DISABLED			= 0x00, ///< Disabled state.
-    TSL25911_STATE_PON					= 0x01, ///< Power ON only.
-    TSL25911_STATE_AEN					= 0x02, ///< ALS Enable only.
-    TSL25911_STATE_PON_AEN 			=	0x03, ///< Power ON and ALS Enable.
-    TSL25911_STATE_AIEN					= 0x10, ///< ALS Interrupt Enable only.
-		TSL25911_STATE_PON_AEN_AIEN	= 0x13, ///< ALS Interrupt Enable only.
-    TSL25911_STATE_SAI					= 0x40, ///< Sleep After Interrupt.
-    TSL25911_STATE_NPIEN				= 0x80, ///< No Persist Interrupt Enable.
-    TSL25911_STATE_ENABLE				= 0x93  ///< Fully enabled state.
+    TSL25911_STATE_DISABLED         = 0x00, ///< Disabled state.
+    TSL25911_STATE_PON              = 0x01, ///< Power ON only.
+    TSL25911_STATE_AEN              = 0x02, ///< ALS Enable only.
+    TSL25911_STATE_PON_AEN          = 0x03, ///< Power ON and ALS Enable.
+    TSL25911_STATE_AIEN             = 0x10, ///< ALS Interrupt Enable only.
+    TSL25911_STATE_PON_AEN_AIEN     = 0x13, ///< Power ON, ALS Enable, and ALS Interrupt Enable.
+    TSL25911_STATE_SAI              = 0x40, ///< Sleep After Interrupt.
+    TSL25911_STATE_NPIEN            = 0x80, ///< No Persist Interrupt Enable.
+    TSL25911_STATE_ENABLE           = 0x93  ///< Fully enabled state.
 } TSL25911_STATE_t;
 
 /**
@@ -140,29 +140,24 @@ typedef struct __attribute__((packed)) {
  */
 typedef struct __attribute__((packed)) {
     union {
-        struct {
-            uint8_t LSB; ///< Low byte of the threshold.
-            uint8_t MSB; ///< High byte of the threshold.
-        } Bytes; ///< Byte-wise representation of the threshold.
-        uint16_t Value; ///< Combined 16-bit threshold value.
-    } LowThreshold; ///< ALS Interrupt Low Threshold.
-
-    union {
-        struct {
-            uint8_t LSB; ///< Low byte of the threshold.
-            uint8_t MSB; ///< High byte of the threshold.
-        } Bytes; ///< Byte-wise representation of the threshold.
-        uint16_t Value; ///< Combined 16-bit threshold value.
-    } HighThreshold; ///< ALS Interrupt High Threshold.
-
-    union {
         uint8_t FullArray[4]; ///< Combined low and high thresholds as an array for I2C transfer.
         struct {
-            uint8_t LowLSB;  ///< Low Threshold LSB.
-            uint8_t LowMSB;  ///< Low Threshold MSB.
-            uint8_t HighLSB; ///< High Threshold LSB.
-            uint8_t HighMSB; ///< High Threshold MSB.
-        } FullBytes; ///< Byte-wise representation of the full array.
+            union {
+                struct {
+                    uint8_t LSB; ///< Low byte of the threshold.
+                    uint8_t MSB; ///< High byte of the threshold.
+                } Bytes; ///< Byte-wise representation of the threshold.
+                uint16_t Value; ///< Combined 16-bit threshold value.
+            } LowThreshold; ///< ALS Interrupt Low Threshold.
+
+            union {
+                struct {
+                    uint8_t LSB; ///< Low byte of the threshold.
+                    uint8_t MSB; ///< High byte of the threshold.
+                } Bytes; ///< Byte-wise representation of the threshold.
+                uint16_t Value; ///< Combined 16-bit threshold value.
+            } HighThreshold; ///< ALS Interrupt High Threshold.
+        };
     };
 } TSL25911_ALS_Interrupt_Threshold_t;
 

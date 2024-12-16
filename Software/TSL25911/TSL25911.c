@@ -24,6 +24,34 @@ static inline HAL_StatusTypeDef TSL25911_ReadRegister(uint8_t reg, uint8_t* data
 }
 
 /**
+ * @brief Reads data from a specified register.
+ * 
+ * This function reads data from the TSL25911 sensor register over I2C.
+ * It takes the register address and the number of bytes to read and returns
+ * the result as `uint8_t` (1-byte read) or `uint16_t` (2-byte read).
+ * 
+ * @param reg The register address to read from.
+ * @param numBytes The number of bytes to read (1 or 2).
+ * @return uint16_t The read value (returns 0xFFFF on error).
+ */
+static uint16_t TSL25911_getRegister(uint8_t reg, uint8_t numBytes) {
+    uint8_t data[2] = {0}; // Buffer to store read data (max 2 bytes)
+    HAL_StatusTypeDef status;
+
+    // Send register address and read data over I2C
+    status = HAL_I2C_Mem_Read(&hi2c2, TSL25911_I2C_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, numBytes, HAL_MAX_DELAY);
+    if (status != HAL_OK) {
+        return 0xFFFF; // Read failed, return error code
+    }
+
+    // Return value based on the number of bytes read
+    if (numBytes == 1) {
+        return data[0]; // Return 1-byte data as uint8_t
+    } else {
+        return (uint16_t)((data[1] << 8) | data[0]); // Return 2-byte data as uint16_t (MSB:LSB)
+    }
+}
+/**
  * @brief Initializes the TSL25911 sensor.
  * 
  * This function follows the initialization sequence:
@@ -57,10 +85,11 @@ HAL_StatusTypeDef TSL25911_Init(void) {
     }
 
     // Step 6: Enable ALS and ALS interrupts
-		TSL25911_Sensor.ENABLE.Val.BitField.PON = 1;
-		TSL25911_Sensor.ENABLE.Val.BitField.AEN = 1;
-		TSL25911_Sensor.ENABLE.Val.BitField.AIEN = 1;
-
+//		uint16_t crtVal = TSL25911_getRegister(TSL25911_REG_ENABLE, 1);
+		TSL25911_Sensor.ENABLE.Val.Value = TSL25911_STATE_PON_AEN_AIEN;
+//		TSL25911_Sensor.ENABLE.Val.BitField.PON = 1; // Power ON
+//		TSL25911_Sensor.ENABLE.Val.BitField.AEN = 1; // ALS Enable
+//		TSL25911_Sensor.ENABLE.Val.BitField.AIEN = 1; // ALS Interrupt Enable
     if (TSL25911_Enable(TSL25911_STATE_PON_AEN_AIEN) != HAL_OK) {
         return HAL_ERROR; // Failed to set PON
     }
@@ -228,5 +257,6 @@ HAL_StatusTypeDef TSL25911_ReadLightData(TSL25911_LightData_t *lightData) {
 
     return HAL_OK;
 }
+
 
 
