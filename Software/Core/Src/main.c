@@ -34,7 +34,7 @@
 #include "AS3935.h"
 #include "AS7331.h"
 #include "ENS160.h"
-#include "TCS34717.h"
+#include "TCS34003.h"
 #include "TSL25911.h"
 #include "PGA460.h"
 /* USER CODE END Includes */
@@ -52,15 +52,15 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 	// Constants
-	#define R_D 287.05									// Specific gas constant for dry air (J/kg·K)
-	#define R_V 461.495									// Specific gas constant for water vapor (J/kg·K)
+	#define R_D 287.05									// Specific gas constant for dry air (J/kgï¿½K)
+	#define R_V 461.495									// Specific gas constant for water vapor (J/kgï¿½K)
 	#define GAMMA 1.4										// Adiabatic index for air
 	#define L 0.0065										// Temperature lapse rate (K/m)
 	#define T0 288.15										// Standard temperature at sea level (K)
 	#define P0 101325.0									// Standard pressure at sea level (Pa)
-	#define G 9.80665										// Gravitational acceleration (m/s²)
+	#define G 9.80665										// Gravitational acceleration (m/sï¿½)
 	#define M 0.0289644									// Molar mass of air (kg/mol)
-	#define R 8.3144598									// Universal gas constant (J/(mol·K))
+	#define R 8.3144598									// Universal gas constant (J/(molï¿½K))
 	#define KELVIN_OFFSET 273.15				// Conversion from Celsius to Kelvin
 	#define RH_DIVISOR 100.0						// Converts RH percentage to a fraction
 	#define WATER_VAPOR_EFFECT	0.6077	// Effect of water vapor on speed of sound
@@ -79,7 +79,7 @@
 
 /* USER CODE BEGIN PV */
 		HAL_StatusTypeDef status;
-		volatile uint8_t HDC3020_1_Ready, AS3935_Ready, BMP581_Ready, HDC3020_2_Ready, ENS160_Ready, AS7331_Ready, TSL25911_Ready, TCS34717_Ready;
+		volatile uint8_t HDC3020_1_Ready, AS3935_Ready, BMP581_Ready, HDC3020_2_Ready, ENS160_Ready, AS7331_Ready, TSL25911_Ready, TCS34003_Ready;
 		BMP581_sensor_data_t BMP581_Data;
 
 		HDC302x_t hdc3020_sensor_1; // Sensor connected to 0x44
@@ -89,7 +89,7 @@
 		
 		
     double height = 500.0;   // Height in meters
-    double T = 20.0;         // Temperature in °C
+    double T = 20.0;         // Temperature in ï¿½C
     double RH = 50.0;        // Relative Humidity in %
     double P = 95460.94;     // Pressure in Pa
 		
@@ -110,15 +110,16 @@ typedef struct __attribute__((packed)) {
         } BitField;
     } Status; // Status bitfield indicating sensor data availability
 
-    float Temperature;								// Combined/average temperature (°C)
+    float Temperature;								// Combined/average temperature (ï¿½C)
     float RH;													// Combined/average relative humidity (%)
     float Pressure;										// Pressure (Pa)
-		float SoundSpeed;									//Calculated souns spee in air for specific conditions
+		float SoundSpeed;									// Calculated souns spee in air for specific conditions
 		AS3935_Distance_t StormDistance;	// Distance to storm, if any 
 		ENS160_Data_t Air;								// Air quality data
-		AS7331_UVData_t UV_Data;					//UVA, UVB and UVC
+		ENS160_Resistance_t Resistance;		// Resistance data
+		AS7331_UVData_t UV_Data;					// UVA, UVB and UVC
 		TSL25911_LightData_t LightData;		//
-		TCS34717_CRGB_t CRGB;							// Clear, Red, Green Blue light
+		TCS34003_LightData_t CRGB;				// Clear, Red, Green Blue light
 } EnvData_t;
 
 EnvData_t envData;
@@ -203,7 +204,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         TSL25911_Ready = 1;
     }
     if(GPIO_Pin == INT_TCS34717_Pin) { //PC6
-        TCS34717_Ready = 1;
+        TCS34003_Ready = 1;
     }
     __HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin);
 }
@@ -238,7 +239,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
@@ -268,62 +269,75 @@ int main(void)
   MX_I2C2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-		envData.Status.Value = 0;
-		envData.Temperature = 0.0;
-		envData.Pressure = 0.0;
-		envData.RH = 0.0;
-    if (BMP581_Init() == HAL_OK) {
-        printf("BMP581 initialized successfully.\n");
-    } else {
-        printf("Failed to initialize BMP581.\n");
-        Error_Handler();
-    }
-    // Initialize Sensor 1 (I2C address: 0x44 << 1)
-    status = HDC302x_Init(&hdc3020_sensor_1, HDC302X_SENSOR_1_ADDR);
-    if (status == HAL_OK) {
-        printf("HDC3020 Sensor 1 (0x44) initialized successfully.\n");
-    } else {
-        printf("Failed to initialize HDC3020 Sensor 1 (0x44).\n");
-        Error_Handler();
-    }
+	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_RESET);
+	HAL_Delay(50);
+	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_SET);
+	HAL_Delay(100);	
+	envData.Status.Value = 0;
+	envData.Temperature = 0.0;
+	envData.Pressure = 0.0;
+	envData.RH = 0.0;
+	hdc3020_sensor_1.Address = HDC302X_SENSOR_1_ADDR;
+	hdc3020_sensor_2.Address = HDC302X_SENSOR_2_ADDR;
+	myI2C_Scan();
+//    if (BMP581_Init() == HAL_OK) {
+//        printf("BMP581 initialized successfully.\n");
+//    } else {
+//        printf("Failed to initialize BMP581.\n");
+//        Error_Handler();
+//    }
+//    // Initialize Sensor 1 (I2C address: 0x44 << 1)
+//    status = HDC302x_Init(&hdc3020_sensor_1);
+//    if (status == HAL_OK) {
+//        printf("HDC3020 Sensor 1 (0x44) initialized successfully.\n");
+//    } else {
+//        printf("Failed to initialize HDC3020 Sensor 1 (0x44).\n");
+//        Error_Handler();
+//    }
 
-    // Initialize Sensor 2 (I2C address: 0x45 << 1)
-    status = HDC302x_Init(&hdc3020_sensor_2, HDC302X_SENSOR_2_ADDR);
-    if (status == HAL_OK) {
-        printf("HDC3020 Sensor 2 (0x45) initialized successfully.\n");
-    } else {
-        printf("Failed to initialize HDC3020 Sensor 2 (0x45).\n");
-        Error_Handler();
-    }
+//    // Initialize Sensor 2 (I2C address: 0x45 << 1)
+//    //status = HDC302x_Init(&hdc3020_sensor_2);
+//    if (status == HAL_OK) {
+//        printf("HDC3020 Sensor 2 (0x45) initialized successfully.\n");
+//    } else {
+//        printf("Failed to initialize HDC3020 Sensor 2 (0x45).\n");
+//        Error_Handler();
+//    }
     // Initialize AS3935
-    if (AS3935_Init() != HAL_OK) {
-        printf("AS3935 initialization failed.\n");
-        Error_Handler();
-    } else {
-        printf("AS3935 initialized successfully.\n");
-    }
-    // Initialize ENS160
-    if (ENS160_Init() != HAL_OK) {
-        printf("ENS160 initialization failed.\n");
-        Error_Handler();
-    } else {
-        printf("ENS160 initialized successfully.\n");
-    }
-    // Initialize AS7331
-    if (AS7331_Init() != HAL_OK) {
-        printf("AS7331 initialization failed.\n");
-        Error_Handler();
-    }
+//    if (AS3935_Init() != HAL_OK) {
+//        printf("AS3935 initialization failed.\n");
+//        Error_Handler();
+//    } else {
+//        printf("AS3935 initialized successfully.\n");
+//    }
+//    // Initialize ENS160
+//    if (ENS160_Init() != HAL_OK) {
+//        printf("ENS160 initialization failed.\n");
+//        Error_Handler();
+//    } else {
+//        printf("ENS160 initialized successfully.\n");
+//    }
+//    // Initialize AS7331
+//    if (AS7331_Init() != HAL_OK) {
+//        printf("AS7331 initialization failed.\n");
+//        Error_Handler();
+//    }
 
-	TCS34717_Enable();
     // Initialize TSL25911 for outdoor sunlight use
-    if (TSL25911_Init() != HAL_OK) {
-        printf("TSL25911 initialization failed.\n");
-        Error_Handler();
-    } else {
-        printf("TSL25911 initialized successfully.\n");
-    }
-	PGA460_Init();
+//    if (TSL25911_Init() != HAL_OK) {
+//        printf("TSL25911 initialization failed.\n");
+//        Error_Handler();
+//    } else {
+//        printf("TSL25911 initialized successfully.\n");
+//    }		
+//		// Initialize TCS34003 for outdoor sunlight use
+//	if (TCS34003_Init() != HAL_OK) {
+//		printf("TCS34003 initialization failed.\n");
+//		Error_Handler();
+//	} else {
+//		printf("TCS34003 initialized successfully.\n");
+//	}
+//	PGA460_Init();
 	
   /* USER CODE END 2 */
 
@@ -335,18 +349,18 @@ int main(void)
 		if(envData.Status.Value == 7){
 			envData.Temperature = (BMP581_Data.temperature + HDC302x_Data_1.Temperature + HDC302x_Data_2.Temperature)/3.0;
 			envData.RH = (HDC302x_Data_1.Humidity + HDC302x_Data_2.Humidity)/2.0;
-			ENS160_UpdateEnvInputs(envData.Temperature, envData.RH);
+			ENS160_SetEnvCompensation(envData.Temperature, envData.RH);
 			envData.Pressure = BMP581_Data.pressure;
 			calculateSpeedOfSound(height);
 			printf("Speed of Sound: %.2f m/s\n", envData.SoundSpeed);
 			
 			for (int i = 0; i < 3; i++) {
-					if (PGA460_GetUltrasonicMeasurement(i, dataBuffer, 1) == HAL_OK) {
-							ToF_up[i] = (dataBuffer[0] << 24 | dataBuffer[1] << 16 | dataBuffer[2] << 8 | dataBuffer[3]);
-					}
-					if (PGA460_GetUltrasonicMeasurement(i, dataBuffer, 1) == HAL_OK) {
-							ToF_down[i] = (dataBuffer[0] << 24 | dataBuffer[1] << 16 | dataBuffer[2] << 8 | dataBuffer[3]);
-					}
+				if (PGA460_GetUltrasonicMeasurement(i, dataBuffer, 1) == HAL_OK) {
+					ToF_up[i] = (dataBuffer[0] << 24 | dataBuffer[1] << 16 | dataBuffer[2] << 8 | dataBuffer[3]);
+				}
+				if (PGA460_GetUltrasonicMeasurement(i, dataBuffer, 1) == HAL_OK) {
+					ToF_down[i] = (dataBuffer[0] << 24 | dataBuffer[1] << 16 | dataBuffer[2] << 8 | dataBuffer[3]);
+				}
 			}
 
 			calculateWind(ToF_up, ToF_down, envData.SoundSpeed, &wind_speed, &wind_direction);
@@ -355,68 +369,68 @@ int main(void)
 			printf("Wind Direction: %.2f degrees\n", wind_direction);
 			envData.Status.Value = 0;
 		}
-		if(BMP581_Ready){
-			BMP581_Ready = 0;
-			BMP581_Get_TempPressData(&BMP581_Data); 
-			envData.Status.BitField.BMP = 1;
-		}
-    if(HDC3020_1_Ready){
-			HDC3020_1_Ready = 0;
-			HDC302x_ReadData(&hdc3020_sensor_1, &HDC302x_Data_1); 
-			envData.Status.BitField.HDC1 = 1;
-		}
-    if(HDC3020_2_Ready){
-			HDC3020_2_Ready = 0;
-			HDC302x_ReadData(&hdc3020_sensor_2, &HDC302x_Data_2); 
-			envData.Status.BitField.HDC2 = 1;
-		}
-		if(AS3935_Ready){
-			AS3935_Ready = 0;
-			envData.StormDistance = AS3935_GetDistanceToStorm();
-        uint8_t intVal = AS3935_ReadInterruptStatus();
+//		if(BMP581_Ready){
+//			BMP581_Ready = 0;
+//			BMP581_Get_TempPressData(&BMP581_Data); 
+//			envData.Status.BitField.BMP = 1;
+//		}
+//    if(HDC3020_1_Ready){
+//			HDC3020_1_Ready = 0;
+//			//HDC302x_ReadData(&hdc3020_sensor_1, &HDC302x_Data_1); 
+//			envData.Status.BitField.HDC1 = 1;
+//		}
+//    if(HDC3020_2_Ready){
+//			HDC3020_2_Ready = 0;
+//			//HDC302x_ReadData(&hdc3020_sensor_2, &HDC302x_Data_2); 
+//			envData.Status.BitField.HDC2 = 1;
+//		}
+//		if(AS3935_Ready){
+//			AS3935_Ready = 0;
+//			envData.StormDistance = AS3935_GetDistanceToStorm();
+//        uint8_t intVal = AS3935_ReadInterruptStatus();
 
-        switch (intVal) {
-            case INT_NH:  // Noise level too high
-                printf("AS3935: Noise detected.\n");
-                break;
+//        switch (intVal) {
+//            case INT_NH:  // Noise level too high
+//                printf("AS3935: Noise detected.\n");
+//                break;
 
-            case INT_D:  // Disturber detected
-                printf("AS3935: Disturber detected.\n");
-                break;
+//            case INT_D:  // Disturber detected
+//                printf("AS3935: Disturber detected.\n");
+//                break;
 
-            case INT_L:  // Lightning detected
-                printf("AS3935: Lightning strike detected!\n");
+//            case INT_L:  // Lightning detected
+//                printf("AS3935: Lightning strike detected!\n");
 
-                // Get distance to the storm
-                uint8_t distance = AS3935_GetDistanceToStorm();
-                printf("AS3935: Distance to storm: %d km.\n", distance);
+//                // Get distance to the storm
+//                uint8_t distance = AS3935_GetDistanceToStorm();
+//                printf("AS3935: Distance to storm: %d km.\n", distance);
 
-                // Get lightning energy
-                uint32_t energy = AS3935_GetLightningEnergy();
-                printf("AS3935: Lightning energy: %d.\n", energy);
-                break;
+//                // Get lightning energy
+//                uint32_t energy = AS3935_GetLightningEnergy();
+//                printf("AS3935: Lightning energy: %d.\n", energy);
+//                break;
 
-            default:
-                printf("AS3935: Unknown interrupt.\n");
-                break;
-        }
-		}
-		if(ENS160_Ready) {
-			ENS160_Ready = 0;
-			ENS160_ReadAllData(&envData.Air);
-		}
-		if(AS7331_Ready) {
-			AS7331_Ready = 0;
-			AS7331_ReadUVData(&envData.UV_Data);
-		}
-		if(TSL25911_Ready) {
-			TSL25911_Ready = 0;
-			TSL25911_ReadLightData(&envData.LightData);
-		}
-		if(TCS34717_Ready) {
-			TCS34717_Ready = 0;
-			TCS34717_ReadRGBCData(&envData.CRGB);
-		}
+//            default:
+//                printf("AS3935: Unknown interrupt.\n");
+//                break;
+//        }
+//		}
+//		if(ENS160_Ready) {
+//			ENS160_Ready = 0;
+//			ENS160_ReadAllData(&envData.Air, &envData.Resistance);
+//		}
+//		if(AS7331_Ready) {
+//			AS7331_Ready = 0;
+//			AS7331_ReadUVData(&envData.UV_Data);
+//		}
+//		if(TSL25911_Ready) {
+//			TSL25911_Ready = 0;
+//			TSL25911_ReadLightData(&envData.LightData);
+//		}
+//		if(TCS34003_Ready) {
+//			TCS34003_Ready = 0;
+//			TCS34003_GetLightData(&envData.CRGB);
+//		}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
