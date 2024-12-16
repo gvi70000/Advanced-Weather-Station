@@ -123,29 +123,24 @@ typedef enum {
  
 typedef struct __attribute__((packed)) {
     union {
-        uint16_t Value; ///< Combined 16-bit low threshold value.
-        struct __attribute__((packed)) {
-            uint8_t LSB; ///< Low byte of the low threshold (AILTL 0x84).
-            uint8_t MSB; ///< High byte of the low threshold (AILTH 0x85).
-        } Bytes; ///< Byte-wise representation of the low threshold.
-    } LowThreshold; ///< Clear Channel Low Threshold.
+        uint8_t FullArray[4]; ///< Combined low and high thresholds as an array for I2C transfer.
+        struct {
+            union {
+                struct {
+                    uint8_t LSB; ///< Low byte of the low threshold.
+                    uint8_t MSB; ///< High byte of the low threshold.
+                } Bytes; ///< Byte-wise representation of the low threshold.
+                uint16_t Value; ///< Combined 16-bit low threshold value.
+            } LowThreshold; ///< Clear Channel Low Threshold.
 
-    union {
-        uint16_t Value; ///< Combined 16-bit high threshold value.
-        struct __attribute__((packed)) {
-            uint8_t LSB; ///< Low byte of the high threshold (AIHTL 0x86).
-            uint8_t MSB; ///< High byte of the high threshold (AIHTH 0x87).
-        } Bytes; ///< Byte-wise representation of the high threshold.
-    } HighThreshold; ///< Clear Channel High Threshold.
-
-    union {
-        uint8_t FullArray[4]; ///< Combined low and high thresholds as an array.
-        struct __attribute__((packed)) {
-            uint8_t LowLSB;  ///< Low Threshold LSB (AILTL 0x84).
-            uint8_t LowMSB;  ///< Low Threshold MSB (AILTH 0x85).
-            uint8_t HighLSB; ///< High Threshold LSB (AIHTL 0x86).
-            uint8_t HighMSB; ///< High Threshold MSB (AIHTH 0x87).
-        } FullBytes; ///< Byte-wise representation for the full array.
+            union {
+                struct {
+                    uint8_t LSB; ///< Low byte of the high threshold.
+                    uint8_t MSB; ///< High byte of the high threshold.
+                } Bytes; ///< Byte-wise representation of the high threshold.
+                uint16_t Value; ///< Combined 16-bit high threshold value.
+            } HighThreshold; ///< Clear Channel High Threshold.
+        };
     };
 } TCS34003_CC_Threshold_t;
 
@@ -264,29 +259,29 @@ typedef enum {
 // 0xE7 AICLEAR Clears all interrupts (any value)
 
 typedef struct __attribute__((packed)) {
-	TCS34003_RGBC_Data_t RGBC;		///
-	TCS34003_IR_Data_t IR;		///
-	float CCT;			///< Correlated Color Temperature (CCT) in Kelvin
-	float Lux;			///< Luminance in lux
-	float Irradiance;	///< Irradiance in W/m² based on sensor data and responsivity factors
+		TCS34003_RGBC_Data_t RGBC;		///
+		TCS34003_IR_Data_t IR;		///
+		float CCT;			///< Correlated Color Temperature (CCT) in Kelvin
+		float Lux;			///< Luminance in lux
+		float Irradiance;	///< Irradiance in W/m² based on sensor data and responsivity factors
 } TCS34003_LightData_t;
 
 typedef struct __attribute__((packed)) {
-    TCS34003_REG_ENABLE_t ENABLE;	///< (ENABLE 0x80 R/W)
-    TCS34003_ATIME_t ATIME;			///< (ATIME 0x81 R/W)
-    TCS34003_WTIME_t WTIME;			///< (WTIME 0x83 R/W)
-	TCS34003_CC_Threshold_t CC_TH;	///< (CC_TH 0x84-0x87 R/W)
-	TCS34003_APERS_t APERS;			///< (APERS 0x8C R/W)
-	TCS34003_CONFIG_t CONFIG;		///< (CONFIG 0x8D R/W)
-	TCS34003_AGAIN_t AGAIN;			///< (AGAIN 0x8F R/W)
-	TCS34003_AUX_t AUX;				///< (AUX 0x90 R/W)
-	// REV_ID 0x91
-	// ID 0x92
-	TCS34003_STATUS_t STATUS;		///< (STATUS 0x93 R)
-	TCS34003_IR_Access_t IR_Access;	///< (IR_Access 0xC0 R/W)
-	uint8_t IFORCE;					///< (IFORCE 0xE4 R/W)
-	uint8_t CICLEAR;				///< (CICLEAR 0xE6 R/W)
-	uint8_t AICLEAR;				///< (AICLEAR 0xE7 R/W)
+		TCS34003_REG_ENABLE_t ENABLE;	///< (ENABLE 0x80 R/W)
+		TCS34003_ATIME_t ATIME;			///< (ATIME 0x81 R/W)
+		TCS34003_WTIME_t WTIME;			///< (WTIME 0x83 R/W)
+		TCS34003_CC_Threshold_t CC_TH;	///< (CC_TH 0x84-0x87 R/W)
+		TCS34003_APERS_t APERS;			///< (APERS 0x8C R/W)
+		TCS34003_CONFIG_t CONFIG;		///< (CONFIG 0x8D R/W)
+		TCS34003_AGAIN_t AGAIN;			///< (AGAIN 0x8F R/W)
+		TCS34003_AUX_t AUX;				///< (AUX 0x90 R/W)
+		// REV_ID 0x91
+		// ID 0x92
+		TCS34003_STATUS_t STATUS;		///< (STATUS 0x93 R)
+		TCS34003_IR_Access_t IR_Access;	///< (IR_Access 0xC0 R/W)
+		uint8_t IFORCE;					///< (IFORCE 0xE4 R/W)
+		uint8_t CICLEAR;				///< (CICLEAR 0xE6 R/W)
+		uint8_t AICLEAR;				///< (AICLEAR 0xE7 R/W)
 } TCS34003_REGISTERS_t;
 
 /**
