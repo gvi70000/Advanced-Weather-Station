@@ -1,4 +1,4 @@
-#include "as3935.h"
+#include "AS3935.h"
 #include "i2c.h"
 #include <stdio.h>
 static AS3935_REGS_t AS3935_Sensor;
@@ -33,13 +33,13 @@ static HAL_StatusTypeDef AS3935_ReadRegister(uint8_t reg, uint8_t* data, uint8_t
  * Direct commands are used for specific operations, such as oscillator calibration or reset.
  * The command is written to the `AS3935_DIRECT_COMMAND` address to trigger the desired action.
  * 
- * @param command The direct command to send (refer to AS3935 command definitions).
+ * @param commandReg The direct command to send (refer to AS3935 command definitions).
  * @retval HAL_OK     Command sent successfully.
  * @retval HAL_ERROR  Communication failure.
  */
-static inline HAL_StatusTypeDef AS3935_SendDirectCommand(uint8_t command) {
-    // Write the direct command to the AS3935_DIRECT_COMMAND register
-    return AS3935_WriteRegister(AS3935_DIRECT_COMMAND, &command, 1);
+static inline HAL_StatusTypeDef AS3935_SendDirectCommand(uint8_t commandReg) {
+    // Write the direct command (0x96) to the specified register
+	return AS3935_WriteRegister(commandReg, (uint8_t*)&AS3935_DIRECT_COMMAND, 1);
 }
 
 /**
@@ -99,17 +99,18 @@ HAL_StatusTypeDef AS3935_WakeUp(void) {
     if (AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR;
     }
-    HAL_Delay(2); // Wait 2ms for wake-up
+    HAL_Delay(AS3935_CMD_DELAY); // Wait 2ms for wake-up
     // Calibrate TRCO
     if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
         return HAL_ERROR;
     }
-    HAL_Delay(4);
-
+	AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_SRCO_ONLY);
+	HAL_Delay(AS3935_CMD_DELAY);
+	AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_DISABLED);
     // Verify calibration status
-//    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
-//        return HAL_ERROR; // Calibration failed
-//    }
+    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
+        return HAL_ERROR; // Calibration failed
+    }
     return HAL_OK;
 }
 
@@ -326,9 +327,6 @@ HAL_StatusTypeDef AS3935_CalibrateOscillators(void) {
         return HAL_ERROR; // Command failed
     }
 
-    // Wait for calibration to complete
-    HAL_Delay(2);
-
     // Enable TRCO display on IRQ pin for measurement
     status = AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
     if (status != HAL_OK) {
@@ -388,8 +386,6 @@ HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void) {
     if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
         return HAL_ERROR; // Calibration command failed
     }
-    // Allow time for calibration to complete
-    HAL_Delay(2);
     // Enable TRCO display on IRQ pin for validation
     if (AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to read IRQ register
@@ -408,35 +404,91 @@ HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void) {
 }
 
 /**
- * @brief Loops through all possible tuning capacitor values for the AS3935 sensor.
- * 
- * This function iterates through all `TUN_CAP` values, setting each one sequentially and 
- * allowing observation of the sensor's behavior at each step. It automatically covers the 
- * full range defined in the `AS3935_TUNE_CAP_t` enum.
- * 
- * @param delayMs Delay in milliseconds between each tuning step (for evaluation purposes).
- *                Use 0 for no delay.
+ * @brief Measures the frequency of the signal on TIM3_CH3 (PB0).
+ *
+ * This function configures TIM3 in input capture mode and calculates the signal frequency.
+ *
+ * @param htim Timer handle for TIM3.
+ * @retval uint32_t The measured frequency in Hz or 0 if the measurement failed.
  */
-void AS3935_TuneCapacitorsWithLoop(uint32_t delayMs) {
+uint32_t MeasureFrequencyWithTimer(TIM_HandleTypeDef *htim) {
+    uint32_t captureValue1 = 0, captureValue2 = 0;
+    uint32_t timerClock = HAL_RCC_GetPCLK1Freq(); // Get the timer clock frequency
+    uint32_t period = 0;
+
+    // Start the timer in input capture mode
+    HAL_TIM_IC_Start(htim, TIM_CHANNEL_3);
+
+    // Wait for the first rising edge
+    while (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_CC3) == RESET);
+    captureValue1 = __HAL_TIM_GET_COMPARE(htim, TIM_CHANNEL_3);
+    __HAL_TIM_CLEAR_FLAG(htim, TIM_FLAG_CC3);
+
+    // Wait for the next rising edge
+    while (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_CC3) == RESET);
+    captureValue2 = __HAL_TIM_GET_COMPARE(htim, TIM_CHANNEL_3);
+    __HAL_TIM_CLEAR_FLAG(htim, TIM_FLAG_CC3);
+
+    // Stop the timer
+    HAL_TIM_IC_Stop(htim, TIM_CHANNEL_3);
+
+    // Calculate the signal period
+    if (captureValue2 > captureValue1) {
+        period = captureValue2 - captureValue1;
+    } else {
+        period = (htim->Instance->ARR - captureValue1 + captureValue2 + 1);
+    }
+
+    // Calculate the frequency
+    uint32_t frequency = timerClock / period;
+    return frequency;
+}
+
+/*
+1. Enable TIM3, set it to 4MHz in Input Capture
+2. Measure the time between the 2 rising edges, or between 2 falling edges
+*/
+/**
+ * @brief Tunes the antenna of the AS3935 lightning sensor.
+ *
+ * This function iterates through all possible tuning capacitor values, configures the sensor,
+ * measures the frequency output on PB0 (IRQ pin), and selects the capacitor setting that
+ * achieves the target frequency.
+ *
+ * @param targetFreq The desired frequency in Hz (e.g., 500000 Hz for 500 kHz).
+ * @param tolerance  The allowed deviation from the target frequency in Hz.
+ * @retval uint8_t The optimal tuning capacitor value (TUN_CAP) or 0xFF if tuning failed.
+ */
+uint8_t AS3935_TuneAntenna(uint32_t targetFreq, uint32_t tolerance) {
+    uint8_t optimalTuningCap = 0xFF; // Default to failure
+    uint32_t measuredFreq = 0;
+
     // Loop through all tuning capacitor values
     for (AS3935_TUNE_CAP_t tuningCap = TUN_CAP_0PF; tuningCap <= TUN_CAP_120PF; tuningCap++) {
-        // Read the current IRQ register value
-        if (AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1) != HAL_OK) {
-            printf("Failed to read register for TUN_CAP %d pF.\n", tuningCap * 8);
-            continue; // Skip to the next value
-        }
-        // Set the tuning capacitor value
-        AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = tuningCap;
-        // Write the updated value back to the IRQ register
-        if (AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1) != HAL_OK) {
+        // Configure the tuning capacitors
+        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
             printf("Failed to set TUN_CAP to %d pF.\n", tuningCap * 8);
             continue; // Skip to the next value
         }
-        // Display the current tuning capacitor value
-        printf("Tuning capacitors set to %d pF.\n", tuningCap * 8);
-        // Optional delay for testing or observation
-        if (delayMs > 0) {
-            HAL_Delay(delayMs);
+
+        // Measure the frequency using TIM3 on PB0
+        measuredFreq = MeasureFrequencyWithTimer(TIM3);
+
+        // Check if the measured frequency is within the target range
+        if ((measuredFreq >= targetFreq - tolerance) && (measuredFreq <= targetFreq + tolerance)) {
+            optimalTuningCap = tuningCap;
+            break; // Exit the loop if the optimal value is found
         }
     }
+
+    // Disable oscillator display on the IRQ pin
+    AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_DISABLED);
+
+    if (optimalTuningCap != 0xFF) {
+        printf("Optimal tuning capacitor: %d pF (Measured Frequency: %lu Hz)\n", optimalTuningCap * 8, measuredFreq);
+    } else {
+        printf("Failed to tune the antenna. Measured Frequency: %lu Hz\n", measuredFreq);
+    }
+
+    return optimalTuningCap;
 }

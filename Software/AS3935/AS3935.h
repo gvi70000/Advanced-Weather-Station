@@ -14,6 +14,7 @@
 #define AS3935_LIGHTNING_ENERGY_MASK	0x1F ///< Mask for lightning energy bits.
 #define AS3935_OSC_MASK								0xE0 ///< Mask for lightning energy bits.
 #define AS3935_DIRECT_COMMAND					0x96 ///< Command to reset the sensor to default values.
+#define AS3935_CMD_DELAY					2 
 
 /// @brief Register addresses for the AS3935 sensor.
 typedef enum {
@@ -101,14 +102,14 @@ typedef enum {
  * Maps the noise floor threshold levels to the corresponding register values.
  */
 typedef enum {
-    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 µVrms, Indoor: 28 µVrms
-    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 µVrms, Indoor: 45 µVrms
-    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 µVrms, Indoor: 62 µVrms
-    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 µVrms, Indoor: 78 µVrms
-    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 µVrms, Indoor: 95 µVrms
-    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 µVrms, Indoor: 112 µVrms
-    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 µVrms, Indoor: 130 µVrms
-    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 µVrms, Indoor: 146 µVrms
+    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 ÂµVrms, Indoor: 28 ÂµVrms
+    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 ÂµVrms, Indoor: 45 ÂµVrms
+    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 ÂµVrms, Indoor: 62 ÂµVrms
+    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 ÂµVrms, Indoor: 78 ÂµVrms
+    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 ÂµVrms, Indoor: 95 ÂµVrms
+    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 ÂµVrms, Indoor: 112 ÂµVrms
+    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 ÂµVrms, Indoor: 130 ÂµVrms
+    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 ÂµVrms, Indoor: 146 ÂµVrms
 } AS3935_NoiseFloorLevel_t;
 
 /**
