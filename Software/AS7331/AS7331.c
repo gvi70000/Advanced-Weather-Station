@@ -2,7 +2,31 @@
 #include "i2c.h"
 
 // Global instance to hold AS7331 register values
-AS7331_Registers_t AS7331_Registers;
+AS7331_Sensor_t AS7331_Sensor;
+
+/**
+ * @brief Write data to a register of the AS7331 sensor.
+ *
+ * @param reg Register address to write to.
+ * @param data Pointer to the data buffer to be written.
+ * @param len Length of data to write.
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ */
+static HAL_StatusTypeDef AS7331_WriteRegister(uint8_t reg, uint8_t* data, uint8_t len) {
+    return WriteRegister(AS7331_I2C_ADDR, reg, data, len, &hi2c2);
+}
+
+/**
+ * @brief Read data from a register of the AS7331 sensor.
+ *
+ * @param reg Register address to read from.
+ * @param data Pointer to the data buffer to store the read data.
+ * @param len Length of data to read.
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ */
+static HAL_StatusTypeDef AS7331_ReadRegister(uint8_t reg, uint8_t* data, uint8_t len) {
+    return ReadRegister(AS7331_I2C_ADDR, reg, data, len, &hi2c2);
+}
 
 // Function to initialize the AS7331 sensor
 HAL_StatusTypeDef AS7331_Init(void) {
@@ -24,21 +48,21 @@ HAL_StatusTypeDef AS7331_Init(void) {
     }
 
     // Step 3: Enable continuous measurement mode with interrupts
-    AS7331_Registers.CREG3.Val.BitField.MMODE = CREG3_MMODE_CONT;    // Continuous measurement mode
-    AS7331_Registers.CREG3.Val.BitField.RDYOD = CREG3_RDYOD_OPEN_DRAIN; // Open-drain ready output
-    if (WriteRegister(AS7331_I2C_ADDR, AS7331_REG_CREG3, &AS7331_Registers.CREG3.Val.Value, 1, &hi2c1) != HAL_OK) {
+    AS7331_Sensor.CREG3.Val.BitField.MMODE = CREG3_MMODE_CONT;    // Continuous measurement mode
+    AS7331_Sensor.CREG3.Val.BitField.RDYOD = CREG3_RDYOD_OPEN_DRAIN; // Open-drain ready output
+    if (AS7331_WriteRegister(AS7331_REG_CREG3, &AS7331_Sensor.CREG3.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR;
     }
 
     // Step 4: Enable data-ready interrupt in CREG2
-    AS7331_Registers.CREG2.Val.BitField.EN_TM = CREG2_EN_TM_ENABLED; // Enable interrupt for measurement ready
-    if (WriteRegister(AS7331_I2C_ADDR, AS7331_REG_CREG2, &AS7331_Registers.CREG2.Val.Value, 1, &hi2c1) != HAL_OK) {
+    AS7331_Sensor.CREG2.Val.BitField.EN_TM = CREG2_EN_TM_ENABLED; // Enable interrupt for measurement ready
+    if (AS7331_WriteRegister(AS7331_REG_CREG2, &AS7331_Sensor.CREG2.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR;
     }
 
     // Step 5: Update OSR register to start measurements
-    AS7331_Registers.OSR.Val.BitField.DOS = OSR_DOS_MEASUREMENT; // Start measurement mode
-    if (WriteRegister(AS7331_I2C_ADDR, AS7331_REG_OSR, &AS7331_Registers.OSR.Val.Value, 1, &hi2c1) != HAL_OK) {
+    AS7331_Sensor.OSR.Val.BitField.DOS = OSR_DOS_MEASUREMENT; // Start measurement mode
+    if (AS7331_WriteRegister(AS7331_REG_OSR, &AS7331_Sensor.OSR.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -66,32 +90,32 @@ HAL_StatusTypeDef AS7331_ReadUVData(AS7331_UVData_t *uvData) {
 HAL_StatusTypeDef AS7331_UpdateOutputResultRegisters(AS7331_OutputResultRegisterBank_t *outputRegisters) {
     uint8_t buffer[2];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x01, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x01, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->TEMP = (buffer[1] << 8) | buffer[0];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x02, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x02, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->MRES1 = (buffer[1] << 8) | buffer[0];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x03, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x03, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->MRES2 = (buffer[1] << 8) | buffer[0];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x04, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x04, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->MRES3 = (buffer[1] << 8) | buffer[0];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x05, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x05, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->OUTCONVL = (buffer[1] << 8) | buffer[0];
 
-    if (ReadRegister(AS7331_I2C_ADDR, 0x06, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(0x06, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
     outputRegisters->OUTCONVH = (buffer[1] << 8) | buffer[0];
@@ -101,21 +125,21 @@ HAL_StatusTypeDef AS7331_UpdateOutputResultRegisters(AS7331_OutputResultRegister
 
 // Function to set the integration time in the CREG1 register
 HAL_StatusTypeDef AS7331_SetIntegrationTime(AS7331_CREG1_TIME_t time) {
-    AS7331_Registers.CREG1.Val.BitField.TIME = time;
-    return WriteRegister(AS7331_I2C_ADDR, AS7331_REG_CREG1, &AS7331_Registers.CREG1.Val.Value, 1, &hi2c1);
+    AS7331_Sensor.CREG1.Val.BitField.TIME = time;
+    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
 }
 
 // Function to set the gain in the CREG1 register
 HAL_StatusTypeDef AS7331_SetGain(AS7331_CREG1_GAIN_t gain) {
-    AS7331_Registers.CREG1.Val.BitField.GAIN = gain;
-    return WriteRegister(AS7331_I2C_ADDR, AS7331_REG_CREG1, &AS7331_Registers.CREG1.Val.Value, 1, &hi2c1);
+    AS7331_Sensor.CREG1.Val.BitField.GAIN = gain;
+    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
 }
 
 // Function to read the OSR and STATUS register as part of a single read operation
 HAL_StatusTypeDef AS7331_ReadOSRStatus(uint8_t *osr, uint8_t *status) {
     uint8_t buffer[2];
 
-    if (ReadRegister(AS7331_I2C_ADDR, AS7331_REG_OSR, buffer, 2, &hi2c1) != HAL_OK) {
+    if (AS7331_ReadRegister(AS7331_REG_OSR, buffer, 2) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -125,14 +149,14 @@ HAL_StatusTypeDef AS7331_ReadOSRStatus(uint8_t *osr, uint8_t *status) {
     return HAL_OK;
 }
 
-// Function to write the entire AS7331_Registers structure back to the device
+// Function to write the entire AS7331_Sensor structure back to the device
 HAL_StatusTypeDef AS7331_WriteRegisters(void) {
-    uint8_t *buffer = (uint8_t *)&AS7331_Registers;
+    uint8_t *buffer = (uint8_t *)&AS7331_Sensor;
     uint8_t regAddr = 0x00; // Starting register address
 
     // Write each register byte by byte
-    for (uint8_t i = 0; i < sizeof(AS7331_Registers); i++) {
-        if (WriteRegister(AS7331_I2C_ADDR, regAddr++, &buffer[i], 1, &hi2c1) != HAL_OK) {
+    for (uint8_t i = 0; i < sizeof(AS7331_Sensor); i++) {
+        if (AS7331_WriteRegister(regAddr++, &buffer[i], 1) != HAL_OK) {
             return HAL_ERROR;
         }
     }

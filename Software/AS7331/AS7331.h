@@ -7,14 +7,18 @@
 // AS7331 I2C Address
 #define AS7331_I2C_ADDR 0x74 << 1 // ADDR 1, 2 LOW
 
-#define AS7331_REG_OSR		0x00
-#define AS7331_REG_AGEN		0x02
-#define AS7331_REG_CREG1	0x06
-#define AS7331_REG_CREG2	0x07
-#define AS7331_REG_CREG3	0x08
-#define AS7331_REG_BREAK	0x09
-#define AS7331_REG_EDGES	0x0A
-#define AS7331_REG_OPTREG	0x0B
+#define AS7331_REG_OSR			0x00
+//#define AS7331_REG_TEMP			0x01
+#define AS7331_REG_AGEN			0x02
+//#define AS7331_REG_MRES2		0x03
+//#define AS7331_REG_MRES3		0x04
+//#define AS7331_REG_OUTCONV_L	0x05 // ONLY in SYND
+#define AS7331_REG_CREG1		0x06
+#define AS7331_REG_CREG2		0x07
+#define AS7331_REG_CREG3		0x08
+#define AS7331_REG_BREAK		0x09
+#define AS7331_REG_EDGES		0x0A
+#define AS7331_REG_OPTREG		0x0B
 
 // OSR Register Enums and Structure
 typedef enum {
