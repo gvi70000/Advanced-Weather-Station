@@ -3,6 +3,7 @@
 #include "gpio.h"
 #include "tim.h"
 #include <stdio.h>
+#include <stdlib.h>
 static AS3935_REGS_t AS3935_Sensor;
 
 /**
@@ -14,7 +15,7 @@ static AS3935_REGS_t AS3935_Sensor;
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 static HAL_StatusTypeDef AS3935_WriteRegister(uint8_t reg, uint8_t* data, uint8_t len) {
-    return WriteRegister(AS3935_I2C_W_ADDRESS, reg, data, len, &hi2c2);
+    return WriteRegister(AS3935_I2C_ADDRESS, reg, data, len, &hi2c2);
 }
 
 /**
@@ -26,7 +27,7 @@ static HAL_StatusTypeDef AS3935_WriteRegister(uint8_t reg, uint8_t* data, uint8_
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 static HAL_StatusTypeDef AS3935_ReadRegister(uint8_t reg, uint8_t* data, uint8_t len) {
-    return ReadRegister(AS3935_I2C_R_ADDRESS, reg, data, len, &hi2c2);
+    return ReadRegister(AS3935_I2C_ADDRESS, reg, data, len, &hi2c2);
 }
 
 /**
@@ -76,13 +77,9 @@ HAL_StatusTypeDef AS3935_Init(void) {
         return HAL_ERROR; // Failed to configure lightning statistics
     }
     // Configure interrupts and frequency division ratio (INT = INT_L, mask disturbers, divide frequency by 16)
-    if (AS3935_ConfigureInterruptsAndFrequency(INT_L, MASK_DIST_ENABLED, LCO_FDIV_RATIO_16) != HAL_OK) {
+    if (AS3935_ConfigureInterruptsAndFrequency(INT_L, MASK_DIST_DISABLED, LCO_FDIV_RATIO_16) != HAL_OK) {
         return HAL_ERROR; // Failed to configure interrupts and frequency
     }
-    // Calibrate oscillators (TRCO and SRCO)
-//    if (AS3935_CalibrateOscillators() != HAL_OK) {
-//        return HAL_ERROR; // Oscillator calibration failed
-//    }
     return HAL_OK; // Initialization successful
 }
 
@@ -151,13 +148,13 @@ HAL_StatusTypeDef AS3935_WakeUp(void) {
     if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
         return HAL_ERROR;
     }
-		AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_SRCO_ONLY);
+		AS3935_SetIRQConfig(TUN_CAP_64PF, OSC_DISPLAY_SRCO_ONLY);
 		HAL_Delay(250);
-		AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_DISABLED);
+		AS3935_SetIRQConfig(TUN_CAP_64PF, OSC_DISPLAY_DISABLED);
     // Verify calibration status
-    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
-        return HAL_ERROR; // Calibration failed
-    }
+//    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
+//        return HAL_ERROR; // Calibration failed
+//    }
     return HAL_OK;
 }
 
@@ -517,7 +514,7 @@ uint8_t AS3935_TuneAntenna(void) {
     int32_t minErrorSRCO = INT32_MAX;
     int32_t minErrorTRCO = INT32_MAX;
     int32_t minErrorLCO = INT32_MAX;
-	const uint16_t stabilizationTime = 200; // Allow frequency to stabilize
+    const uint16_t stabilizationTime = 1000; // Allow frequency to stabilize
     const uint32_t targetFreqLCO = 500000;   // Target fLCO in Hz
     const uint16_t toleranceLCO = 17500;     // fLCO tolerance in Hz
     const uint16_t targetFreqTRCO = 32250;   // Target fTRCO in Hz
@@ -544,6 +541,7 @@ uint8_t AS3935_TuneAntenna(void) {
             minErrorSRCO = errorSRCO;
             optimalTuningCap = tuningCap;
         }
+        printf("TUN_CAP: %d pF, SRCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorSRCO);
 
         // Tuning for TRCO
         if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
@@ -557,6 +555,7 @@ uint8_t AS3935_TuneAntenna(void) {
             minErrorTRCO = errorTRCO;
             optimalTuningCap = tuningCap;
         }
+        printf("TUN_CAP: %d pF, TRCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorTRCO);
 
         // Tuning for LCO
         if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_LCO_ONLY) != HAL_OK) {
@@ -570,10 +569,7 @@ uint8_t AS3935_TuneAntenna(void) {
             minErrorLCO = errorLCO;
             optimalTuningCap = tuningCap;
         }
-
-        // Log results for debugging
-        printf("TUN_CAP: %d pF, SRCO Error: %d Hz, TRCO Error: %d Hz, LCO Error: %d Hz\n", 
-               tuningCap * 8, minErrorSRCO, minErrorTRCO, minErrorLCO);
+        printf("TUN_CAP: %d pF, LCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorLCO);
     }
 
     // Set the final optimal TUN_CAP value
@@ -590,10 +586,12 @@ uint8_t AS3935_TuneAntenna(void) {
     }
 
     // Restore IRQ pin to interrupt mode
+		HAL_TIM_Base_MspDeInit(&htim3);
     Init_IntAS3935();
 
     return finalTuningCap;
 }
+
 
 //OSC_DISPLAY_TRCO_ONLY
 //TUN_CAP: 0	pF, Measured Frequency: 33898 Hz
@@ -651,7 +649,6 @@ uint8_t AS3935_TuneAntenna(void) {
 //TUN_CAP: 104	pF, Measured Frequency: 31496 Hz
 //TUN_CAP: 112	pF, Measured Frequency: 31496 Hz
 //TUN_CAP: 120	pF, Measured Frequency: 31250 Hz
-
 
 
 
