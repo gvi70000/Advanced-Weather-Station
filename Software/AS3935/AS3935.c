@@ -450,172 +450,196 @@ HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void) {
     return HAL_OK; // Recalibration successful
 }
 
-/**
- * @brief Measures the frequency of the signal on TIM3_CH3 (PB0).
- *
- * This function configures TIM3 in input capture mode and calculates the signal frequency.
- *
- * @param htim Timer handle for TIM3.
- * @retval uint32_t The measured frequency in Hz or 0 if the measurement failed.
- */
-static uint32_t MeasureFrequencyWithTimer(TIM_HandleTypeDef *htim) {
+static uint32_t MeasureFrequencyWithTimer(void) {
     uint32_t captureValue1 = 0, captureValue2 = 0;
-    uint32_t timerClock = 4000000;//HAL_RCC_GetPCLK1Freq() / (htim->Instance->PSC + 1); // Calculate actual timer clock
+    const uint32_t timerClock = 4000000; // TIM3 clock frequency (4 MHz)
     uint32_t period = 0;
 
-    // Start the timer in input capture mode
-    HAL_TIM_IC_Start(htim, TIM_CHANNEL_3);
+    // Start TIM3 in input capture mode
+    HAL_TIM_IC_Start(&htim3, TIM_CHANNEL_3);
 
     // Wait for the first rising edge
     uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
-    while (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_CC3) == RESET) {
+    while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
         if (HAL_GetTick() > timeout) {
+            HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
             return 0; // Timeout
         }
     }
-    captureValue1 = __HAL_TIM_GET_COMPARE(htim, TIM_CHANNEL_3);
-    __HAL_TIM_CLEAR_FLAG(htim, TIM_FLAG_CC3);
+    captureValue1 = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
+    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
 
     // Wait for the next rising edge
     timeout = HAL_GetTick() + 10; // Reset timeout
-    while (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_CC3) == RESET) {
+    while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
         if (HAL_GetTick() > timeout) {
+            HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
             return 0; // Timeout
         }
     }
-    captureValue2 = __HAL_TIM_GET_COMPARE(htim, TIM_CHANNEL_3);
-    __HAL_TIM_CLEAR_FLAG(htim, TIM_FLAG_CC3);
+    captureValue2 = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
+    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
 
-    // Stop the timer
-    HAL_TIM_IC_Stop(htim, TIM_CHANNEL_3);
+    // Stop TIM3
+    HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
 
     // Calculate the signal period
     if (captureValue2 >= captureValue1) {
         period = captureValue2 - captureValue1;
     } else {
-        period = (htim->Instance->ARR + 1 - captureValue1 + captureValue2);
+        period = (htim3.Instance->ARR + 1 - captureValue1 + captureValue2);
     }
 
     // Calculate the frequency
-    return timerClock / period;
+    return (period > 0) ? (timerClock / period) : 0; // Avoid division by zero
 }
 
 ///*
 //1. Enable TIM3, set it to 4MHz in Input Capture
 //2. Measure the time between the 2 rising edges, or between 2 falling edges
 //*/
-/**
- * @brief Tunes the antenna of the AS3935 lightning sensor.
- *
- * This function iterates through all possible tuning capacitor values, configures the sensor,
- * measures the frequency output on PB0 (IRQ pin), and selects the capacitor setting that
- * achieves the target frequency.
- *
- * @param targetFreq The desired frequency in Hz (e.g., 500000 Hz for 500 kHz).
- * @param tolerance  The allowed deviation from the target frequency in Hz.
- * @retval uint8_t The optimal tuning capacitor value (TUN_CAP) or 0xFF if tuning failed.
- */
-uint8_t AS3935_TuneAntenna(uint32_t targetFreq, uint32_t tolerance) {
-    uint8_t optimalTuningCap = 0xFF; // Default to failure
-    uint32_t measuredFreq = 0;
 
-    // Set up timer 3
+uint8_t AS3935_TuneAntenna(void) {
+    uint8_t optimalTuningCap = 0xFF; // Default to failure
+    uint8_t finalTuningCap = 0xFF;  // Final tuning capacitor value
+    uint32_t measuredFreq = 0;
+    int32_t minErrorSRCO = INT32_MAX;
+    int32_t minErrorTRCO = INT32_MAX;
+    int32_t minErrorLCO = INT32_MAX;
+	const uint16_t stabilizationTime = 200; // Allow frequency to stabilize
+    const uint32_t targetFreqLCO = 500000;   // Target fLCO in Hz
+    const uint16_t toleranceLCO = 17500;     // fLCO tolerance in Hz
+    const uint16_t targetFreqTRCO = 32250;   // Target fTRCO in Hz
+    const uint16_t toleranceTRCO = 1750;     // fTRCO tolerance in Hz
+    const uint32_t targetFreqSRCO = 1125000; // Target fSRCO in Hz
+    const uint16_t toleranceSRCO = 65000;    // fSRCO tolerance in Hz
+
+    // Set up TIM3
     MX_TIM3_Init();
 
     // Loop through all tuning capacitor values
     for (AS3935_TUNE_CAP_t tuningCap = TUN_CAP_0PF; tuningCap <= TUN_CAP_120PF; tuningCap++) {
-        // Configure the tuning capacitors
-        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_LCO_ONLY) != HAL_OK) {
-            printf("Failed to set TUN_CAP to %d pF.\n", tuningCap * 8);
-            continue; // Skip to the next value
+        int32_t errorSRCO, errorTRCO, errorLCO;
+
+        // Tuning for SRCO
+        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+            printf("Failed to set TUN_CAP for SRCO: %d pF\n", tuningCap * 8);
+            continue;
         }
-				HAL_Delay(2);
-        // Measure the frequency using TIM3 on PB0
-        measuredFreq = MeasureFrequencyWithTimer(&htim3);
-
-        // Log the measured frequency for debugging
-        printf("TUN_CAP: %d pF, Measured Frequency: %d Hz\n", tuningCap * 8, measuredFreq);
-
-        // Check if the measured frequency is within the target range
-        if ((measuredFreq >= targetFreq - tolerance) && (measuredFreq <= targetFreq + tolerance)) {
+        HAL_Delay(stabilizationTime); // Allow stabilization
+        measuredFreq = MeasureFrequencyWithTimer();
+        errorSRCO = abs((int32_t)measuredFreq - (int32_t)targetFreqSRCO);
+        if (errorSRCO < minErrorSRCO && errorSRCO <= (int32_t)toleranceSRCO) {
+            minErrorSRCO = errorSRCO;
             optimalTuningCap = tuningCap;
-            break; // Exit the loop if the optimal value is found
         }
+
+        // Tuning for TRCO
+        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
+            printf("Failed to set TUN_CAP for TRCO: %d pF\n", tuningCap * 8);
+            continue;
+        }
+        HAL_Delay(stabilizationTime); // Allow stabilization
+        measuredFreq = MeasureFrequencyWithTimer();
+        errorTRCO = abs((int32_t)measuredFreq - (int32_t)targetFreqTRCO);
+        if (errorTRCO < minErrorTRCO && errorTRCO <= (int32_t)toleranceTRCO) {
+            minErrorTRCO = errorTRCO;
+            optimalTuningCap = tuningCap;
+        }
+
+        // Tuning for LCO
+        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_LCO_ONLY) != HAL_OK) {
+            printf("Failed to set TUN_CAP for LCO: %d pF\n", tuningCap * 8);
+            continue;
+        }
+        HAL_Delay(stabilizationTime); // Allow stabilization
+        measuredFreq = MeasureFrequencyWithTimer() * 16; // Multiply by 16 for LCO
+        errorLCO = abs((int32_t)measuredFreq - (int32_t)targetFreqLCO);
+        if (errorLCO < minErrorLCO && errorLCO <= (int32_t)toleranceLCO) {
+            minErrorLCO = errorLCO;
+            optimalTuningCap = tuningCap;
+        }
+
+        // Log results for debugging
+        printf("TUN_CAP: %d pF, SRCO Error: %d Hz, TRCO Error: %d Hz, LCO Error: %d Hz\n", 
+               tuningCap * 8, minErrorSRCO, minErrorTRCO, minErrorLCO);
     }
+
+    // Set the final optimal TUN_CAP value
+    finalTuningCap = optimalTuningCap;
 
     // Disable oscillator display on the IRQ pin
     AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_DISABLED);
 
     // Log the final tuning result
-    if (optimalTuningCap != 0xFF) {
-        printf("Optimal tuning capacitor: %d pF (Measured Frequency: %d Hz)\n", optimalTuningCap * 8, measuredFreq);
+    if (finalTuningCap != 0xFF) {
+        printf("Optimal TUN_CAP: %d pF\n", finalTuningCap * 8);
     } else {
-        printf("Failed to tune the antenna. Measured Frequency: %d Hz\n", measuredFreq);
+        printf("Failed to tune the antenna.\n");
     }
 
-    // Set up Interrupt pin for AS3935
+    // Restore IRQ pin to interrupt mode
     Init_IntAS3935();
 
-    return optimalTuningCap;
+    return finalTuningCap;
 }
 
 //OSC_DISPLAY_TRCO_ONLY
-//TUN_CAP: 0 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 8 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 16 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 24 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 32 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 40 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 48 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 56 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 64 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 72 pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 80 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 88 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 96 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 104 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 112 pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 120 pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 0	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 8	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 16	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 24	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 32	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 40	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 48	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 56	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 64	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 72	pF, Measured Frequency: 33898 Hz
+//TUN_CAP: 80	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 88	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 96	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 104	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 112	pF, Measured Frequency: 34188 Hz
+//TUN_CAP: 120	pF, Measured Frequency: 34188 Hz
 
 //OSC_DISPLAY_SRCO_ONLY
 
-//TUN_CAP: 0 pF, Measured Frequency:	1333333 Hz
-//TUN_CAP: 8 pF, Measured Frequency:	1333333 Hz
-//TUN_CAP: 16 pF, Measured Frequency:	571428 Hz
-//TUN_CAP: 24 pF, Measured Frequency:	1000000 Hz
-//TUN_CAP: 32 pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 40 pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 48 pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 56 pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 64 pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 72 pF, Measured Frequency: 571428 Hz
-//TUN_CAP: 80 pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 88 pF, Measured Frequency: 666666 Hz
-//TUN_CAP: 96 pF, Measured Frequency:	1333333 Hz
-//TUN_CAP: 104 pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 112 pF, Measured Frequency: 666666 Hz
-//TUN_CAP: 120 pF, Measured Frequency: 1000000 Hz
+//TUN_CAP: 0	pF, Measured Frequency:	1333333	Hz
+//TUN_CAP: 8	pF, Measured Frequency:	1333333	Hz
+//TUN_CAP: 16	pF, Measured Frequency:	571428	Hz
+//TUN_CAP: 24	pF, Measured Frequency:	1000000 Hz
+//TUN_CAP: 32	pF, Measured Frequency: 1333333 Hz
+//TUN_CAP: 40	pF, Measured Frequency: 1333333 Hz
+//TUN_CAP: 48	pF, Measured Frequency: 1000000 Hz
+//TUN_CAP: 56	pF, Measured Frequency: 1000000 Hz
+//TUN_CAP: 64	pF, Measured Frequency: 1333333 Hz
+//TUN_CAP: 72	pF, Measured Frequency: 571428	Hz
+//TUN_CAP: 80	pF, Measured Frequency: 1000000 Hz
+//TUN_CAP: 88	pF, Measured Frequency: 666666	Hz
+//TUN_CAP: 96	pF, Measured Frequency:	1333333 Hz
+//TUN_CAP: 104	pF, Measured Frequency: 1333333 Hz
+//TUN_CAP: 112	pF, Measured Frequency: 666666	Hz
+//TUN_CAP: 120	pF, Measured Frequency: 1000000 Hz
 
 
 //OSC_DISPLAY_LCO_ONLY
 
-//TUN_CAP: 0 pF, Measured Frequency: 32786 Hz
-//TUN_CAP: 8 pF, Measured Frequency: 32786 Hz
-//TUN_CAP: 16 pF, Measured Frequency: 32520 Hz
-//TUN_CAP: 24 pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 32 pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 40 pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 48 pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 56 pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 64 pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 72 pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 80 pF, Measured Frequency: 31746 Hz
-//TUN_CAP: 88 pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 96 pF, Measured Frequency: 31746 Hz
-//TUN_CAP: 104 pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 112 pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 120 pF, Measured Frequency: 31250 Hz
-
+//TUN_CAP: 0	pF, Measured Frequency: 32786 Hz
+//TUN_CAP: 8	pF, Measured Frequency: 32786 Hz
+//TUN_CAP: 16	pF, Measured Frequency: 32520 Hz
+//TUN_CAP: 24	pF, Measured Frequency: 32258 Hz
+//TUN_CAP: 32	pF, Measured Frequency: 32258 Hz
+//TUN_CAP: 40	pF, Measured Frequency: 32258 Hz
+//TUN_CAP: 48	pF, Measured Frequency: 32000 Hz
+//TUN_CAP: 56	pF, Measured Frequency: 32258 Hz
+//TUN_CAP: 64	pF, Measured Frequency: 32000 Hz
+//TUN_CAP: 72	pF, Measured Frequency: 32000 Hz
+//TUN_CAP: 80	pF, Measured Frequency: 31746 Hz
+//TUN_CAP: 88	pF, Measured Frequency: 31496 Hz
+//TUN_CAP: 96	pF, Measured Frequency: 31746 Hz
+//TUN_CAP: 104	pF, Measured Frequency: 31496 Hz
+//TUN_CAP: 112	pF, Measured Frequency: 31496 Hz
+//TUN_CAP: 120	pF, Measured Frequency: 31250 Hz
 
 
 

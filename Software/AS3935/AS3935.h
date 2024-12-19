@@ -1,3 +1,4 @@
+
 #ifndef AS3935_H
 #define AS3935_H
 
@@ -102,14 +103,14 @@ typedef enum {
  * Maps the noise floor threshold levels to the corresponding register values.
  */
 typedef enum {
-    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 µVrms, Indoor: 28 µVrms
-    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 µVrms, Indoor: 45 µVrms
-    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 µVrms, Indoor: 62 µVrms
-    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 µVrms, Indoor: 78 µVrms
-    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 µVrms, Indoor: 95 µVrms
-    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 µVrms, Indoor: 112 µVrms
-    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 µVrms, Indoor: 130 µVrms
-    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 µVrms, Indoor: 146 µVrms
+    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 ÂµVrms, Indoor: 28 ÂµVrms
+    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 ÂµVrms, Indoor: 45 ÂµVrms
+    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 ÂµVrms, Indoor: 62 ÂµVrms
+    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 ÂµVrms, Indoor: 78 ÂµVrms
+    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 ÂµVrms, Indoor: 95 ÂµVrms
+    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 ÂµVrms, Indoor: 112 ÂµVrms
+    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 ÂµVrms, Indoor: 130 ÂµVrms
+    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 ÂµVrms, Indoor: 146 ÂµVrms
 } AS3935_NoiseFloorLevel_t;
 
 /**
@@ -351,11 +352,7 @@ typedef enum {
     OSC_DISPLAY_DISABLED				= 0, ///< All oscillators disabled (000 in binary).
     OSC_DISPLAY_TRCO_ONLY				= 1, ///< TRCO oscillator only enabled (001 in binary).
     OSC_DISPLAY_SRCO_ONLY				= 2, ///< SRCO oscillator only enabled (010 in binary).
-    OSC_DISPLAY_TRCO_AND_SRCO		= 3, ///< TRCO and SRCO oscillators enabled (011 in binary).
-    OSC_DISPLAY_LCO_ONLY				= 4, ///< LCO oscillator only enabled (100 in binary).
-    OSC_DISPLAY_TRCO_AND_LCO		= 5, ///< TRCO and LCO oscillators enabled (101 in binary).
-    OSC_DISPLAY_SRCO_AND_LCO		= 6, ///< SRCO and LCO oscillators enabled (110 in binary).
-    OSC_DISPLAY_ALL_OSCILLATORS	= 7  ///< All oscillators enabled (TRCO, SRCO, LCO; 111 in binary).
+    OSC_DISPLAY_LCO_ONLY				= 4  ///< LCO oscillator only enabled (100 in binary).
 } AS3935_OSCDisplay_t;
 
 /**
