@@ -287,20 +287,31 @@ HAL_StatusTypeDef AS3935_ConfigureInterruptsAndFrequency(AS3935_INT_t interrupt,
  * 
  * This function reads the lightning energy (20 bits) and the distance estimation (6 bits) 
  * from the AS3935 sensor. The values are parsed into the `AS3935_Energy_t` structure, 
- * which combines the two data points into an easy-to-use representation.
+ * which combines the two data points into an easy-to-use representation. It also reads 
+ * the interrupt register to ensure a new interrupt is triggered for the next event.
  * 
  * @param energy Pointer to an `AS3935_Energy_t` structure to store the read values.
  * @retval HAL_OK     Operation successful.
  * @retval HAL_ERROR  Communication failure.
  */
 HAL_StatusTypeDef AS3935_ReadLightningEnergyAndDistance(AS3935_Energy_t *energy) {
-    // Read registers 0x04 to 0x07 into the byte array of the structure
-    if (AS3935_ReadRegister(ENERGY_LIGHT_LSB, energy->ByteArray, 4) != HAL_OK) {
+    // Read the interrupt register (0x03) to clear any existing interrupts
+    if (AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Communication error
     }
-    // Extract the lightning energy (20 bits) and distance estimation (6 bits)
-    energy->LightningEnergy = (energy->LSB) | ((uint32_t)(energy->MSB) << 8) | ((uint32_t)(energy->MMSB) << 16);
-    energy->DistanceEstimation = energy->Distance;
+
+    // Check if we received a lightning interrupt
+    if (AS3935_Sensor.INT_FREQ.Val.BitField.INT == INT_L) { // INT_L corresponds to lightning detection
+        // Read registers 0x04 to 0x07 into the byte array of the structure
+        if (AS3935_ReadRegister(ENERGY_LIGHT_LSB, energy->ByteArray, 4) != HAL_OK) {
+            return HAL_ERROR; // Communication error
+        }
+
+        // Extract the lightning energy (20 bits) and distance estimation (6 bits)
+        energy->LightningEnergy = (energy->LSB) | ((uint32_t)(energy->MSB) << 8) | ((uint32_t)(energy->MMSB) << 16);
+        energy->DistanceEstimation = energy->Distance;
+    }
+
     return HAL_OK;
 }
 
