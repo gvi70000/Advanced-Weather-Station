@@ -14,8 +14,8 @@
 #define AS3935_LIGHTNING_ENERGY_MASK	0x1F ///< Mask for lightning energy bits.
 #define AS3935_OSC_MASK								0xE0 ///< Mask for lightning energy bits.
 #define AS3935_DIRECT_COMMAND					0x96 ///< Command to reset the sensor to default values.
-#define AS3935_CMD_DELAY					2 
-
+#define AS3935_CMD_DELAY					4 
+#define AS3935_CAL_DELAY					250
 /// @brief Register addresses for the AS3935 sensor.
 typedef enum {
     AFE_GAIN             = 0x00, ///< Power management and AFE gain boost.
@@ -102,14 +102,14 @@ typedef enum {
  * Maps the noise floor threshold levels to the corresponding register values.
  */
 typedef enum {
-    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 µVrms, Indoor: 28 µVrms
-    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 µVrms, Indoor: 45 µVrms
-    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 µVrms, Indoor: 62 µVrms
-    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 µVrms, Indoor: 78 µVrms
-    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 µVrms, Indoor: 95 µVrms
-    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 µVrms, Indoor: 112 µVrms
-    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 µVrms, Indoor: 130 µVrms
-    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 µVrms, Indoor: 146 µVrms
+    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 ÂµVrms, Indoor: 28 ÂµVrms
+    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 ÂµVrms, Indoor: 45 ÂµVrms
+    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 ÂµVrms, Indoor: 62 ÂµVrms
+    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 ÂµVrms, Indoor: 78 ÂµVrms
+    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 ÂµVrms, Indoor: 95 ÂµVrms
+    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 ÂµVrms, Indoor: 112 ÂµVrms
+    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 ÂµVrms, Indoor: 130 ÂµVrms
+    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 ÂµVrms, Indoor: 146 ÂµVrms
 } AS3935_NoiseFloorLevel_t;
 
 /**
@@ -349,9 +349,9 @@ typedef enum {
  */
 typedef enum {
     OSC_DISPLAY_DISABLED				= 0, ///< All oscillators disabled (000 in binary).
-    OSC_DISPLAY_TRCO_ONLY				= 1, ///< TRCO oscillator only enabled (001 in binary).
-    OSC_DISPLAY_SRCO_ONLY				= 2, ///< SRCO oscillator only enabled (010 in binary).
-    OSC_DISPLAY_LCO_ONLY				= 4  ///< LCO oscillator only enabled (100 in binary).
+    OSC_DISPLAY_TRCO_ONLY				= 1, ///< TRCO oscillator only enabled (001 in binary). System RCO at 32.768kHz
+    OSC_DISPLAY_SRCO_ONLY				= 2, ///< SRCO oscillator only enabled (010 in binary). Timer RCO Oscillators 1.1MHz
+    OSC_DISPLAY_LCO_ONLY				= 4  ///< LCO oscillator only enabled (100 in binary). Frequency of the Antenna 500kHz
 } AS3935_OSCDisplay_t;
 
 /**
@@ -441,17 +441,24 @@ typedef struct __attribute__((packed)) {
 
 // Function prototypes
 HAL_StatusTypeDef AS3935_Init(void);
+HAL_StatusTypeDef AS3935_ReadAllRegisters(void);
 HAL_StatusTypeDef AS3935_WakeUp(void);
-HAL_StatusTypeDef AS3935_ConfigurePowerAndGain(AS3935_PowerState_t pwr, AS3935_AFE_Gain_t gain);
-HAL_StatusTypeDef AS3935_ConfigureDetectionAndNoise(AS3935_WDTH_t wdth, AS3935_NoiseFloorLevel_t level);
-HAL_StatusTypeDef AS3935_ConfigureLightningStatistics(AS3935_SREJ_t srej, AS3935_MinLightning_t minNum, AS3935_ClearStat_t clearStat);
-HAL_StatusTypeDef AS3935_ConfigureInterruptsAndFrequency(AS3935_INT_t interrupt, AS3935_MaskDist_t maskDist, AS3935_LCO_FDiv_t fdivRatio);
+HAL_StatusTypeDef AS3935_SetPower(AS3935_PowerState_t powerState);
+HAL_StatusTypeDef AS3935_SetGain(AS3935_AFE_Gain_t gain);
+HAL_StatusTypeDef AS3935_SetWatchdog(AS3935_WDTH_t watchdogThreshold);
+HAL_StatusTypeDef AS3935_SetNoise(AS3935_NoiseFloorLevel_t noiseLevel);
+HAL_StatusTypeDef AS3935_SetSpikeRejectionLevel(AS3935_SREJ_t spikeRejectionLevel);
+HAL_StatusTypeDef AS3935_SetLightningNo(AS3935_MinLightning_t noLightningEvents);
+HAL_StatusTypeDef AS3935_ClearStatistics(AS3935_ClearStat_t clearStat);
+HAL_StatusTypeDef AS3935_SetInterruptType(AS3935_INT_t interrupt);
+HAL_StatusTypeDef AS3935_SetdDisturberMask(AS3935_MaskDist_t maskDist);
+HAL_StatusTypeDef AS3935_setFrequencyDivisionRatio(AS3935_LCO_FDiv_t fdivRatio);
 HAL_StatusTypeDef AS3935_ReadLightningEnergyAndDistance(AS3935_Energy_t *energy);
-HAL_StatusTypeDef AS3935_SetIRQConfig(AS3935_TUNE_CAP_t tuningCap, AS3935_OSCDisplay_t oscDisplay);
+HAL_StatusTypeDef AS3935_setTuningCapacitor(AS3935_TUNE_CAP_t tuningCap);
+HAL_StatusTypeDef AS3935_SetOscillatorDisplay(AS3935_OSCDisplay_t oscDisplay);
 HAL_StatusTypeDef AS3935_ReadTRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_ReadSRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_CalibrateOscillators(void);
 HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void);
-void AS3935_TuneCapacitorsWithLoop(uint32_t delayMs);
 uint8_t AS3935_TuneAntenna(void);
 #endif // AS3935_H

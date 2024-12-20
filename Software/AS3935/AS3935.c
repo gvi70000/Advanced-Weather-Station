@@ -64,20 +64,22 @@ HAL_StatusTypeDef AS3935_Init(void) {
     if (AS3935_WakeUp() != HAL_OK) {
         return HAL_ERROR; // Wake-up failed
     }
-    // Configure detection efficiency and noise floor (WDTH = 50%, NF_LEV = 4)
-    if (AS3935_ConfigureDetectionAndNoise(EFFICIENCY_100, NOISE_FLOOR_390uVrms) != HAL_OK) {
+	
+	AS3935_Sensor.NOISE.Val.BitField.NF_LEV = NOISE_FLOOR_390uVrms;
+	AS3935_Sensor.NOISE.Val.BitField.WDTH = EFFICIENCY_100;
+    if (AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to configure detection and noise
     }
-    // Configure power state to "Power Up" and AFE gain to "Outdoor Mode"
-    if (AS3935_ConfigurePowerAndGain(AS3935_POWER_UP, AFE_GAIN_OUTDOOR) != HAL_OK) {
-        return HAL_ERROR; // Failed to configure power and gain
-    }
-    // Configure lightning statistics (SREJ = 1, MIN_NUM_LIGH = 1, do not clear statistics)
-    if (AS3935_ConfigureLightningStatistics(SREJ_LEVEL_0, MIN_NUM_LIGHTNING_1, CLEAR_STAT_DISABLED) != HAL_OK) {
+	AS3935_Sensor.STATISTICS.Val.BitField.SREJ = SREJ_LEVEL_0;
+	AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = MIN_NUM_LIGHTNING_1;
+    if (AS3935_ClearStatistics(CLEAR_STAT_ENABLED) != HAL_OK) {
         return HAL_ERROR; // Failed to configure lightning statistics
     }
-    // Configure interrupts and frequency division ratio (INT = INT_L, mask disturbers, divide frequency by 16)
-    if (AS3935_ConfigureInterruptsAndFrequency(INT_L, MASK_DIST_DISABLED, LCO_FDIV_RATIO_16) != HAL_OK) {
+	AS3935_Sensor.INT_FREQ.Val.BitField.INT = INT_L;
+	AS3935_Sensor.INT_FREQ.Val.BitField.MASK_DIST = MASK_DIST_DISABLED;
+	AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = LCO_FDIV_RATIO_16;
+    // Configure interrupts and frequency division ratio (INT = INT_L, show disturbers, divide frequency by 16)
+    if (AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to configure interrupts and frequency
     }
     return HAL_OK; // Initialization successful
@@ -143,139 +145,152 @@ HAL_StatusTypeDef AS3935_WakeUp(void) {
         return HAL_ERROR;
     }
     HAL_Delay(AS3935_CMD_DELAY); // Wait 2ms for wake-up
-		AS3935_ReadAllRegisters();
+	AS3935_ReadAllRegisters();
     // Calibrate TRCO
     if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
         return HAL_ERROR;
     }
-		AS3935_SetIRQConfig(TUN_CAP_64PF, OSC_DISPLAY_SRCO_ONLY);
-		HAL_Delay(250);
-		AS3935_SetIRQConfig(TUN_CAP_64PF, OSC_DISPLAY_DISABLED);
+    AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = TUN_CAP_64PF;
+	AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = OSC_DISPLAY_SRCO_ONLY;
+    if (AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    HAL_Delay(AS3935_CAL_DELAY); // Wait 250ms for calibration
     // Verify calibration status
-//    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
+	// ToDo! Check what is wrong with the frequency
+//    if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
 //        return HAL_ERROR; // Calibration failed
 //    }
     return HAL_OK;
 }
 
+
 /**
- * @brief Configures the power state and AFE (Analog Front End) gain of the AS3935 sensor.
+ * @brief Configures the power state of the AS3935 sensor.
  * 
- * This function allows simultaneous configuration of the power state and AFE gain
- * by modifying the AFE_GAIN register. It combines the functionality of setting the 
- * power-down bit and adjusting the gain in a single call.
- * 
- * @param pwr  Power state (use AS3935_PowerState_t).
- *             - `POWER_DOWN`: Power down the sensor.
- *             - `POWER_UP`: Power up the sensor.
- * @param gain Gain setting for the AFE (use AS3935_AFE_Gain_t, range 0-31).
+ * @param pwr The desired power state (e.g., power-down or normal operation).
  * @retval HAL_OK     Operation successful.
  * @retval HAL_ERROR  Communication failure.
  */
-HAL_StatusTypeDef AS3935_ConfigurePowerAndGain(AS3935_PowerState_t pwr, AS3935_AFE_Gain_t gain) {
-    // Configure the power state
-    AS3935_Sensor.POWER.Val.BitField.PWD = pwr;
-    // Configure the AFE gain
-    AS3935_Sensor.POWER.Val.BitField.GAIN = gain;
-    // Write the updated value to the AFE_GAIN register
+HAL_StatusTypeDef AS3935_SetPower(AS3935_PowerState_t powerState) {
+    AS3935_Sensor.POWER.Val.BitField.PWD = powerState;
     return AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
 }
 
 /**
- * @brief Configures the detection efficiency and noise floor level of the AS3935 sensor.
+ * @brief Sets the AFE gain of the AS3935 sensor.
  * 
- * This function allows simultaneous configuration of the Watchdog Threshold (WDTH) 
- * and the Noise Floor Level (NF_LEV) by modifying the THRESHOLD register. 
- * 
- * @param wdth  Desired Watchdog Threshold value (use AS3935_WDTH_t).
- *              Values range from 0 to 15 (corresponding to binary 0000 to 1111).
- * @param level Desired Noise Floor Level (use AS3935_NoiseFloorLevel_t).
- *              Values range from 0 to 7, where higher values filter more noise.
+ * @param gain The desired AFE gain level.
  * @retval HAL_OK     Operation successful.
  * @retval HAL_ERROR  Communication failure.
  */
-HAL_StatusTypeDef AS3935_ConfigureDetectionAndNoise(AS3935_WDTH_t wdth, AS3935_NoiseFloorLevel_t level) {
-    // Configure the Watchdog Threshold (WDTH)
-    AS3935_Sensor.NOISE.Val.BitField.WDTH = wdth;
-    // Configure the Noise Floor Level (NF_LEV)
-    AS3935_Sensor.NOISE.Val.BitField.NF_LEV = level;
-    // Write the updated noise register value to the THRESHOLD register
+HAL_StatusTypeDef AS3935_SetGain(AS3935_AFE_Gain_t gain) {
+    AS3935_Sensor.POWER.Val.BitField.GAIN = gain;
+    return AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1);
+}
+
+/**
+ * @brief Configures the watchdog threshold of the AS3935 sensor.
+ * 
+ * @param wdth The desired watchdog threshold.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_SetWatchdog(AS3935_WDTH_t watchdogThreshold) {
+    AS3935_Sensor.NOISE.Val.BitField.WDTH = watchdogThreshold;
     return AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
 }
 
 /**
- * @brief Configures the spike rejection level, minimum number of lightning events, and lightning detection statistics.
+ * @brief Sets the noise floor level of the AS3935 sensor.
  * 
- * This function sets the spike rejection threshold (SREJ) and the minimum number of lightning events 
- * (MIN_NUM_LIGH) in register 0x02. Additionally, it allows clearing the lightning detection statistics 
- * by setting the `CL_STAT` bit. If statistics are cleared, the bit is reset to `0` after the operation.
- * 
- * @param srej      Spike rejection level (use AS3935_SREJ_t).
- *                  - Values range from `SREJ_LEVEL_0` (highest detection efficiency) to `SREJ_LEVEL_11` (lowest efficiency).
- * @param minNum    Minimum number of lightning events for validation (use AS3935_MinLightning_t).
- *                  - Values:
- *                    - `MIN_NUM_LIGHTNING_1`: Minimum of 1 lightning event.
- *                    - `MIN_NUM_LIGHTNING_5`: Minimum of 5 lightning events.
- *                    - `MIN_NUM_LIGHTNING_9`: Minimum of 9 lightning events.
- *                    - `MIN_NUM_LIGHTNING_16`: Minimum of 16 lightning events.
- * @param clearStat Lightning detection statistics clearing configuration (use AS3935_ClearStat_t).
- *                  - `CLEAR_STAT_ENABLED`: Clears the statistics.
- *                  - `CLEAR_STAT_DISABLED`: Leaves the statistics unchanged.
+ * @param level The desired noise floor level.
  * @retval HAL_OK     Operation successful.
- * @retval HAL_ERROR  Communication failure or invalid values.
+ * @retval HAL_ERROR  Communication failure.
  */
-HAL_StatusTypeDef AS3935_ConfigureLightningStatistics(AS3935_SREJ_t srej, AS3935_MinLightning_t minNum, AS3935_ClearStat_t clearStat) {
-    // Configure the Spike Rejection Level (SREJ)
-    AS3935_Sensor.STATISTICS.Val.BitField.SREJ = srej;
-    // Configure the Minimum Number of Lightning Events (MIN_NUM_LIGH)
-    AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = minNum;
-    // Set the Clear Statistics (CL_STAT) bit
+HAL_StatusTypeDef AS3935_SetNoise(AS3935_NoiseFloorLevel_t noiseLevel) {
+    AS3935_Sensor.NOISE.Val.BitField.NF_LEV = noiseLevel;
+    return AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1);
+}
+
+/**
+ * @brief Configures the spike rejection level of the AS3935 sensor.
+ * 
+ * @param srej The desired spike rejection level.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_SetSpikeRejectionLevel(AS3935_SREJ_t spikeRejectionLevel) {
+    AS3935_Sensor.STATISTICS.Val.BitField.SREJ = spikeRejectionLevel;
+    return AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
+}
+
+/**
+ * @brief Sets the minimum number of lightning events required for validation.
+ * 
+ * @param minNum The minimum number of lightning events.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_SetLightningNo(AS3935_MinLightning_t noLightningEvents) {
+    AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = noLightningEvents;
+    return AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
+
+
+/**
+ * @brief Clears the lightning statistics in the AS3935 sensor.
+ * 
+ * @param clearStat The clear statistics command.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_ClearStatistics(AS3935_ClearStat_t clearStat) {
     AS3935_Sensor.STATISTICS.Val.BitField.CL_STAT = clearStat;
-    // Write the updated configuration to register 0x02
     if (AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1) != HAL_OK) {
-        return HAL_ERROR; // Communication error
+        return HAL_ERROR;
     }
-    // If clearing statistics, reset the CL_STAT bit after the operation
     if (clearStat == CLEAR_STAT_ENABLED) {
         AS3935_Sensor.STATISTICS.Val.BitField.CL_STAT = CLEAR_STAT_DISABLED;
         if (AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1) != HAL_OK) {
-            return HAL_ERROR; // Communication error
+            return HAL_ERROR;
         }
     }
     return HAL_OK;
 }
 
 /**
- * @brief Configures interrupt types, disturber masking, and frequency division ratio for the AS3935 sensor.
+ * @brief Sets the type of interrupt generated by the AS3935 sensor.
  * 
- * This function sets the interrupt type(s), configures whether disturber events are masked, 
- * and sets the frequency division ratio for the antenna. The configuration is written to 
- * register 0x03 (INT_MASK_ANT).
- * 
- * @param interrupt  Desired interrupt type(s) (use AS3935_INT_t).
- *                   Multiple interrupt types can be combined using bitwise OR (e.g., INT_NH | INT_L).
- *                   - INT_NH: Noise level too high.
- *                   - INT_D: Disturber detected.
- *                   - INT_L: Lightning event detected.
- * @param maskDist   Configures whether disturber events are masked (use AS3935_MaskDist_t).
- *                   - MASK_DIST_DISABLED: Do not mask disturber events (INT_D is enabled).
- *                   - MASK_DIST_ENABLED: Mask disturber events (INT_D is disabled).
- * @param fdivRatio  Desired frequency division ratio for the antenna (use AS3935_LCO_FDiv_t).
- *                   - LCO_FDIV_RATIO_16: Divide frequency by 16.
- *                   - LCO_FDIV_RATIO_32: Divide frequency by 32.
- *                   - LCO_FDIV_RATIO_64: Divide frequency by 64.
- *                   - LCO_FDIV_RATIO_128: Divide frequency by 128.
+ * @param interrupt The desired interrupt type.
  * @retval HAL_OK     Operation successful.
- * @retval HAL_ERROR  Communication failure or invalid values.
+ * @retval HAL_ERROR  Communication failure.
  */
-HAL_StatusTypeDef AS3935_ConfigureInterruptsAndFrequency(AS3935_INT_t interrupt, AS3935_MaskDist_t maskDist, AS3935_LCO_FDiv_t fdivRatio) { 
-    // Configure the interrupt type (INT)
+HAL_StatusTypeDef AS3935_SetInterruptType(AS3935_INT_t interrupt) {
     AS3935_Sensor.INT_FREQ.Val.BitField.INT = interrupt;
-    // Configure the MASK_DIST bit
+    return AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
+}
+
+/**
+ * @brief Configures the disturber mask in the AS3935 sensor.
+ * 
+ * @param maskDist The desired disturber mask state.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_SetdDisturberMask(AS3935_MaskDist_t maskDist) {
     AS3935_Sensor.INT_FREQ.Val.BitField.MASK_DIST = maskDist;
-    // Configure the frequency division ratio (LCO_FDIV)
+    return AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
+}
+
+/**
+ * @brief Sets the frequency division ratio for the LCO signal.
+ * 
+ * @param fdivRatio The desired frequency division ratio.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_setFrequencyDivisionRatio(AS3935_LCO_FDiv_t fdivRatio) {
     AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = fdivRatio;
-    // Write the updated value to register 0x03
     return AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
 }
 
@@ -313,54 +328,46 @@ HAL_StatusTypeDef AS3935_ReadLightningEnergyAndDistance(AS3935_Energy_t *energy)
 }
 
 /**
- * @brief Configures the tuning capacitors and oscillator display settings for the AS3935 sensor.
+ * @brief Configures the tuning capacitors for the AS3935 sensor.
  * 
- * This function sets the internal tuning capacitor value (TUN_CAP) for antenna optimization and 
- * configures which oscillator(s) (TRCO, SRCO, LCO) are displayed on the IRQ pin for diagnostic purposes.
- * 
- * @param tuningCap Desired tuning capacitor value (use AS3935_TUNE_CAP_t).
- *                  - Values range from `TUN_CAP_0PF` (0 pF) to `TUN_CAP_120PF` (120 pF).
- * @param oscDisplay Desired oscillator display configuration (use AS3935_OSCDisplay_t).
- *                   - Options include `OSC_DISPLAY_DISABLED`, `OSC_DISPLAY_TRCO_ONLY`, etc.
+ * @param tuningCap The desired tuning capacitor value.
  * @retval HAL_OK     Operation successful.
- * @retval HAL_ERROR  Communication failure or invalid values.
+ * @retval HAL_ERROR  Communication failure.
  */
-HAL_StatusTypeDef AS3935_SetIRQConfig(AS3935_TUNE_CAP_t tuningCap, AS3935_OSCDisplay_t oscDisplay) {
-    // Configure the tuning capacitors
+HAL_StatusTypeDef AS3935_setTuningCapacitor(AS3935_TUNE_CAP_t tuningCap) {
     AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = tuningCap;
-    // Configure the oscillator display settings
-    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = oscDisplay;
-    // Write the updated value to register 0x08
     return AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }
 
 /**
- * @brief Reads the calibration status of the Timer RC Oscillator (TRCO) into `AS3935_Sensor.TRCO`.
+ * @brief Configures the oscillator display settings.
  * 
- * This function reads the TRCO calibration status from register 0x3A and stores it in the 
- * `AS3935_Sensor.TRCO` structure. It provides detailed information about whether the calibration 
- * was successful or not.
+ * @param oscDisplay The desired oscillator display setting.
+ * @retval HAL_OK     Operation successful.
+ * @retval HAL_ERROR  Communication failure.
+ */
+HAL_StatusTypeDef AS3935_SetOscillatorDisplay(AS3935_OSCDisplay_t oscDisplay) {
+    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = oscDisplay;
+    return AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+}
+
+/**
+ * @brief Reads the TRCO calibration status.
  * 
  * @retval HAL_OK     Operation successful.
  * @retval HAL_ERROR  Communication failure.
  */
 HAL_StatusTypeDef AS3935_ReadTRCOCalibrationStatus(void) {
-    // Read register 0x3A into AS3935_Sensor.TRCO
     return AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1);
 }
 
 /**
- * @brief Reads the calibration status of the System RC Oscillator (SRCO) into `AS3935_Sensor.SRCO`.
- * 
- * This function reads the SRCO calibration status from register 0x3B and stores it in the 
- * `AS3935_Sensor.SRCO` structure. It provides detailed information about whether the calibration 
- * was successful or not.
+ * @brief Reads the SRCO calibration status.
  * 
  * @retval HAL_OK     Operation successful.
  * @retval HAL_ERROR  Communication failure.
  */
 HAL_StatusTypeDef AS3935_ReadSRCOCalibrationStatus(void) {
-    // Read register 0x3B into AS3935_Sensor.SRCO
     return AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1);
 }
 
@@ -374,56 +381,48 @@ HAL_StatusTypeDef AS3935_ReadSRCOCalibrationStatus(void) {
  * @retval HAL_ERROR  Calibration failed or communication error.
  */
 HAL_StatusTypeDef AS3935_CalibrateOscillators(void) {
-    HAL_StatusTypeDef status;
-
-    // Send the calibration command
-    status = AS3935_SendDirectCommand(CALIB_RCO);
-    if (status != HAL_OK) {
-        return HAL_ERROR; // Command failed
+    // Set the IRQ pin to display TRCO
+    if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
+        return HAL_ERROR;
     }
 
-    // Enable TRCO display on IRQ pin for measurement
-    status = AS3935_ReadRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
-    if (status != HAL_OK) {
-        return HAL_ERROR; // Failed to read IRQ register
-    }
-    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = OSC_DISPLAY_TRCO_ONLY;
-    status = AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
-    if (status != HAL_OK) {
-        return HAL_ERROR; // Failed to enable TRCO display
+    // Send the RCO calibration command
+    if (AS3935_WriteCommand(CALIB_RCO) != HAL_OK) {
+        return HAL_ERROR;
     }
 
-    // Continuously poll the TRCO and SRCO calibration status until both are done
-    for (uint8_t attempt = 0; attempt < 10; ++attempt) {
-        // Verify TRCO calibration status
-        status = AS3935_ReadTRCOCalibrationStatus();
-        if (status != HAL_OK) {
-            return HAL_ERROR; // Communication error
-        }
+    // Wait for calibration to complete
+    HAL_Delay(AS3935_CAL_DELAY); // Increase delay for stabilization
 
-        // Verify SRCO calibration status
-        status = AS3935_ReadSRCOCalibrationStatus();
-        if (status != HAL_OK) {
-            return HAL_ERROR; // Communication error
-        }
-
-        // Check if both TRCO and SRCO are calibrated
-        if (AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE && AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
-            // Disable TRCO display on IRQ pin after successful calibration
-            AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = 0;
-            status = AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
-            return status == HAL_OK ? HAL_OK : HAL_ERROR; // Calibration successful if write succeeds
-        }
-
-        // Delay before polling again
-        HAL_Delay(1);
+    // Validate TRCO calibration
+    if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (!AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
+        printf("TRCO calibration failed.\n");
+        return HAL_ERROR;
     }
 
-    // Disable TRCO display on IRQ pin if calibration failed
-    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = 0;
-    status = AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+    // Repeat for SRCO
+    if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    HAL_Delay(AS3935_CAL_DELAY);
+    if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (!AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
+        printf("SRCO calibration failed.\n");
+        return HAL_ERROR;
+    }
 
-    return HAL_ERROR; // Calibration failed
+    // Reset IRQ pin to normal interrupt mode
+    if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    printf("Oscillator calibration successful.\n");
+    return HAL_OK;
 }
 
 /**
@@ -649,7 +648,6 @@ uint8_t AS3935_TuneAntenna(void) {
 //TUN_CAP: 104	pF, Measured Frequency: 31496 Hz
 //TUN_CAP: 112	pF, Measured Frequency: 31496 Hz
 //TUN_CAP: 120	pF, Measured Frequency: 31250 Hz
-
 
 
 
