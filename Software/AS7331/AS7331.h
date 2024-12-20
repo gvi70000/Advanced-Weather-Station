@@ -45,16 +45,30 @@ typedef enum {
 
 typedef struct __attribute__((packed)) {
     union {
-        uint8_t Value;
+        uint8_t OSRValue; // OSR register
         struct {
-            AS7331_OSR_DOS_t DOS		: 3;
-            AS7331_OSR_SW_RES_t SW_RES	: 1;
-            uint8_t RESERVED			: 2;
-            AS7331_OSR_PD_t PD			: 1;
-            AS7331_OSR_SS_t SS			: 1;
-        } BitField;
-    } Val;
-} AS7331_OSR_t;
+            AS7331_OSR_DOS_t DOS        : 3;
+            AS7331_OSR_SW_RES_t SW_RES  : 1;
+            uint8_t RESERVED            : 2;
+            AS7331_OSR_PD_t PD          : 1;
+            AS7331_OSR_SS_t SS          : 1;
+        } OSRBitField;
+    } OSR;
+
+    union {
+        uint8_t STATUSValue; // STATUS register
+        struct {
+            uint8_t POWERSTATE     : 1;
+            uint8_t STANDBYSTATE   : 1;
+            uint8_t NOTREADY       : 1;
+            uint8_t NDATA          : 1;
+            uint8_t LDATA          : 1;
+            uint8_t ADCOF          : 1;
+            uint8_t MRESOF         : 1;
+            uint8_t OUTCONVOF      : 1;
+        } STATUSBitField;
+    } STATUS;
+} AS7331_OSR_STATUS_t;
 
 // AGEN Register Structure
 typedef struct __attribute__((packed)) {
@@ -202,39 +216,20 @@ typedef struct __attribute__((packed)) {
     } Val;
 } AS7331_OPTREG_t;
 
-// STATUS Register Structure
-typedef struct __attribute__((packed)) {
-    union {
-        uint8_t Value;
-        struct {
-            uint8_t POWERSTATE		: 1;
-            uint8_t STANDBYSTATE	: 1;
-            uint8_t NOTREADY		: 1;
-            uint8_t NDATA			: 1;
-            uint8_t LDATA			: 1;
-            uint8_t ADCOF			: 1;
-            uint8_t MRESOF			: 1;
-            uint8_t OUTCONVOF 		: 1;
-        } BitField;
-    } Val;
-} AS7331_STATUS_t;
-
 // Structure for Output Result Register Bank
 typedef struct __attribute__((packed)) {
-    AS7331_OSR_t OSR;             // Operational State Register (8 bits)
-    AS7331_STATUS_t STATUS;       // Status Register (8 bits)
-    uint16_t TEMP;                // Temperature Measurement Result (16 bits, 12 bits for the value)
-    uint16_t MRES1;               // Measurement Result A-Channel (16 bits)
-    uint16_t MRES2;               // Measurement Result B-Channel (16 bits)
-    uint16_t MRES3;               // Measurement Result C-Channel (16 bits)
-    uint16_t OUTCONVL;            // Time reference, conversion time measurement (16 bits, LSB + middle byte)
-    uint16_t OUTCONVH;            // Time reference, conversion time measurement (16 bits, MSB + empty byte)
+    AS7331_OSR_STATUS_t OSR_STATUS;	// Operational State Register + Status (8+8 bits)
+    uint16_t TEMP;                	// Temperature Measurement Result (16 bits, 12 bits for the value)
+    uint16_t MRES1;               	// Measurement Result A-Channel (16 bits)
+    uint16_t MRES2;               	// Measurement Result B-Channel (16 bits)
+    uint16_t MRES3;               	// Measurement Result C-Channel (16 bits)
+    uint16_t OUTCONVL;            	// Time reference, conversion time measurement (16 bits, LSB + middle byte)
+    uint16_t OUTCONVH;            	// Time reference, conversion time measurement (16 bits, MSB + empty byte)
 } AS7331_OutputResultRegisterBank_t;
 
 // Structure for all registers
 typedef struct __attribute__((packed)) {
-    AS7331_OSR_t OSR;
-    uint8_t STATUS;
+    AS7331_OSR_STATUS_t OSR_STATUS;
     uint16_t TEMP;
     uint16_t MRES1;
     uint16_t MRES2;
@@ -259,13 +254,9 @@ typedef struct __attribute__((packed)) {
 
 HAL_StatusTypeDef AS7331_Init(void);
 HAL_StatusTypeDef AS7331_ReadUVData(AS7331_UVData_t *uvData);
-HAL_StatusTypeDef AS7331_WriteRegister(uint8_t regAddr, uint8_t value);
-HAL_StatusTypeDef AS7331_ReadRegister(uint8_t regAddr, uint8_t *value);
-HAL_StatusTypeDef AS7331_ReadRegister16(uint8_t regAddr, uint16_t *value);
 HAL_StatusTypeDef AS7331_UpdateOutputResultRegisters(AS7331_OutputResultRegisterBank_t *outputRegisters);
 HAL_StatusTypeDef AS7331_SetIntegrationTime(AS7331_CREG1_TIME_t time);
 HAL_StatusTypeDef AS7331_SetGain(AS7331_CREG1_GAIN_t gain);
-HAL_StatusTypeDef AS7331_ReadOSRStatus(uint8_t *osr, uint8_t *status);
-HAL_StatusTypeDef AS7331_WriteRegisters(void);
+HAL_StatusTypeDef AS7331_ReadOSRStatus(void);
 
 #endif // AS7331_H

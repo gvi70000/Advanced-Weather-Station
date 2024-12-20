@@ -30,10 +30,8 @@ static HAL_StatusTypeDef AS7331_ReadRegister(uint8_t reg, uint8_t* data, uint8_t
 
 // Function to initialize the AS7331 sensor
 HAL_StatusTypeDef AS7331_Init(void) {
-    uint8_t osr, status;
-
     // Step 1: Verify communication by reading OSR and STATUS registers
-    if (AS7331_ReadOSRStatus(&osr, &status) != HAL_OK) {
+    if (AS7331_ReadOSRStatus() != HAL_OK) {
         return HAL_ERROR; // Communication failed
     }
 
@@ -86,6 +84,26 @@ HAL_StatusTypeDef AS7331_ReadUVData(AS7331_UVData_t *uvData) {
     return HAL_OK;
 }
 
+// Function to set the integration time in the CREG1 register
+HAL_StatusTypeDef AS7331_SetIntegrationTime(AS7331_CREG1_TIME_t time) {
+    AS7331_Sensor.CREG1.Val.BitField.TIME = time;
+    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
+}
+
+// Function to set the gain in the CREG1 register
+HAL_StatusTypeDef AS7331_SetGain(AS7331_CREG1_GAIN_t gain) {
+    AS7331_Sensor.CREG1.Val.BitField.GAIN = gain;
+    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
+}
+
+// Function to read the OSR and STATUS register as part of a single read operation
+HAL_StatusTypeDef AS7331_ReadOSRStatus(void) {
+    // Read both OSR and STATUS registers directly into OSR_STATUS structure
+    if (AS7331_ReadRegister(AS7331_REG_OSR, (uint8_t *)&AS7331_Sensor.OSR_STATUS, 2) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    return HAL_OK;
+}
 // Function to read and update the output result registers
 HAL_StatusTypeDef AS7331_UpdateOutputResultRegisters(AS7331_OutputResultRegisterBank_t *outputRegisters) {
     uint8_t buffer[2];
@@ -123,45 +141,5 @@ HAL_StatusTypeDef AS7331_UpdateOutputResultRegisters(AS7331_OutputResultRegister
     return HAL_OK;
 }
 
-// Function to set the integration time in the CREG1 register
-HAL_StatusTypeDef AS7331_SetIntegrationTime(AS7331_CREG1_TIME_t time) {
-    AS7331_Sensor.CREG1.Val.BitField.TIME = time;
-    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
-}
-
-// Function to set the gain in the CREG1 register
-HAL_StatusTypeDef AS7331_SetGain(AS7331_CREG1_GAIN_t gain) {
-    AS7331_Sensor.CREG1.Val.BitField.GAIN = gain;
-    return AS7331_WriteRegister(AS7331_REG_CREG1, &AS7331_Sensor.CREG1.Val.Value, 1);
-}
-
-// Function to read the OSR and STATUS register as part of a single read operation
-HAL_StatusTypeDef AS7331_ReadOSRStatus(uint8_t *osr, uint8_t *status) {
-    uint8_t buffer[2];
-
-    if (AS7331_ReadRegister(AS7331_REG_OSR, buffer, 2) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    *osr = buffer[0];
-    *status = buffer[1];
-
-    return HAL_OK;
-}
-
-// Function to write the entire AS7331_Sensor structure back to the device
-HAL_StatusTypeDef AS7331_WriteRegisters(void) {
-    uint8_t *buffer = (uint8_t *)&AS7331_Sensor;
-    uint8_t regAddr = 0x00; // Starting register address
-
-    // Write each register byte by byte
-    for (uint8_t i = 0; i < sizeof(AS7331_Sensor); i++) {
-        if (AS7331_WriteRegister(regAddr++, &buffer[i], 1) != HAL_OK) {
-            return HAL_ERROR;
-        }
-    }
-
-    return HAL_OK;
-}
 
 
