@@ -79,9 +79,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : INT_AS3935_Pin BMP_INT_Pin INT2_HDC3020_Pin INT_AS7331_Pin */
-  GPIO_InitStruct.Pin = INT_AS3935_Pin|BMP_INT_Pin|INT2_HDC3020_Pin|INT_AS7331_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  /*Configure GPIO pins : BMP_INT_Pin INT2_HDC3020_Pin INT_AS7331_Pin */
+  GPIO_InitStruct.Pin = BMP_INT_Pin|INT2_HDC3020_Pin|INT_AS7331_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -122,10 +122,16 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(IO2_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : INT_AS3935_Pin */
+//  GPIO_InitStruct.Pin = INT_AS3935_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+//  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+//  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
+//  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+//  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+	
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
@@ -141,5 +147,10 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
+void Init_IntAS3935(void) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+
+}
 
 /* USER CODE END 2 */

@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -110,16 +111,16 @@ typedef struct __attribute__((packed)) {
         } BitField;
     } Status; // Status bitfield indicating sensor data availability
 
-    float Temperature;								// Combined/average temperature (�C)
-    float RH;													// Combined/average relative humidity (%)
-    float Pressure;										// Pressure (Pa)
-		float SoundSpeed;									// Calculated souns spee in air for specific conditions
-		AS3935_Distance_t StormDistance;	// Distance to storm, if any 
-		ENS160_Data_t Air;								// Air quality data
-		ENS160_Resistance_t Resistance;		// Resistance data
-		AS7331_UVData_t UV_Data;					// UVA, UVB and UVC
-		TSL25911_LightData_t LightData;		//
-		TCS34003_LightData_t CRGB;				// Clear, Red, Green Blue light
+    float Temperature;							// Combined/average temperature (�C)
+    float RH;												// Combined/average relative humidity (%)
+    float Pressure;									// Pressure (Pa)
+		float SoundSpeed;								// Calculated souns spee in air for specific conditions
+		AS3935_Energy_t Storm;					// Distance to storm, if any 
+		ENS160_Data_t Air;							// Air quality data
+		ENS160_Resistance_t Resistance;	// Resistance data
+		AS7331_DataOut_t UV_Data;				// UVA, UVB and UVC
+		TSL25911_LightData_t LightData;	//
+		TCS34003_LightData_t CRGB;			// Clear, Red, Green Blue light
 } EnvData_t;
 
 EnvData_t envData;
@@ -239,7 +240,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 int main(void)
 {
 
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
@@ -269,16 +270,17 @@ int main(void)
   MX_I2C2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_RESET);
-	HAL_Delay(50);
-	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_SET);
-	HAL_Delay(100);	
-	envData.Status.Value = 0;
-	envData.Temperature = 0.0;
-	envData.Pressure = 0.0;
-	envData.RH = 0.0;
-	hdc3020_sensor_1.Address = HDC302X_SENSOR_1_ADDR;
-	hdc3020_sensor_2.Address = HDC302X_SENSOR_2_ADDR;
+//	Init_IntAS3935();
+//	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_RESET);
+//	HAL_Delay(50);
+//	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_SET);
+//	HAL_Delay(100);	
+//	envData.Status.Value = 0;
+//	envData.Temperature = 0.0;
+//	envData.Pressure = 0.0;
+//	envData.RH = 0.0;
+//	hdc3020_sensor_1.Address = HDC302X_SENSOR_1_ADDR;
+//	hdc3020_sensor_2.Address = HDC302X_SENSOR_2_ADDR;
 	myI2C_Scan();
 //    if (BMP581_Init() == HAL_OK) {
 //        printf("BMP581 initialized successfully.\n");
@@ -306,9 +308,10 @@ int main(void)
     // Initialize AS3935
 //    if (AS3935_Init() != HAL_OK) {
 //        printf("AS3935 initialization failed.\n");
-//        Error_Handler();
+//        //Error_Handler();
 //    } else {
 //        printf("AS3935 initialized successfully.\n");
+//				AS3935_TuneAntenna();
 //    }
 //    // Initialize ENS160
 //    if (ENS160_Init() != HAL_OK) {
@@ -318,10 +321,10 @@ int main(void)
 //        printf("ENS160 initialized successfully.\n");
 //    }
 //    // Initialize AS7331
-//    if (AS7331_Init() != HAL_OK) {
-//        printf("AS7331 initialization failed.\n");
-//        Error_Handler();
-//    }
+    if (AS7331_Init() != HAL_OK) {
+        printf("AS7331 initialization failed.\n");
+        Error_Handler();
+    }
 
     // Initialize TSL25911 for outdoor sunlight use
 //    if (TSL25911_Init() != HAL_OK) {
@@ -386,43 +389,17 @@ int main(void)
 //		}
 //		if(AS3935_Ready){
 //			AS3935_Ready = 0;
-//			envData.StormDistance = AS3935_GetDistanceToStorm();
-//        uint8_t intVal = AS3935_ReadInterruptStatus();
-
-//        switch (intVal) {
-//            case INT_NH:  // Noise level too high
-//                printf("AS3935: Noise detected.\n");
-//                break;
-
-//            case INT_D:  // Disturber detected
-//                printf("AS3935: Disturber detected.\n");
-//                break;
-
-//            case INT_L:  // Lightning detected
-//                printf("AS3935: Lightning strike detected!\n");
-
-//                // Get distance to the storm
-//                uint8_t distance = AS3935_GetDistanceToStorm();
-//                printf("AS3935: Distance to storm: %d km.\n", distance);
-
-//                // Get lightning energy
-//                uint32_t energy = AS3935_GetLightningEnergy();
-//                printf("AS3935: Lightning energy: %d.\n", energy);
-//                break;
-
-//            default:
-//                printf("AS3935: Unknown interrupt.\n");
-//                break;
-//        }
+//			HAL_Delay(2);
+//			AS3935_ReadLightningEnergyAndDistance(&envData.Storm);
 //		}
 //		if(ENS160_Ready) {
 //			ENS160_Ready = 0;
 //			ENS160_ReadAllData(&envData.Air, &envData.Resistance);
 //		}
-//		if(AS7331_Ready) {
-//			AS7331_Ready = 0;
-//			AS7331_ReadUVData(&envData.UV_Data);
-//		}
+		if(AS7331_Ready) {
+			AS7331_Ready = 0;
+			AS7331_ReadUVData(&envData.UV_Data);
+		}
 //		if(TSL25911_Ready) {
 //			TSL25911_Ready = 0;
 //			TSL25911_ReadLightData(&envData.LightData);
