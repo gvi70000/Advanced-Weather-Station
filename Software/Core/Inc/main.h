@@ -74,9 +74,6 @@ void Error_Handler(void);
 #define INT1_HDC3020_Pin GPIO_PIN_7
 #define INT1_HDC3020_GPIO_Port GPIOA
 #define INT1_HDC3020_EXTI_IRQn EXTI9_5_IRQn
-#define INT_AS3935_Pin GPIO_PIN_0
-#define INT_AS3935_GPIO_Port GPIOB
-#define INT_AS3935_EXTI_IRQn EXTI0_IRQn
 #define BMP_INT_Pin GPIO_PIN_1
 #define BMP_INT_GPIO_Port GPIOB
 #define BMP_INT_EXTI_IRQn EXTI1_IRQn
@@ -121,7 +118,9 @@ void Error_Handler(void);
 #define UST1_TX_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+#define INT_AS3935_Pin GPIO_PIN_0
+#define INT_AS3935_GPIO_Port GPIOB
+#define INT_AS3935_EXTI_IRQn EXTI0_IRQn
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
