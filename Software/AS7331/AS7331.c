@@ -75,13 +75,13 @@ HAL_StatusTypeDef AS7331_Init(void) {
 
     // Step 4: Set integration time and gain
     if (AS7331_SetIntegrationTime(TIME_1024MS) != HAL_OK) return HAL_ERROR;
-    if (AS7331_SetGain(GAIN_2048X) != HAL_OK) return HAL_ERROR;
+    if (AS7331_SetGain(GAIN_1X) != HAL_OK) return HAL_ERROR;
 
     // Step 5: Configure measurement mode to continuous
     if (AS7331_SetMeasurementMode(MEASURE_MODE_CONT) != HAL_OK) return HAL_ERROR;
 
-    // Step 6: Configure the READY pin for open-drain interrupts
-    if (AS7331_SetReadyOutputMode(RDY_PIN_OPEN_DRAIN) != HAL_OK) return HAL_ERROR;
+    // Step 6: Configure the READY pin for push-pull interrupts
+    if (AS7331_SetReadyOutputMode(RDY_PIN_PUSH_PULL) != HAL_OK) return HAL_ERROR;
 
     // Step 7: Set the clock frequency
     if (AS7331_SetClockFrequency(CLK_1MHZ) != HAL_OK) return HAL_ERROR;
@@ -462,10 +462,10 @@ HAL_StatusTypeDef AS7331_ReadUVData(AS7331_DataOut_t *uvData) {
     }
 
     // Step 4: Parse the data into the AS7331_DataOut_t structure
-    uvData->TEMP = ((uint16_t)data[1] << 8) | data[0]; // Temperature (16 bits)
-    uvData->UVA = ((uint16_t)data[3] << 8) | data[2];  // UVA (16 bits)
-    uvData->UVB = ((uint16_t)data[5] << 8) | data[4];  // UVB (16 bits)
-    uvData->UVC = ((uint16_t)data[7] << 8) | data[6];  // UVC (16 bits)
+    uvData->TEMP_C100 = (int16_t)((((uint16_t)data[1] << 8) | data[0]) * AS7331_TEMP1 - AS7331_TEMP2); // Convert TEMP to °C * 100
+    uvData->UVA = ((uint16_t)data[3] << 8) | data[2];                              // UVA (16 bits)
+    uvData->UVB = ((uint16_t)data[5] << 8) | data[4];                              // UVB (16 bits)
+    uvData->UVC = ((uint16_t)data[7] << 8) | data[6];                              // UVC (16 bits)
 
     return HAL_OK;
 }

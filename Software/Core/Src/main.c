@@ -83,11 +83,8 @@
 		volatile uint8_t HDC3020_1_Ready, AS3935_Ready, BMP581_Ready, HDC3020_2_Ready, ENS160_Ready, AS7331_Ready, TSL25911_Ready, TCS34003_Ready;
 		BMP581_sensor_data_t BMP581_Data;
 
-		HDC302x_t hdc3020_sensor_1; // Sensor connected to 0x44
-		HDC302x_t hdc3020_sensor_2; // Sensor connected to 0x45
 		HDC302x_Data_t HDC302x_Data_1;
 		HDC302x_Data_t HDC302x_Data_2;
-		
 		
     double height = 500.0;   // Height in meters
     double T = 20.0;         // Temperature in �C
@@ -124,6 +121,7 @@ typedef struct __attribute__((packed)) {
 } EnvData_t;
 
 EnvData_t envData;
+uint32_t readTime;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -183,31 +181,42 @@ void calculateWind(uint32_t ToF_up[3], uint32_t ToF_down[3], double speed_of_sou
 									 
 // Interrupt callback function for BMP581 and BNO086
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if(GPIO_Pin == INT1_HDC3020_Pin) { //PA7
-        HDC3020_1_Ready = 1;
+    switch (GPIO_Pin) {
+        case INT1_HDC3020_Pin:	// PA7
+            HDC3020_1_Ready = 1;
+            break;
+
+        case INT_AS3935_Pin:		// PB0
+            AS3935_Ready = 1;
+            break;
+
+        case BMP_INT_Pin:				// PB1
+            BMP581_Ready = 1;
+            break;
+
+        case INT2_HDC3020_Pin:	// PB2
+            HDC3020_2_Ready = 1;
+            break;
+
+        case INT_ENS160_Pin:		// PB12
+            ENS160_Ready = 1;
+            break;
+
+        case INT_AS7331_Pin:		// PB14
+            AS7331_Ready = 1;
+            break;
+
+        case INT_TSL25911_Pin:	// PB15
+            TSL25911_Ready = 1;
+            break;
+
+        case INT_TCS34717_Pin:	// PC6
+            TCS34003_Ready = 1;
+            break;
+//        default:
+//            // Optional: Handle unexpected interrupts
+//            break;
     }
-		if(GPIO_Pin == INT_AS3935_Pin) { //PB0
-        AS3935_Ready = 1;
-    }
-    if(GPIO_Pin == BMP_INT_Pin) { //PB1
-        BMP581_Ready = 1;
-    }
-    if(GPIO_Pin == INT2_HDC3020_Pin) { //PB2
-        HDC3020_2_Ready = 1;
-    }
-    if(GPIO_Pin == INT_ES160_Pin) { //PB12
-        ENS160_Ready = 1;
-    }
-    if(GPIO_Pin == INT_AS7331_Pin) { //PB14
-        AS7331_Ready = 1;
-    }
-    if(GPIO_Pin == INT_TSL25911_Pin) { //PB15
-        TSL25911_Ready = 1;
-    }
-    if(GPIO_Pin == INT_TCS34717_Pin) { //PC6
-        TCS34003_Ready = 1;
-    }
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin);
 }
 /* USER CODE END PFP */
 
@@ -215,10 +224,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 /* USER CODE BEGIN 0 */
 
 // Sensors on main board
-//* 01. AMS AS7331				UVA, UVB and UVC			connected on I2C2 with Interrupt on PB14		0xE8 = 0x74 << 1
-//* 02. AMS TSL25911FN		Ambient light					connected to I2C2 with Interrupt on PB15		0x52 = 0x29 << 1
-//* 03. AMS TCS34717FN		Color/clear light			connected to I2C1 with Interrupt on PC6			0x52 = 0x29 << 1
-//* 04. ScioSense ENS160	Multi-Gas Sensor			connected to I2C2 with Interrupt on PB12		0xA6 = 0x53 << 1
+//	01. AMS AS7331				UVA, UVB and UVC			connected on I2C2 with Interrupt on PB14		0xE8 = 0x74 << 1
+//	02. AMS TSL25911FN		Ambient light					connected to I2C2 with Interrupt on PB15		0x52 = 0x29 << 1
+//	03. AMS TCS34003FN		Color/clear light			connected to I2C1 with Interrupt on PC6			0x52 = 0x29 << 1
+//	04. ScioSense ENS160	Multi-Gas Sensor			connected to I2C2 with Interrupt on PB12		0xA6 = 0x53 << 1
 //* 05. ScioSense AS3935	Lightning Detector		connected to I2C2 with Interrupt on PB0			0x06 = 0x03 << 1
 // Sensors on flex board
 //* 06. Bosch BMP581	Pressure Temperature			connected to I2C2 with Interrupt on PB1		0x8C = 0x46 << 1
@@ -269,6 +278,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_I2C2_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 //	Init_IntAS3935();
 //	HAL_GPIO_WritePin(RST_HDC3020_GPIO_Port, RST_HDC3020_Pin, GPIO_PIN_RESET);
@@ -279,39 +289,35 @@ int main(void)
 //	envData.Temperature = 0.0;
 //	envData.Pressure = 0.0;
 //	envData.RH = 0.0;
-//	hdc3020_sensor_1.Address = HDC302X_SENSOR_1_ADDR;
-//	hdc3020_sensor_2.Address = HDC302X_SENSOR_2_ADDR;
-	myI2C_Scan();
-//    if (BMP581_Init() == HAL_OK) {
-//        printf("BMP581 initialized successfully.\n");
-//    } else {
-//        printf("Failed to initialize BMP581.\n");
-//        Error_Handler();
-//    }
-//    // Initialize Sensor 1 (I2C address: 0x44 << 1)
-//    status = HDC302x_Init(&hdc3020_sensor_1);
-//    if (status == HAL_OK) {
-//        printf("HDC3020 Sensor 1 (0x44) initialized successfully.\n");
-//    } else {
-//        printf("Failed to initialize HDC3020 Sensor 1 (0x44).\n");
-//        Error_Handler();
-//    }
 
-//    // Initialize Sensor 2 (I2C address: 0x45 << 1)
-//    //status = HDC302x_Init(&hdc3020_sensor_2);
-//    if (status == HAL_OK) {
-//        printf("HDC3020 Sensor 2 (0x45) initialized successfully.\n");
-//    } else {
-//        printf("Failed to initialize HDC3020 Sensor 2 (0x45).\n");
-//        Error_Handler();
-//    }
+	myI2C_Scan();
+    if (BMP581_Init() == HAL_OK) {
+        printf("BMP581 initialized successfully.\n");
+    } else {
+        printf("Failed to initialize BMP581.\n");
+        Error_Handler();
+    }
+//    // Initialize Sensor 1 (I2C address: 0x44 << 1)
+    if (HDC302x_Init(0) == HAL_OK) {
+        printf("HDC3020 Sensor 1 (0x44) initialized successfully.\n");
+    } else {
+        printf("Failed to initialize HDC3020 Sensor 1 (0x44).\n");
+    }
+
+    // Initialize Sensor 2 (I2C address: 0x45 << 1)
+    if (HDC302x_Init(1) == HAL_OK) {
+        printf("HDC3020 Sensor 2 (0x45) initialized successfully.\n");
+    } else {
+        printf("Failed to initialize HDC3020 Sensor 2 (0x45).\n");
+    }
+		readTime = HAL_GetTick();
     // Initialize AS3935
 //    if (AS3935_Init() != HAL_OK) {
 //        printf("AS3935 initialization failed.\n");
 //        //Error_Handler();
 //    } else {
 //        printf("AS3935 initialized successfully.\n");
-//				AS3935_TuneAntenna();
+//				//AS3935_TuneAntenna();
 //    }
 //    // Initialize ENS160
 //    if (ENS160_Init() != HAL_OK) {
@@ -321,10 +327,10 @@ int main(void)
 //        printf("ENS160 initialized successfully.\n");
 //    }
 //    // Initialize AS7331
-    if (AS7331_Init() != HAL_OK) {
-        printf("AS7331 initialization failed.\n");
-        Error_Handler();
-    }
+//    if (AS7331_Init() != HAL_OK) {
+//        printf("AS7331 initialization failed.\n");
+//        Error_Handler();
+//    }
 
     // Initialize TSL25911 for outdoor sunlight use
 //    if (TSL25911_Init() != HAL_OK) {
@@ -372,34 +378,63 @@ int main(void)
 			printf("Wind Direction: %.2f degrees\n", wind_direction);
 			envData.Status.Value = 0;
 		}
-//		if(BMP581_Ready){
-//			BMP581_Ready = 0;
-//			BMP581_Get_TempPressData(&BMP581_Data); 
-//			envData.Status.BitField.BMP = 1;
-//		}
-//    if(HDC3020_1_Ready){
-//			HDC3020_1_Ready = 0;
-//			//HDC302x_ReadData(&hdc3020_sensor_1, &HDC302x_Data_1); 
-//			envData.Status.BitField.HDC1 = 1;
-//		}
-//    if(HDC3020_2_Ready){
-//			HDC3020_2_Ready = 0;
-//			//HDC302x_ReadData(&hdc3020_sensor_2, &HDC302x_Data_2); 
-//			envData.Status.BitField.HDC2 = 1;
-//		}
-//		if(AS3935_Ready){
-//			AS3935_Ready = 0;
-//			HAL_Delay(2);
-//			AS3935_ReadLightningEnergyAndDistance(&envData.Storm);
-//		}
+		if(BMP581_Ready){
+			BMP581_Ready = 0;
+			BMP581_Get_TempPressData(&BMP581_Data); 
+			envData.Status.BitField.BMP = 1;
+		}
+		HAL_Delay(40);
+		if((HAL_GetTick() - readTime) > 1000) {
+				HDC302x_ReadTemperatureAndHumidity(0, &HDC302x_Data_1);
+				HDC302x_ReadTemperatureAndHumidity(1, &HDC302x_Data_2);
+				readTime = HAL_GetTick();	
+		}
+    if(HDC3020_1_Ready){
+			HDC3020_1_Ready = 0;
+			//HDC302x_ReadData(&hdc3020_sensor_1, &HDC302x_Data_1); 
+			envData.Status.BitField.HDC1 = 1;
+		}
+    if(HDC3020_2_Ready){
+			HDC3020_2_Ready = 0;
+			//HDC302x_ReadData(&hdc3020_sensor_2, &HDC302x_Data_2); 
+			envData.Status.BitField.HDC2 = 1;
+		}
+if (AS3935_Ready) {
+    AS3935_Ready = 0; // Reset flag
+    HAL_Delay(2); // Short delay to stabilize sensor state
+    // Get the type of interrupt
+    AS3935_INT_t intType = AS3935_GetInterruptType();
+    switch (intType) {
+        case INT_L:
+            // Lightning detected
+            if (AS3935_ReadLightningEnergyAndDistance(&envData.Storm) == HAL_OK) {
+                printf("Lightning detected! Energy: %d, Distance: %d km\n",
+                       envData.Storm.LightningEnergy,
+                       envData.Storm.DistanceEstimation);
+            } else {
+                printf("Error reading lightning energy or distance.\n");
+            }
+            break;
+        case INT_NH:
+            printf("Noise level too high!\n");
+            break;
+        case INT_D:
+            printf("Disturber detected.\n");
+            break;
+        case INT_NI:
+        default:
+            printf("No valid interrupt or error. Type: %d\n", intType);
+            break;
+    }
+}
 //		if(ENS160_Ready) {
 //			ENS160_Ready = 0;
 //			ENS160_ReadAllData(&envData.Air, &envData.Resistance);
 //		}
-		if(AS7331_Ready) {
-			AS7331_Ready = 0;
-			AS7331_ReadUVData(&envData.UV_Data);
-		}
+//		if(AS7331_Ready) {
+//			AS7331_Ready = 0;
+//			AS7331_ReadUVData(&envData.UV_Data);
+//		}
 //		if(TSL25911_Ready) {
 //			TSL25911_Ready = 0;
 //			TSL25911_ReadLightData(&envData.LightData);

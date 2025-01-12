@@ -17,45 +17,42 @@ extern "C" {
 #define BMP581_ADDRESS  0x8C  // 0x46 << 1
 
 // Chip id of BMP581
-#define BMP581_CHIP_ID_PRIM    0x50
-#define BMP581_CHIP_ID_SEC     0x51
+#define BMP581_CHIP_ID_PRIM    			0x50
+#define BMP581_CHIP_ID_SEC     			0x51
 
 // Register addresses
-#define BMP581_REG_CHIP_ID      0x01
-#define BMP581_REG_REV_ID       0x02
-#define BMP581_REG_CHIP_STATUS  0x11
-#define BMP581_REG_DRIVE_CONFIG 0x13
-#define BMP581_REG_INT_CONFIG   0x14
-#define BMP581_REG_INT_SOURCE   0x15
-#define BMP581_REG_FIFO_CONFIG  0x16
-#define BMP581_REG_FIFO_COUNT   0x17
-#define BMP581_REG_FIFO_SEL     0x18
-#define BMP581_REG_TEMP_DATA_XLSB  0x1D
-#define BMP581_REG_TEMP_DATA_LSB   0x1E
-#define BMP581_REG_TEMP_DATA_MSB   0x1F
-#define BMP581_REG_PRESS_DATA_XLSB 0x20
-#define BMP581_REG_PRESS_DATA_LSB  0x21
-#define BMP581_REG_PRESS_DATA_MSB  0x22
-#define BMP581_REG_INT_STATUS    0x27
-#define BMP581_REG_STATUS        0x28
-#define BMP581_REG_FIFO_DATA     0x29
-#define BMP581_REG_NVM_ADDR      0x2B
-#define BMP581_REG_NVM_DATA_LSB  0x2C
-#define BMP581_REG_NVM_DATA_MSB  0x2D
-#define BMP581_REG_DSP_CONFIG    0x30
-#define BMP581_REG_DSP_IIR       0x31
-#define BMP581_REG_OOR_THR_P_LSB 0x32
-#define BMP581_REG_OOR_THR_P_MSB 0x33
-#define BMP581_REG_OOR_RANGE     0x34
-#define BMP581_REG_OOR_CONFIG    0x35
-#define BMP581_REG_OSR_CONFIG    0x36
-#define BMP581_REG_ODR_CONFIG    0x37
-#define BMP581_REG_OSR_EFF       0x38
-#define BMP581_REG_CMD           0x7E
+#define BMP581_REG_CHIP_ID      		0x01
+#define BMP581_REG_REV_ID       		0x02
+#define BMP581_REG_CHIP_STATUS  		0x11
+#define BMP581_REG_DRIVE_CONFIG 		0x13
+#define BMP581_REG_INT_CONFIG   		0x14
+#define BMP581_REG_INT_SOURCE   		0x15
+#define BMP581_REG_FIFO_CONFIG  		0x16
+#define BMP581_REG_FIFO_COUNT   		0x17
+#define BMP581_REG_FIFO_SEL     		0x18
+#define BMP581_REG_TEMP_DATA_XLSB  	0x1D
+#define BMP581_REG_TEMP_DATA_LSB   	0x1E
+#define BMP581_REG_TEMP_DATA_MSB   	0x1F
+#define BMP581_REG_PRESS_DATA_XLSB	0x20
+#define BMP581_REG_PRESS_DATA_LSB		0x21
+#define BMP581_REG_PRESS_DATA_MSB		0x22
+#define BMP581_REG_INT_STATUS    		0x27
+#define BMP581_REG_STATUS        		0x28
+#define BMP581_REG_FIFO_DATA     		0x29
+#define BMP581_REG_NVM_ADDR      		0x2B
+#define BMP581_REG_NVM_DATA_LSB  		0x2C
+#define BMP581_REG_NVM_DATA_MSB  		0x2D
+#define BMP581_REG_DSP_CONFIG    		0x30
+#define BMP581_REG_DSP_IIR       		0x31
+#define BMP581_REG_OOR_THR_P_LSB 		0x32
+#define BMP581_REG_OOR_THR_P_MSB 		0x33
+#define BMP581_REG_OOR_RANGE     		0x34
+#define BMP581_REG_OOR_CONFIG    		0x35
+#define BMP581_REG_OSR_CONFIG    		0x36
+#define BMP581_REG_ODR_CONFIG    		0x37
+#define BMP581_REG_OSR_EFF       		0x38
+#define BMP581_REG_CMD           		0x7E
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_HIF_MODE_I2C_ONLY            = 0x0,  // 0b00: I2C Mode Only (SPI disabled)
     BMP581_HIF_MODE_SPI_MODE1_MODE2     = 0x1,  // 0b01: SPI Mode1 and Mode2
@@ -63,137 +60,86 @@ typedef enum {
     BMP581_HIF_MODE_SPI_I2C_AUTOCONFIG  = 0x3   // 0b11: SPI and I2C available (autoconfig)
 } BMP581_hif_mode_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_I3C_ERR_0_NO_ERROR    = 0x0,  // 0b0: No SDR parity error occurred
     BMP581_I3C_ERR_0_ERROR       = 0x1   // 0b1: SDR parity error occurred
 } BMP581_i3c_err_0_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_I3C_ERR_3_NO_ERROR    = 0x0,  // 0b0: No S0/S1 error occurred
     BMP581_I3C_ERR_3_ERROR       = 0x1   // 0b1: S0/S1 error occurred
 } BMP581_i3c_err_3_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_I2C_CSB_PULLUP_DISABLED = 0x0,  // 0b0: Pullup disabled
     BMP581_I2C_CSB_PULLUP_ENABLED  = 0x1   // 0b1: Pullup enabled
 } BMP581_i2c_csb_pup_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_SPI_4WIRE_MODE = 0x0,  // 0b0: SPI 4-wire mode
     BMP581_SPI_3WIRE_MODE = 0x1   // 0b1: SPI 3-wire mode
 } BMP581_spi3_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_PAD_DRV_LOW  = 0x0,  // 0b0: Low drive strength
     BMP581_PAD_DRV_HIGH = 0x1   // 0b1: High drive strength
 } BMP581_pad_if_drv_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_INT_MODE_PULSED  = 0x0,  // 0b0: Pulsed
     BMP581_INT_MODE_LATCHED = 0x1   // 0b1: Latched
 } BMP581_int_mode_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_INT_POL_ACTIVE_LOW  = 0x0,  // 0b0: Active Low
     BMP581_INT_POL_ACTIVE_HIGH = 0x1   // 0b1: Active High
 } BMP581_int_pol_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_INT_PIN_PUSH_PULL  = 0x0,  // 0b0: Push-Pull
     BMP581_INT_PIN_OPEN_DRAIN = 0x1   // 0b1: Open-Drain
 } BMP581_int_od_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_INT_DISABLE = 0x0,  // 0b0: Interrupts disabled
     BMP581_INT_ENABLE  = 0x1   // 0b1: Interrupts enabled
 } BMP581_int_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_INT_DRV_LOW  = 0x0,  // 0b0: Low drive strength
     BMP581_INT_DRV_HIGH = 0x1   // 0b1: High drive strength
 } BMP581_pad_int_drv_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_DRDY_DISABLE = 0x0,  // 0b0: Data Ready interrupt disabled
     BMP581_DRDY_ENABLE  = 0x1   // 0b1: Data Ready interrupt enabled
 } BMP581_drdy_data_reg_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_FULL_DISABLE = 0x0,  // 0b0: FIFO Full interrupt disabled
     BMP581_FIFO_FULL_ENABLE  = 0x1   // 0b1: FIFO Full interrupt enabled
 } BMP581_fifo_full_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_THS_DISABLE = 0x0,  // 0b0: FIFO Threshold/Watermark interrupt disabled
     BMP581_FIFO_THS_ENABLE  = 0x1   // 0b1: FIFO Threshold/Watermark interrupt enabled
 } BMP581_fifo_ths_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_OOR_P_DISABLE = 0x0,  // 0b0: Pressure Out-of-Range interrupt disabled
     BMP581_OOR_P_ENABLE  = 0x1   // 0b1: Pressure Out-of-Range interrupt enabled
 } BMP581_oor_p_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_THR_DISABLE = 0x00,  // 0x0: Disable the FIFO threshold
     BMP581_FIFO_THR_31_FRAMES = 0x1F // 0x1F: Set the FIFO threshold to 31 frames
 } BMP581_fifo_threshold_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_MODE_STREAM = 0x0,  // 0b0: Stream-to-FIFO Mode
     BMP581_FIFO_MODE_STOP_ON_FULL = 0x1  // 0b1: STOP-on-FULL Mode
 } BMP581_fifo_mode_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_NOT_ENABLED = 0x0,         // 0b00: FIFO not enabled
     BMP581_FIFO_TEMP_DATA = 0x1,           // 0b01: Temperature data
@@ -201,9 +147,6 @@ typedef enum {
     BMP581_FIFO_PRESS_TEMP_DATA = 0x3      // 0b11: Pressure and temperature data
 } BMP581_fifo_frame_s_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_FIFO_NO_DOWNSAMPLING = 0x0,     // 0b000: No decimation
     BMP581_FIFO_DOWNSAMPLING_2X = 0x1,     // 0b001: 2x downsampling
@@ -215,9 +158,6 @@ typedef enum {
     BMP581_FIFO_DOWNSAMPLING_128X = 0x7    // 0b111: 128x downsampling
 } BMP581_fifo_dec_sel_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_COMP_NONE            = 0x0,  // 0b00: No compensation for both Pressure and Temperature
     BMP581_COMP_TEMP_ONLY       = 0x1,  // 0b01: No Pressure compensation, Temperature compensation enabled
@@ -225,33 +165,21 @@ typedef enum {
     BMP581_COMP_PRESS_TEMP_BOTH = 0x3   // 0b11: Compensation enabled for both Pressure and Temperature
 } BMP581_comp_pt_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_IIR_FLUSH_DISABLED = 0x0,  // 0b0: IIR flush disabled
     BMP581_IIR_FLUSH_ENABLED  = 0x1   // 0b1: IIR flush enabled in FORCED mode
 } BMP581_iir_flush_forced_en_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_IIR_BEFORE_FILTER = 0x0,  // 0b0: Value selected before IIR filter
     BMP581_IIR_AFTER_FILTER  = 0x1   // 0b1: Value selected after IIR filter
 } BMP581_iir_selection_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_OOR_IIR_BEFORE_FILTER = 0x0,  // 0b0: Value selected before IIR filter
     BMP581_OOR_IIR_AFTER_FILTER  = 0x1   // 0b1: Value selected after IIR filter
 } BMP581_oor_iir_sel_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_IIR_BYPASS    = 0x0,  // 0b000: Bypass
     BMP581_IIR_COEFF_1   = 0x1,  // 0b001: Filter Coefficient: 1
@@ -263,9 +191,6 @@ typedef enum {
     BMP581_IIR_COEFF_127 = 0x7   // 0b111: Filter Coefficient: 127
 } BMP581_iir_filter_coeff_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_OOR_CNT_LIMIT_1  = 0x0,  // Counter limit of 1
     BMP581_OOR_CNT_LIMIT_3  = 0x1,  // Counter limit of 3
@@ -273,9 +198,6 @@ typedef enum {
     BMP581_OOR_CNT_LIMIT_15 = 0x3   // Counter limit of 15
 } BMP581_oor_cnt_limit_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_OSR_1X    = 0x0,  // Oversampling rate = 1x
     BMP581_OSR_2X    = 0x1,  // Oversampling rate = 2x
@@ -287,9 +209,6 @@ typedef enum {
     BMP581_OSR_128X  = 0x7   // Oversampling rate = 128x
 } BMP581_osr_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_PWRMODE_STANDBY  = 0x0,  // Standby mode: no measurement ongoing
     BMP581_PWRMODE_NORMAL   = 0x1,  // Normal mode: measurement in configured ODR grid
@@ -297,9 +216,6 @@ typedef enum {
     BMP581_PWRMODE_NONSTOP  = 0x3   // Non-Stop mode: repetitive measurements without further duty-cycling
 } BMP581_pwr_mode_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_ODR_240_HZ   = 0x0,  // 240.000 Hz
     BMP581_ODR_218_HZ   = 0x1,  // 218.537 Hz
@@ -335,17 +251,11 @@ typedef enum {
     BMP581_ODR_0_125_HZ = 0x1F  // 0.125 Hz
 } BMP581_odr_sel_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_DEEP_ENABLED  = 0,  // Enable deep standby mode
     BMP581_DEEP_DISABLED = 1   // Disable deep standby mode
 } BMP581_deep_standby_t;
 
-/**
- * @brief enum definition.
- */
 typedef enum {
     BMP581_CMD_NO_CMD        = 0x00, // Reserved. No command.
     BMP581_CMD_NVM_WRITE_1   = 0x5D, // First CMD in the sequence 0x5D, 0xA0/0xA5 for NVM write/read.
@@ -359,459 +269,148 @@ typedef enum {
 
 
 // ASIC Status Register (0x11)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief hif_mode function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t hif_mode   : 2;  // Bits 0-1: HIF mode (NVM-backed)
-/**
- * @brief i3c_err_0 function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t i3c_err_0  : 1;  // Bit 2: SDR parity error occurred
-/**
- * @brief i3c_err_3 function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t i3c_err_3  : 1;  // Bit 3: S0/S1 error occurred
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved   : 4; // Bits 4-7: Reserved
         } BitField;
     } Val;
 } BMP581_asic_status_t;
 
 // Host Interface Related Settings (0x13)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief i2c_csb_pup_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t i2c_csb_pup_en  : 1;  // Bit 0: CSB pullup selection (valid in I2C mode only)
-/**
- * @brief spi3_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t spi3_en         : 1;  // Bit 1: SPI 3-wire mode enabling
-/**
- * @brief reserved_1 function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved_1      : 2;  // Bit 2-3: Reserved
-/**
- * @brief pad_if_drv function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t pad_if_drv      : 1;  // Bit 4: Pad drive strength for serial IO pins (valid in I2C mode only)
-/**
- * @brief reserved_2 function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved_2    	: 3;  // Bits 5-7: Reserved
         } BitField;
     } Val;
 } BMP581_host_if_config_t;
 
 // Interrupt Configuration Register (0x14)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief int_mode function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t int_mode      : 1;  // Bit 0: INT mode (pulsed or latched)
-/**
- * @brief int_pol function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t int_pol       : 1;  // Bit 1: INT polarity (active low or active high)
-/**
- * @brief int_od function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t int_od        : 1;  // Bit 2: INT pin (push-pull or open drain)
-/**
- * @brief int_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t int_en        : 1;  // Bit 3: Interrupt enabling
-/**
- * @brief pad_int_drv function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t pad_int_drv   : 1;  // Bit 4: Pad drive strength for INT
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved      : 3;  // Bits 5-7: Reserved
         } BitField;
     } Val;
 } BMP581_int_config_t;
 
 // INT Source Selection Register (0x15)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief drdy_data_reg_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t drdy_data_reg_en : 1;  // Bit 0: Data Ready interrupt enable
-/**
- * @brief fifo_full_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_full_en      : 1;  // Bit 1: FIFO Full interrupt enable
-/**
- * @brief fifo_ths_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_ths_en       : 1;  // Bit 2: FIFO Threshold/Watermark interrupt enable
-/**
- * @brief oor_p_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t oor_p_en          : 1;  // Bit 3: Pressure Out-of-Range interrupt enable
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved		      : 4;  // Bits 4-7: Reserved
         } BitField;
     } Val;
 } BMP581_int_source_t;
 
 // FIFO Configuration Register (0x16)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief fifo_threshold function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_threshold : 5;  // Bits 0-4: FIFO threshold value
-/**
- * @brief fifo_mode function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_mode      : 1;  // Bit 5: FIFO mode control
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved		   : 2;  // Bits 6-7: Reserved
         } BitField;
     } Val;
 } BMP581_fifo_config_t;
 
 // Number of Frames in FIFO Register (0x17)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief fifo_count function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_count   : 6;  // Bits 0-5: Number of frames in FIFO
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved		 : 2;  // Bits 6-7: Reserved
         } BitField;
     } Val;
 } BMP581_fifo_count_t;
 
 // FIFO Selection Configuration Register (0x18)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief fifo_frame_sel function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_frame_sel : 2;  // Bits 0-1: FIFO frame data source selection
-/**
- * @brief fifo_dec_sel function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_dec_sel   : 3;  // Bits 2-4: FIFO decimation selection
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved		   : 3;  // Bits 5-7: Reserved
         } BitField;
     } Val;
 } BMP581_fifo_frame_sel_t;
 
 // BMP5 sensor data structure for temperature and pressure (0x1D - 0x1F) + (0x20 - 0x22)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     float pressure;    // Pressure data in Pa
     float temperature; // Temperature data in degrees Celsius
 } BMP581_sensor_data_t;
 
 // Interrupt Status Register (0x27)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief drdy_data_reg function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t drdy_data_reg  : 1;  // Bit 0: Data Ready
-/**
- * @brief fifo_full function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_full      : 1;  // Bit 1: FIFO Full
-/**
- * @brief fifo_ths function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t fifo_ths       : 1;  // Bit 2: FIFO Threshold/Watermark
-/**
- * @brief oor_p function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t oor_p          : 1;  // Bit 3: Pressure data out-of-range
-/**
- * @brief por function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t por            : 1;  // Bit 4: POR or software reset complete
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved   		 : 3;  // Bits 5-7: Reserved
         } BitField;
     } Val;
 } BMP581_int_status_t;
 
 // Status Register (0x28)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief status_core_rdy function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t status_core_rdy      	    : 1;  // Bit 0: Digital core domain is accessible
-/**
- * @brief status_nvm_rdy function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t status_nvm_rdy       	    : 1;  // Bit 1: Device is ready for NVM operations
-/**
- * @brief status_nvm_err function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t status_nvm_err       		  : 1;  // Bit 2: Indicates an NVM error
-/**
- * @brief status_nvm_cmd_err function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t status_nvm_cmd_err    	  : 1;  // Bit 3: Indicates a boot command error
-/**
- * @brief status_boot_err_corrected function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t status_boot_err_corrected : 1;  // Bit 4: Indicates that an error was corrected by ECC
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved			            : 2;  // Bits 5-6: Reserved
-/**
- * @brief st_crack_pass function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t st_crack_pass           	: 1;  // Bit 7: Crack check successfully executed
         } BitField;
     } Val;
 } BMP581_status_t;
 
 // NVM Address Register (0x2B)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief nvm_row_address function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t nvm_row_address  : 6;  // Bits 0-5: NVM row address
-/**
- * @brief nvm_prog_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t nvm_prog_en      : 1;  // Bit 6: NVM programming enable
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved         : 1;  // Bit 7: Reserved
         } BitField;
     } Val;
 } BMP581_nvm_addr_t;
 
 // DSP Configuration Register (0x30)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
             BMP581_comp_pt_en_t           comp_pt_en           : 2;  // Bits 0-1: Pressure/Temperature sensor compensation enable
@@ -826,54 +425,23 @@ typedef struct __attribute__((packed)) {
 } BMP581_dsp_config_t;
 
 // DSP IIR Configuration (0x31)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
             BMP581_iir_filter_coeff_t set_iir_p : 3;  // Bits 0-2: Pressure IIR LPF band filter selection
             BMP581_iir_filter_coeff_t set_iir_t : 3;  // Bits 3-5: Temperature IIR LPF band filter selection
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved		                : 2;  // Bits 6-7: Reserved, should be written as 0x0
         } BitField;
     } Val;
 } BMP581_dsp_iir_config_t;
 
 // OOR Count Limit (0x35)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief oor_thr_p_16 function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t oor_thr_p_16					 : 1;  // Bit 0: OOR pressure threshold, bit 16
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved							 : 5;  // Bits 1-5: Reserved
             BMP581_oor_cnt_limit_t cnt_lim : 2;  // Bits 6-7: OOR count limit (use enum)
         } BitField;
@@ -881,47 +449,21 @@ typedef struct __attribute__((packed)) {
 } BMP581_oor_config_t;
 
 // Oversampling rates (0x36)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
             BMP581_osr_t osr_t   : 3;  // Bits 0-2: OSR_T selection
             BMP581_osr_t osr_p   : 3;  // Bits 3-5: OSR_P selection
-/**
- * @brief press_en function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t press_en     : 1;  // Bit 6: Pressure enable
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved	   : 1;  // Bit 7: Reserved
         } BitField;
     } Val;
 } BMP581_osr_config_t;
 
 // ODR Configuration Register (0x37)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
             BMP581_pwr_mode_t pwr_mode 			: 2;  // Bits 0-1: Power mode configuration
@@ -932,49 +474,18 @@ typedef struct __attribute__((packed)) {
 } BMP581_odr_config_t;
 
 // Effective OSR Configuration Register (0x38)
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     union {
-/**
- * @brief Value; function.
- * @param None
- * @return uint8_t value.
- */
         uint8_t Value;
         struct __attribute__((packed)) {
-/**
- * @brief osr_t_eff function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t osr_t_eff      : 3;  // Bits 0-2: Effective OSR for temperature
-/**
- * @brief osr_p_eff function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t osr_p_eff      : 3;  // Bits 3-5: Effective OSR for pressure
-/**
- * @brief reserved function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t reserved	     : 1;  // Bit 6: Reserved
-/**
- * @brief odr_is_valid function.
- * @param None
- * @return uint8_t value.
- */
             uint8_t odr_is_valid   : 1;  // Bit 7: ODR validity flag
         } BitField;
     } Val;
 } BMP581_osr_eff_config_t;
 
-/**
- * @brief struct definition.
- */
 typedef struct __attribute__((packed)) {
     //uint8_t CHIP_ID;												// BMP581_REG_CHIP_ID (0x01)
     //uint8_t CHIP_REV;												// BMP581_REG_CHIP_REV (0x02)
@@ -988,22 +499,12 @@ typedef struct __attribute__((packed)) {
     BMP581_sensor_data_t TEMP_PRESS;				// BMP581_REG_TEMP_DATA_XLSB - BMP581_REG_TEMP_DATA_MSB (0x1D - 0x1F) + BMP581_REG_PRESS_DATA_XLSB - BMP581_REG_PRESS_DATA_MSB (0x20 - 0x22)
     BMP581_int_status_t INT_STATUS;					// BMP581_REG_INT_STATUS (0x27)
     BMP581_status_t STATUS;									// BMP581_REG_STATUS (0x28)
-/**
- * @brief FIFO_DATA; function.
- * @param None
- * @return uint8_t value.
- */
     uint8_t FIFO_DATA;											// BMP581_REG_FIFO_DATA (0x29)
     BMP581_nvm_addr_t NVM_ADDR;							// BMP581_REG_NVM_ADDR (0x2B)
     uint16_t NVM_DATA;											// BMP581_REG_NVM_DATA_LSB - BMP581_REG_NVM_DATA_MSB (0x2C - 0x2D)
     BMP581_dsp_config_t DSP_CONFIG;					// BMP581_REG_DSP_CONFIG (0x30)
 		BMP581_dsp_iir_config_t DSP_IIR_CONFIG;	// BMP581_REG_DSP_IIR_CONFIG (0x31)
 		uint16_t OOR_PRESS_THR;									// BMP581_REG_OOR_PRESS_THR (0x32 - 0x33)
-/**
- * @brief OOR_PRESS_RNG; function.
- * @param None
- * @return uint8_t value.
- */
 		uint8_t OOR_PRESS_RNG;									// BMP581_REG_OOR_PRESS_RNG (0x34)
 		BMP581_oor_config_t OOR_CONFIG;					// BMP581_REG_OOR_CONFIG (0x35)
     BMP581_osr_config_t OSR_CONFIG;					// BMP581_REG_OSR_CONFIG (0x36)

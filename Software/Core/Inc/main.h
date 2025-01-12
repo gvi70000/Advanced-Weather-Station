@@ -74,6 +74,9 @@ void Error_Handler(void);
 #define INT1_HDC3020_Pin GPIO_PIN_7
 #define INT1_HDC3020_GPIO_Port GPIOA
 #define INT1_HDC3020_EXTI_IRQn EXTI9_5_IRQn
+#define INT_AS3935_Pin GPIO_PIN_0
+#define INT_AS3935_GPIO_Port GPIOB
+#define INT_AS3935_EXTI_IRQn EXTI0_IRQn
 #define BMP_INT_Pin GPIO_PIN_1
 #define BMP_INT_GPIO_Port GPIOB
 #define BMP_INT_EXTI_IRQn EXTI1_IRQn
@@ -84,9 +87,9 @@ void Error_Handler(void);
 #define GPS_RX_GPIO_Port GPIOB
 #define GPS_TX_Pin GPIO_PIN_11
 #define GPS_TX_GPIO_Port GPIOB
-#define INT_ES160_Pin GPIO_PIN_12
-#define INT_ES160_GPIO_Port GPIOB
-#define INT_ES160_EXTI_IRQn EXTI15_10_IRQn
+#define INT_ENS160_Pin GPIO_PIN_12
+#define INT_ENS160_GPIO_Port GPIOB
+#define INT_ENS160_EXTI_IRQn EXTI15_10_IRQn
 #define SYN_Pin GPIO_PIN_13
 #define SYN_GPIO_Port GPIOB
 #define INT_AS7331_Pin GPIO_PIN_14

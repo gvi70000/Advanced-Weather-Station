@@ -42,7 +42,7 @@ static HAL_StatusTypeDef AS3935_ReadRegister(uint8_t reg, uint8_t* data, uint8_t
  */
 static inline HAL_StatusTypeDef AS3935_SendDirectCommand(uint8_t commandReg) {
     // Write the direct command (0x96) to the specified register
-	return AS3935_WriteRegister(commandReg, (uint8_t*)AS3935_DIRECT_COMMAND, 1);
+		return AS3935_WriteRegister(commandReg, (uint8_t*)AS3935_DIRECT_COMMAND, 1);
 }
 
 /**
@@ -61,27 +61,55 @@ static inline HAL_StatusTypeDef AS3935_SendDirectCommand(uint8_t commandReg) {
  */
 HAL_StatusTypeDef AS3935_Init(void) {
     // Wake up the sensor
-    if (AS3935_WakeUp() != HAL_OK) {
-        return HAL_ERROR; // Wake-up failed
+    // Clear power-down bit and set recommended outdoor gain
+    AS3935_Sensor.POWER.Val.BitField.PWD = AS3935_POWER_UP;
+    AS3935_Sensor.POWER.Val.BitField.GAIN = AFE_GAIN_OUTDOOR;
+    if (AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    HAL_Delay(AS3935_CMD_DELAY); // Wait 2ms for wake-up
+		
+		AS3935_ReadAllRegisters();
+
+		if (AS3935_setTuningCapacitor(TUN_CAP_64PF) != HAL_OK) {
+        return HAL_ERROR;
     }
 	
-	AS3935_Sensor.NOISE.Val.BitField.NF_LEV = NOISE_FLOOR_390uVrms;
-	AS3935_Sensor.NOISE.Val.BitField.WDTH = EFFICIENCY_100;
+		AS3935_Sensor.NOISE.Val.BitField.NF_LEV = NOISE_FLOOR_390uVrms;
+		AS3935_Sensor.NOISE.Val.BitField.WDTH = EFFICIENCY_100;
     if (AS3935_WriteRegister(THRESHOLD, &AS3935_Sensor.NOISE.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to configure detection and noise
     }
-	AS3935_Sensor.STATISTICS.Val.BitField.SREJ = SREJ_LEVEL_0;
-	AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = MIN_NUM_LIGHTNING_1;
+		AS3935_Sensor.STATISTICS.Val.BitField.SREJ = SREJ_LEVEL_0;
+		AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = MIN_NUM_LIGHTNING_1;
     if (AS3935_ClearStatistics(CLEAR_STAT_ENABLED) != HAL_OK) {
         return HAL_ERROR; // Failed to configure lightning statistics
     }
-	AS3935_Sensor.INT_FREQ.Val.BitField.INT = INT_L;
-	AS3935_Sensor.INT_FREQ.Val.BitField.MASK_DIST = MASK_DIST_DISABLED;
-	AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = LCO_FDIV_RATIO_16;
+		AS3935_Sensor.INT_FREQ.Val.BitField.INT = INT_L;
+		AS3935_Sensor.INT_FREQ.Val.BitField.MASK_DIST = MASK_DIST_DISABLED;
+		AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = LCO_FDIV_RATIO_16;
     // Configure interrupts and frequency division ratio (INT = INT_L, show disturbers, divide frequency by 16)
     if (AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to configure interrupts and frequency
     }
+		HAL_Delay(AS3935_CMD_DELAY); // Wait 250ms for calibration
+		
+    // Send calibrate command
+    if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
+        return HAL_ERROR;
+    }
+		if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+        return HAL_ERROR; // Failed to configure interrupts and frequency
+    }
+    HAL_Delay(250); // Wait 250ms for calibration
+		if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+        return HAL_ERROR; // Failed to configure interrupts and frequency
+    }
+    // Verify calibration status
+		// ToDo! Check what is wrong with the frequency
+//    if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
+//        return HAL_ERROR; // Calibration failed
+//    }
     return HAL_OK; // Initialization successful
 }
 
@@ -128,42 +156,6 @@ HAL_StatusTypeDef AS3935_ReadAllRegisters(void) {
 
     return HAL_OK;
 }
-
-/**
- * @brief Wakes up the AS3935 lightning sensor from power-down mode.
- * 
- * Clears the power-down bit and recalibrates the oscillators.
- * 
- * @retval HAL_OK Wake-up successful.
- * @retval HAL_ERROR Wake-up failed.
- */
-HAL_StatusTypeDef AS3935_WakeUp(void) {
-    // Clear power-down bit and set recommended outdoor gain
-    AS3935_Sensor.POWER.Val.BitField.PWD = AS3935_POWER_UP;
-    AS3935_Sensor.POWER.Val.BitField.GAIN = AFE_GAIN_OUTDOOR;
-    if (AS3935_WriteRegister(AFE_GAIN, &AS3935_Sensor.POWER.Val.Value, 1) != HAL_OK) {
-        return HAL_ERROR;
-    }
-    HAL_Delay(AS3935_CMD_DELAY); // Wait 2ms for wake-up
-	AS3935_ReadAllRegisters();
-    // Calibrate TRCO
-    if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
-        return HAL_ERROR;
-    }
-    AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = TUN_CAP_64PF;
-	AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = OSC_DISPLAY_SRCO_ONLY;
-    if (AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1) != HAL_OK) {
-        return HAL_ERROR;
-    }
-    HAL_Delay(AS3935_CAL_DELAY); // Wait 250ms for calibration
-    // Verify calibration status
-	// ToDo! Check what is wrong with the frequency
-//    if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
-//        return HAL_ERROR; // Calibration failed
-//    }
-    return HAL_OK;
-}
-
 
 /**
  * @brief Configures the power state of the AS3935 sensor.
@@ -235,7 +227,7 @@ HAL_StatusTypeDef AS3935_SetSpikeRejectionLevel(AS3935_SREJ_t spikeRejectionLeve
 HAL_StatusTypeDef AS3935_SetLightningNo(AS3935_MinLightning_t noLightningEvents) {
     AS3935_Sensor.STATISTICS.Val.BitField.MIN_NUM_LIGH = noLightningEvents;
     return AS3935_WriteRegister(LIGHTNING_REG, &AS3935_Sensor.STATISTICS.Val.Value, 1);
-
+}
 
 /**
  * @brief Clears the lightning statistics in the AS3935 sensor.
@@ -259,15 +251,24 @@ HAL_StatusTypeDef AS3935_ClearStatistics(AS3935_ClearStat_t clearStat) {
 }
 
 /**
- * @brief Sets the type of interrupt generated by the AS3935 sensor.
- * 
- * @param interrupt The desired interrupt type.
- * @retval HAL_OK     Operation successful.
- * @retval HAL_ERROR  Communication failure.
+ * @brief Reads the interrupt register (0x03) and updates the AS3935_Sensor structure.
+ *
+ * This function directly updates the `AS3935_Sensor.INT_FREQ.Val.Value` field
+ * and returns the interrupt type.
+ *
+ * @retval INT_L  Lightning detected.
+ * @retval INT_D  Disturber detected.
+ * @retval INT_NH Noise level too high.
+ * @retval INT_NI No interrupt or communication error.
  */
-HAL_StatusTypeDef AS3935_SetInterruptType(AS3935_INT_t interrupt) {
-    AS3935_Sensor.INT_FREQ.Val.BitField.INT = interrupt;
-    return AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
+AS3935_INT_t AS3935_GetInterruptType(void) {
+    // Read the interrupt register (0x03) directly into AS3935_Sensor.INT_FREQ.Val.Value
+    if (AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1) != HAL_OK) {
+        return INT_NI; // Communication error
+    }
+
+    // Extract the interrupt type (bits [3:0] of register 0x03)
+    return (AS3935_INT_t)(AS3935_Sensor.INT_FREQ.Val.BitField.INT);
 }
 
 /**
@@ -307,23 +308,13 @@ HAL_StatusTypeDef AS3935_setFrequencyDivisionRatio(AS3935_LCO_FDiv_t fdivRatio) 
  * @retval HAL_ERROR  Communication failure.
  */
 HAL_StatusTypeDef AS3935_ReadLightningEnergyAndDistance(AS3935_Energy_t *energy) {
-    // Read the interrupt register (0x03) to clear any existing interrupts
-    if (AS3935_ReadRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1) != HAL_OK) {
+    // Read registers 0x04 to 0x07 into the byte array of the structure
+    if (AS3935_ReadRegister(ENERGY_LIGHT_LSB, energy->ByteArray, 4) != HAL_OK) {
         return HAL_ERROR; // Communication error
     }
-
-    // Check if we received a lightning interrupt
-    if (AS3935_Sensor.INT_FREQ.Val.BitField.INT == INT_L) { // INT_L corresponds to lightning detection
-        // Read registers 0x04 to 0x07 into the byte array of the structure
-        if (AS3935_ReadRegister(ENERGY_LIGHT_LSB, energy->ByteArray, 4) != HAL_OK) {
-            return HAL_ERROR; // Communication error
-        }
-
-        // Extract the lightning energy (20 bits) and distance estimation (6 bits)
-        energy->LightningEnergy = (energy->LSB) | ((uint32_t)(energy->MSB) << 8) | ((uint32_t)(energy->MMSB) << 16);
-        energy->DistanceEstimation = energy->Distance;
-    }
-
+    // Extract the lightning energy (20 bits) and distance estimation (6 bits)
+    energy->LightningEnergy = (energy->LSB) | ((uint32_t)(energy->MSB) << 8) | ((uint32_t)(energy->MMSB) << 16);
+    energy->DistanceEstimation = energy->Distance;
     return HAL_OK;
 }
 
@@ -387,12 +378,12 @@ HAL_StatusTypeDef AS3935_CalibrateOscillators(void) {
     }
 
     // Send the RCO calibration command
-    if (AS3935_WriteCommand(CALIB_RCO) != HAL_OK) {
+    if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
         return HAL_ERROR;
     }
 
     // Wait for calibration to complete
-    HAL_Delay(AS3935_CAL_DELAY); // Increase delay for stabilization
+    HAL_Delay(AS3935_CMD_DELAY); // Increase delay for stabilization
 
     // Validate TRCO calibration
     if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK) {
@@ -407,7 +398,7 @@ HAL_StatusTypeDef AS3935_CalibrateOscillators(void) {
     if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
         return HAL_ERROR;
     }
-    HAL_Delay(AS3935_CAL_DELAY);
+    HAL_Delay(AS3935_CMD_DELAY);
     if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -445,60 +436,52 @@ HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void) {
         return HAL_ERROR; // Failed to read IRQ register
     }
     // Set the oscillator display configuration to display TRCO only
-    if (AS3935_SetIRQConfig(AS3935_Sensor.IRQ.Val.BitField.TUN_CAP, OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
+    if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
         return HAL_ERROR; // Failed to configure TRCO display
     }
     // Allow time for TRCO display to stabilize
     HAL_Delay(2);
     // Disable TRCO display on IRQ pin
-    if (AS3935_SetIRQConfig(AS3935_Sensor.IRQ.Val.BitField.TUN_CAP, OSC_DISPLAY_DISABLED) != HAL_OK) {
+    if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
         return HAL_ERROR; // Failed to disable TRCO display
     }
     return HAL_OK; // Recalibration successful
 }
 
 static uint32_t MeasureFrequencyWithTimer(void) {
-    uint32_t captureValue1 = 0, captureValue2 = 0;
-    const uint32_t timerClock = 4000000; // TIM3 clock frequency (4 MHz)
-    uint32_t period = 0;
+    uint32_t captureValue[101] = {0}; // Array to store 101 capture values
+    const uint32_t timerClock = 72000000; // TIM3 clock frequency (72 MHz)
+    uint32_t totalPeriod = 0;
 
     // Start TIM3 in input capture mode
     HAL_TIM_IC_Start(&htim3, TIM_CHANNEL_3);
 
-    // Wait for the first rising edge
-    uint32_t timeout = HAL_GetTick() + 10; // 10ms timeout
-    while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
-        if (HAL_GetTick() > timeout) {
-            HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
-            return 0; // Timeout
+    // Capture 101 consecutive rising edges
+    for (uint8_t i = 0; i < 101; i++) {
+        while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
+            // Wait indefinitely for the capture event
         }
+        captureValue[i] = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
+        __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
     }
-    captureValue1 = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
-    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
-
-    // Wait for the next rising edge
-    timeout = HAL_GetTick() + 10; // Reset timeout
-    while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
-        if (HAL_GetTick() > timeout) {
-            HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
-            return 0; // Timeout
-        }
-    }
-    captureValue2 = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
-    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
 
     // Stop TIM3
     HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
 
-    // Calculate the signal period
-    if (captureValue2 >= captureValue1) {
-        period = captureValue2 - captureValue1;
-    } else {
-        period = (htim3.Instance->ARR + 1 - captureValue1 + captureValue2);
+    // Calculate total period over 101 captures
+    for (uint8_t i = 0; i < 100; i++) { // 100 intervals between 101 captures
+        if (captureValue[i + 1] >= captureValue[i]) {
+            totalPeriod += (captureValue[i + 1] - captureValue[i]);
+        } else {
+            totalPeriod += ((htim3.Instance->ARR + 1) - captureValue[i] + captureValue[i + 1]);
+        }
     }
 
-    // Calculate the frequency
-    return (period > 0) ? (timerClock / period) : 0; // Avoid division by zero
+    // Calculate average period
+    uint32_t averagePeriod = totalPeriod / 100; // 100 intervals for 101 captures
+
+    // Calculate frequency
+    return (averagePeriod > 0) ? (timerClock / averagePeriod) : 0; // Avoid division by zero
 }
 
 ///*
@@ -508,12 +491,11 @@ static uint32_t MeasureFrequencyWithTimer(void) {
 
 uint8_t AS3935_TuneAntenna(void) {
     uint8_t optimalTuningCap = 0xFF; // Default to failure
-    uint8_t finalTuningCap = 0xFF;  // Final tuning capacitor value
     uint32_t measuredFreq = 0;
     int32_t minErrorSRCO = INT32_MAX;
     int32_t minErrorTRCO = INT32_MAX;
     int32_t minErrorLCO = INT32_MAX;
-    const uint16_t stabilizationTime = 1000; // Allow frequency to stabilize
+    const uint16_t stabilizationTime = 200; // Allow frequency to stabilize
     const uint32_t targetFreqLCO = 500000;   // Target fLCO in Hz
     const uint16_t toleranceLCO = 17500;     // fLCO tolerance in Hz
     const uint16_t targetFreqTRCO = 32250;   // Target fTRCO in Hz
@@ -524,131 +506,108 @@ uint8_t AS3935_TuneAntenna(void) {
     // Set up TIM3
     MX_TIM3_Init();
 
-    // Loop through all tuning capacitor values
     for (AS3935_TUNE_CAP_t tuningCap = TUN_CAP_0PF; tuningCap <= TUN_CAP_120PF; tuningCap++) {
         int32_t errorSRCO, errorTRCO, errorLCO;
 
         // Tuning for SRCO
-        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
             printf("Failed to set TUN_CAP for SRCO: %d pF\n", tuningCap * 8);
             continue;
         }
+
         HAL_Delay(stabilizationTime); // Allow stabilization
+
         measuredFreq = MeasureFrequencyWithTimer();
         errorSRCO = abs((int32_t)measuredFreq - (int32_t)targetFreqSRCO);
+
+        // Verify SRCO calibration
+        if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK || 
+            !AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
+            printf("SRCO calibration failed for TUN_CAP: %d pF\n", tuningCap * 8);
+            //continue;
+        }
+
         if (errorSRCO < minErrorSRCO && errorSRCO <= (int32_t)toleranceSRCO) {
             minErrorSRCO = errorSRCO;
             optimalTuningCap = tuningCap;
         }
-        printf("TUN_CAP: %d pF, SRCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorSRCO);
+
+        printf("TUN_CAP: %d pF, SRCO Measured: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorSRCO);
+
+        // Disable oscillator display
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+            printf("Failed to disable SRCO display.\n");
+            continue;
+        }
 
         // Tuning for TRCO
-        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_TRCO_ONLY) != HAL_OK) {
             printf("Failed to set TUN_CAP for TRCO: %d pF\n", tuningCap * 8);
             continue;
         }
+
         HAL_Delay(stabilizationTime); // Allow stabilization
+
         measuredFreq = MeasureFrequencyWithTimer();
         errorTRCO = abs((int32_t)measuredFreq - (int32_t)targetFreqTRCO);
+
+        // Verify TRCO calibration
+        if (AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1) != HAL_OK || 
+            !AS3935_Sensor.TRCO.Val.BitField.TRCO_CALIB_DONE) {
+            printf("TRCO calibration failed for TUN_CAP: %d pF\n", tuningCap * 8);
+            //continue;
+        }
+
         if (errorTRCO < minErrorTRCO && errorTRCO <= (int32_t)toleranceTRCO) {
             minErrorTRCO = errorTRCO;
             optimalTuningCap = tuningCap;
         }
-        printf("TUN_CAP: %d pF, TRCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorTRCO);
+
+        printf("TUN_CAP: %d pF, TRCO Measured: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorTRCO);
+
+        // Disable oscillator display
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+            printf("Failed to disable TRCO display.\n");
+            continue;
+        }
 
         // Tuning for LCO
-        if (AS3935_SetIRQConfig(tuningCap, OSC_DISPLAY_LCO_ONLY) != HAL_OK) {
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_LCO_ONLY) != HAL_OK) {
             printf("Failed to set TUN_CAP for LCO: %d pF\n", tuningCap * 8);
             continue;
         }
+
         HAL_Delay(stabilizationTime); // Allow stabilization
+
         measuredFreq = MeasureFrequencyWithTimer() * 16; // Multiply by 16 for LCO
         errorLCO = abs((int32_t)measuredFreq - (int32_t)targetFreqLCO);
+
         if (errorLCO < minErrorLCO && errorLCO <= (int32_t)toleranceLCO) {
             minErrorLCO = errorLCO;
             optimalTuningCap = tuningCap;
         }
-        printf("TUN_CAP: %d pF, LCO Measured Frequency: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorLCO);
+
+        printf("TUN_CAP: %d pF, LCO Measured: %d Hz, Error: %d Hz\n", tuningCap * 8, measuredFreq, errorLCO);
+
+        // Disable oscillator display
+        if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+            printf("Failed to disable LCO display.\n");
+            continue;
+        }
     }
 
-    // Set the final optimal TUN_CAP value
-    finalTuningCap = optimalTuningCap;
-
-    // Disable oscillator display on the IRQ pin
-    AS3935_SetIRQConfig(TUN_CAP_0PF, OSC_DISPLAY_DISABLED);
-
     // Log the final tuning result
-    if (finalTuningCap != 0xFF) {
-        printf("Optimal TUN_CAP: %d pF\n", finalTuningCap * 8);
+    if (optimalTuningCap != 0xFF) {
+        printf("Optimal TUN_CAP: %d pF\n", optimalTuningCap * 8);
     } else {
         printf("Failed to tune the antenna.\n");
     }
 
     // Restore IRQ pin to interrupt mode
-		HAL_TIM_Base_MspDeInit(&htim3);
     Init_IntAS3935();
 
-    return finalTuningCap;
+    return optimalTuningCap;
 }
-
-
-//OSC_DISPLAY_TRCO_ONLY
-//TUN_CAP: 0	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 8	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 16	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 24	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 32	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 40	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 48	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 56	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 64	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 72	pF, Measured Frequency: 33898 Hz
-//TUN_CAP: 80	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 88	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 96	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 104	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 112	pF, Measured Frequency: 34188 Hz
-//TUN_CAP: 120	pF, Measured Frequency: 34188 Hz
-
-//OSC_DISPLAY_SRCO_ONLY
-
-//TUN_CAP: 0	pF, Measured Frequency:	1333333	Hz
-//TUN_CAP: 8	pF, Measured Frequency:	1333333	Hz
-//TUN_CAP: 16	pF, Measured Frequency:	571428	Hz
-//TUN_CAP: 24	pF, Measured Frequency:	1000000 Hz
-//TUN_CAP: 32	pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 40	pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 48	pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 56	pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 64	pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 72	pF, Measured Frequency: 571428	Hz
-//TUN_CAP: 80	pF, Measured Frequency: 1000000 Hz
-//TUN_CAP: 88	pF, Measured Frequency: 666666	Hz
-//TUN_CAP: 96	pF, Measured Frequency:	1333333 Hz
-//TUN_CAP: 104	pF, Measured Frequency: 1333333 Hz
-//TUN_CAP: 112	pF, Measured Frequency: 666666	Hz
-//TUN_CAP: 120	pF, Measured Frequency: 1000000 Hz
-
-
-//OSC_DISPLAY_LCO_ONLY
-
-//TUN_CAP: 0	pF, Measured Frequency: 32786 Hz
-//TUN_CAP: 8	pF, Measured Frequency: 32786 Hz
-//TUN_CAP: 16	pF, Measured Frequency: 32520 Hz
-//TUN_CAP: 24	pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 32	pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 40	pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 48	pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 56	pF, Measured Frequency: 32258 Hz
-//TUN_CAP: 64	pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 72	pF, Measured Frequency: 32000 Hz
-//TUN_CAP: 80	pF, Measured Frequency: 31746 Hz
-//TUN_CAP: 88	pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 96	pF, Measured Frequency: 31746 Hz
-//TUN_CAP: 104	pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 112	pF, Measured Frequency: 31496 Hz
-//TUN_CAP: 120	pF, Measured Frequency: 31250 Hz
-
 
 
 

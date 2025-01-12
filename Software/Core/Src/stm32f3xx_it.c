@@ -206,14 +206,34 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+  if (__HAL_GPIO_EXTI_GET_IT(INT_AS3935_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT_AS3935_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT_AS3935_Pin); // Call the HAL handler
+  }
+  /* USER CODE END EXTI0_IRQn 0 */
+
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI line1 interrupt.
   */
 void EXTI1_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI1_IRQn 0 */
-
+  if (__HAL_GPIO_EXTI_GET_IT(BMP_INT_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(BMP_INT_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(BMP_INT_Pin); // Call the HAL handler
+  }
   /* USER CODE END EXTI1_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(BMP_INT_Pin);
+
   /* USER CODE BEGIN EXTI1_IRQn 1 */
 
   /* USER CODE END EXTI1_IRQn 1 */
@@ -225,9 +245,12 @@ void EXTI1_IRQHandler(void)
 void EXTI2_TSC_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI2_TSC_IRQn 0 */
-
+  if (__HAL_GPIO_EXTI_GET_IT(INT2_HDC3020_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT2_HDC3020_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT2_HDC3020_Pin); // Call the HAL handler
+  }
   /* USER CODE END EXTI2_TSC_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(INT2_HDC3020_Pin);
+
   /* USER CODE BEGIN EXTI2_TSC_IRQn 1 */
 
   /* USER CODE END EXTI2_TSC_IRQn 1 */
@@ -239,11 +262,20 @@ void EXTI2_TSC_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
+  if (__HAL_GPIO_EXTI_GET_IT(GET_ESP_MSG_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(GET_ESP_MSG_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(GET_ESP_MSG_Pin); // Call the HAL handler
+  }
+  if (__HAL_GPIO_EXTI_GET_IT(INT_TCS34717_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT_TCS34717_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT_TCS34717_Pin); // Call the HAL handler
+  }
+  if (__HAL_GPIO_EXTI_GET_IT(INT1_HDC3020_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT1_HDC3020_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT1_HDC3020_Pin); // Call the HAL handler
+  }
   /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GET_ESP_MSG_Pin);
-  HAL_GPIO_EXTI_IRQHandler(INT_TCS34717_Pin);
-  HAL_GPIO_EXTI_IRQHandler(INT1_HDC3020_Pin);
+
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
@@ -367,11 +399,20 @@ void USART3_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-
+  if (__HAL_GPIO_EXTI_GET_IT(INT_ENS160_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT_ENS160_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT_ENS160_Pin); // Call the HAL handler
+  }
+  if (__HAL_GPIO_EXTI_GET_IT(INT_AS7331_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT_AS7331_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT_AS7331_Pin); // Call the HAL handler
+  }
+  if (__HAL_GPIO_EXTI_GET_IT(INT_TSL25911_Pin)) {
+      __HAL_GPIO_EXTI_CLEAR_IT(INT_TSL25911_Pin); // Clear the interrupt flag
+      HAL_GPIO_EXTI_Callback(INT_TSL25911_Pin); // Call the HAL handler
+  }
   /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(INT_ES160_Pin);
-  HAL_GPIO_EXTI_IRQHandler(INT_AS7331_Pin);
-  HAL_GPIO_EXTI_IRQHandler(INT_TSL25911_Pin);
+
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
@@ -406,14 +447,5 @@ void UART5_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void EXTI0_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI0_IRQn 0 */
 
-  /* USER CODE END EXTI0_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(INT_AS3935_Pin);
-  /* USER CODE BEGIN EXTI0_IRQn 1 */
-
-  /* USER CODE END EXTI0_IRQn 1 */
-}
 /* USER CODE END 1 */

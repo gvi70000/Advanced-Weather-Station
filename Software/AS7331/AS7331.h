@@ -5,9 +5,12 @@
 #include <stdint.h>
 
 // AS7331 I2C Address
-#define AS7331_I2C_ADDR (0x74 << 1) // ADDR 1, 2 LOW
+#define AS7331_I2C_ADDR				(0x74 << 1) // ADDR 1, 2 LOW
 
-#define AS7331_ID				0x21 // 
+#define AS7331_ID							0x21 // 
+
+#define AS7331_TEMP1					5
+#define AS7331_TEMP2					6690
 
 // Register Addresses
 #define AS7331_REG_OSR        0x00
@@ -244,10 +247,10 @@ typedef struct __attribute__((packed)) {
 
 // Output Data Structure
 typedef struct __attribute__((packed)) {
-    uint16_t TEMP; /**< Temperature (16 bits) */
-    uint16_t UVA;  /**< UVA (16 bits) */
-    uint16_t UVB;  /**< UVB (16 bits) */
-    uint16_t UVC;  /**< UVC (16 bits) */
+    int16_t TEMP_C100; /**< Temperature in °C * 100 (16 bits) */
+    uint16_t UVA;      /**< UVA (16 bits) */
+    uint16_t UVB;      /**< UVB (16 bits) */
+    uint16_t UVC;      /**< UVC (16 bits) */
 } AS7331_DataOut_t;
 
 // Full Output Result Structure

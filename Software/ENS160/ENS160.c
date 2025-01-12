@@ -135,11 +135,11 @@ HAL_StatusTypeDef ENS160_Init(void) {
     }
 
     // Configure interrupt settings
-    ENS160_Sensor.CONFIG.INTEN = 1;
-    ENS160_Sensor.CONFIG.INTDAT = 1;
-    ENS160_Sensor.CONFIG.INTGPR = 1;
-    ENS160_Sensor.CONFIG.INT_CFG = 0;
-    ENS160_Sensor.CONFIG.INTPOL = 0;
+    ENS160_Sensor.CONFIG.INTEN = 1;		// INTn pin is enabled for the functions above
+    ENS160_Sensor.CONFIG.INTDAT = 1;	// INTn pin asserted when new data is presented in the DATA_XXX
+    ENS160_Sensor.CONFIG.INTGPR = 1;	// INTn pin asserted when new data is available
+    ENS160_Sensor.CONFIG.INT_CFG = 1; // Push/Pull
+    ENS160_Sensor.CONFIG.INTPOL = 0;	// Active LOW
     if (ENS160_WriteRegister(ENS160_REG_CONFIG, (uint8_t *)&ENS160_Sensor.CONFIG, ENS160_SIZE1) != HAL_OK) {
         return HAL_ERROR;
     }

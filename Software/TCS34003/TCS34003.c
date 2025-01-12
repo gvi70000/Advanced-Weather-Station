@@ -22,7 +22,7 @@ HAL_StatusTypeDef TCS34003_Init(void) {
     HAL_StatusTypeDef status;
 
     // Enable PON (Power ON) and AEN (ADC Enable)
-    status = TCS34003_SetEnable(0x03); // PON=1, AEN=1
+    status = TCS34003_SetEnable(0x0B); // PON=1, AEN=1
     if (status != HAL_OK) return status;
 
     // Set integration time to 256 cycles (712 ms)
@@ -48,7 +48,11 @@ HAL_StatusTypeDef TCS34003_Init(void) {
     // Configure the interrupt thresholds for the Clear channel
     status = TCS34003_SetClearChannelThreshold(TCS34003_MID_VAL, TCS34003_MID_VAL);
     if (status != HAL_OK) return status;
-
+    
+//		// Enable PON (Power ON) and AEN (ADC Enable)
+//    status = TCS34003_SetEnable(0x0D); // PON=1, AEN=1
+//    if (status != HAL_OK) return status;
+		
     // Clear any previous interrupts
     status = TCS34003_ClearInterrupts();
     if (status != HAL_OK) return status;

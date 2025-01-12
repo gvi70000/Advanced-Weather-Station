@@ -14,8 +14,8 @@
 #define AS3935_LIGHTNING_ENERGY_MASK	0x1F ///< Mask for lightning energy bits.
 #define AS3935_OSC_MASK								0xE0 ///< Mask for lightning energy bits.
 #define AS3935_DIRECT_COMMAND					0x96 ///< Command to reset the sensor to default values.
-#define AS3935_CMD_DELAY					4 
-#define AS3935_CAL_DELAY					250
+#define AS3935_CMD_DELAY							4 
+
 /// @brief Register addresses for the AS3935 sensor.
 typedef enum {
     AFE_GAIN             = 0x00, ///< Power management and AFE gain boost.
@@ -102,14 +102,14 @@ typedef enum {
  * Maps the noise floor threshold levels to the corresponding register values.
  */
 typedef enum {
-    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 ÂµVrms, Indoor: 28 ÂµVrms
-    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 ÂµVrms, Indoor: 45 ÂµVrms
-    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 ÂµVrms, Indoor: 62 ÂµVrms
-    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 ÂµVrms, Indoor: 78 ÂµVrms
-    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 ÂµVrms, Indoor: 95 ÂµVrms
-    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 ÂµVrms, Indoor: 112 ÂµVrms
-    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 ÂµVrms, Indoor: 130 ÂµVrms
-    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 ÂµVrms, Indoor: 146 ÂµVrms
+    NOISE_FLOOR_390uVrms  = 0x00, ///< Outdoor: 390 µVrms, Indoor: 28 µVrms
+    NOISE_FLOOR_630uVrms  = 0x01, ///< Outdoor: 630 µVrms, Indoor: 45 µVrms
+    NOISE_FLOOR_860uVrms  = 0x02, ///< Outdoor: 860 µVrms, Indoor: 62 µVrms
+    NOISE_FLOOR_1100uVrms = 0x03, ///< Outdoor: 1100 µVrms, Indoor: 78 µVrms
+    NOISE_FLOOR_1140uVrms = 0x04, ///< Outdoor: 1140 µVrms, Indoor: 95 µVrms
+    NOISE_FLOOR_1570uVrms = 0x05, ///< Outdoor: 1570 µVrms, Indoor: 112 µVrms
+    NOISE_FLOOR_1800uVrms = 0x06, ///< Outdoor: 1800 µVrms, Indoor: 130 µVrms
+    NOISE_FLOOR_2000uVrms = 0x07  ///< Outdoor: 2000 µVrms, Indoor: 146 µVrms
 } AS3935_NoiseFloorLevel_t;
 
 /**
@@ -200,11 +200,13 @@ typedef struct __attribute__((packed)) {
  * @brief Interrupt types (REG0x03[3:0]) that the sensor can generate.
  * 
  * The AS3935 sensor can generate the following types of interrupts:
+ * - INT_NI: No interrupt or error.
  * - INT_NH: Triggered when the noise level is too high.
  * - INT_D: Triggered when a disturber is detected.
  * - INT_L: Triggered when a lightning event is detected.
  */
 typedef enum {
+    INT_NI = 0x00,  ///< No interrupt or error.
     INT_NH = 0x01,  ///< Noise level too high.
     INT_D  = 0x04,  ///< Disturber detected.
     INT_L  = 0x08   ///< Lightning detected.
@@ -450,7 +452,7 @@ HAL_StatusTypeDef AS3935_SetNoise(AS3935_NoiseFloorLevel_t noiseLevel);
 HAL_StatusTypeDef AS3935_SetSpikeRejectionLevel(AS3935_SREJ_t spikeRejectionLevel);
 HAL_StatusTypeDef AS3935_SetLightningNo(AS3935_MinLightning_t noLightningEvents);
 HAL_StatusTypeDef AS3935_ClearStatistics(AS3935_ClearStat_t clearStat);
-HAL_StatusTypeDef AS3935_SetInterruptType(AS3935_INT_t interrupt);
+AS3935_INT_t AS3935_GetInterruptType(void) ;
 HAL_StatusTypeDef AS3935_SetdDisturberMask(AS3935_MaskDist_t maskDist);
 HAL_StatusTypeDef AS3935_setFrequencyDivisionRatio(AS3935_LCO_FDiv_t fdivRatio);
 HAL_StatusTypeDef AS3935_ReadLightningEnergyAndDistance(AS3935_Energy_t *energy);
