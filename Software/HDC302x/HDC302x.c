@@ -24,7 +24,6 @@ static HDC302x_t HDC3020_Sensors[2]; // Sensor connected to 0x44 0x45
  */
 static uint8_t CalculateCRC(uint8_t *data) {
     uint8_t crc = 0xFF; // Initial value
-
     for (uint8_t i = 0; i < 2; i++) { // Process 2 bytes
         crc ^= data[i];
         for (uint8_t j = 0; j < 8; j++) {
@@ -32,6 +31,22 @@ static uint8_t CalculateCRC(uint8_t *data) {
         }
     }
     return crc;
+}
+
+/**
+ * @brief Calculates the closest matching offset byte for temperature or relative humidity.
+ *
+ * @param value The floating-point offset value (e.g., +8.2% RH or -7.8°C).
+ * @param lsb The least significant bit (LSB) step for the offset (e.g., 0.1953125 for RH or 0.1708984375 for Temp).
+ * @return uint8_t The calculated offset byte.
+ */
+static uint8_t calculateOffset(float value, float lsb) {
+    uint8_t sign = (value < 0) ? HDC302X_SIGN_MASK : 0; // Set sign bit if negative
+    if (value < 0) {
+        value = -value; // Use absolute value for calculation
+    }
+    uint8_t offset = (uint8_t)(value / lsb + 0.5f); // Round to nearest value
+    return sign | offset; // Combine sign bit and offset
 }
 
 /**
@@ -46,20 +61,34 @@ static uint8_t CalculateCRC(uint8_t *data) {
  */
 static uint16_t EncodeThreshold(HDC302x_Data_t *threshold) {
     // Convert RH to a 16-bit value (scale: 0% -> 0x0000, 100% -> 0xFFFF)
-    uint16_t rawRH = (uint16_t)((threshold->Humidity / 100.0f) * 65535.0f);
-
+    uint16_t rawRH = (uint16_t)(threshold->Humidity * HDC302X_RH_COEFF_INV);
     // Convert Temperature to a 16-bit value (scale: -40°C -> 0x0000, 125°C -> 0xFFFF)
-    uint16_t rawTemp = (uint16_t)(((threshold->Temperature + 45.0f) / 175.0f) * 65535.0f);
-
+    uint16_t rawTemp = (uint16_t)(threshold->Temperature * HDC302X_TEMP_COEFF1_INV + HDC302X_TEMP_COEFF3);
     // Extract 7 MSBs from RH and 9 MSBs from Temperature
     uint16_t msbRH = (rawRH >> 9) & 0x7F;      // 7 MSBs of RH
     uint16_t msbTemp = (rawTemp >> 7) & 0x1FF; // 9 MSBs of Temperature
-
     // Concatenate MSBs into a 16-bit threshold
     uint16_t encoded = (msbRH << 9) | msbTemp;
-
     // Swap bytes to return the value in little-endian format
     return (encoded >> 8) | (encoded << 8);
+}
+
+/**
+ * @brief Decode a 16-bit threshold value into temperature and humidity and store in a structure.
+ *
+ * This function decodes the 16-bit big-endian threshold value by extracting the 7 MSBs
+ * for humidity and the 9 MSBs for temperature, converting them to floating-point values,
+ * and storing them in the provided `HDC302x_Data_t` structure.
+ *
+ * @param rawThreshold The raw 16-bit threshold value (big-endian).
+ * @param data Pointer to an `HDC302x_Data_t` structure to store the decoded temperature and humidity values.
+ */
+static void DecodeThreshold(uint16_t rawThreshold, HDC302x_Data_t *data) {
+    // Decode RH and Temperature
+    uint8_t msbRH = (rawThreshold >> 9) & 0x7F;    // Extract 7 MSBs for RH
+    uint16_t msbTemp = rawThreshold & 0x1FF;       // Extract 9 MSBs for Temp
+    data->Humidity = (msbRH * 100.0f) / 127.0f;    // Convert RH to percentage
+    data->Temperature = ((msbTemp * 175.0f) / 511.0f) - 45.0f; // Convert Temp to Celsius
 }
 
 /**
@@ -106,7 +135,7 @@ static HAL_StatusTypeDef HDC302x_WriteCommandWithData(uint8_t sensor_index, uint
  * @return HAL_StatusTypeDef Status of the I2C operation.
  */
 static HAL_StatusTypeDef HDC302x_ReadCmdResults(uint8_t sensor_index, uint16_t command, uint16_t *results, uint8_t result_count) {
-    uint8_t recv_buffer[64]; // Buffer for results + CRCs (ensure enough space)
+    uint8_t recv_buffer[6]; // Buffer for results + CRCs (ensure enough space)
     uint8_t recv_size = result_count * 3; // Each result is 2 bytes + 1 CRC
     // Send the command to the sensor
     if (HDC302x_WriteCommand(sensor_index, command) != HAL_OK) {
@@ -121,13 +150,11 @@ static HAL_StatusTypeDef HDC302x_ReadCmdResults(uint8_t sensor_index, uint16_t c
     for (uint8_t i = 0; i < result_count; i++) {
         uint8_t *current_result = &recv_buffer[i * 3];
         // Combine MSB and LSB into big-endian format
-        uint16_t raw_result = (current_result[0] << 8) | current_result[1];
+        results[i] = (current_result[0] << 8) | current_result[1];
         // Validate CRC
         if (CalculateCRC(current_result) != current_result[2]) {
             return HAL_ERROR; // CRC mismatch
         }
-        // Convert the validated result to little-endian format
-        results[i] = raw_result;//(raw_result >> 8) | (raw_result << 8);
     }
     return HAL_OK; // All results successfully read, validated, and converted
 }
@@ -162,10 +189,13 @@ HAL_StatusTypeDef HDC302x_Init(uint8_t senID) {
     }
     // Step 3: Configure default alert limits
     // Default limits: RH (0% - 100%) and Temp (-40°C to 125°C)
-    HDC302x_Data_t highLowAlertClear = { .Temperature = 120.0f, .Humidity = 1.0f };
+    HDC302x_Data_t highLowAlertClear = { .Temperature = 120.0f, .Humidity = 2.0f };
     if (HDC302x_SetAlertLimits(senID, highLowAlertClear, highLowAlertClear, highLowAlertClear, highLowAlertClear) != HAL_OK) {
         return HAL_ERROR; // Setting alert limits failed
     }
+		if (HDC302x_GetAlertLimits(senID, &highLowAlertClear, &highLowAlertClear, &highLowAlertClear, &highLowAlertClear) != HAL_OK) {
+			return HAL_ERROR; // Setting alert limits failed
+		}
     // Step 4: Start auto-measurement mode with the lowest noise at 1 Hz
     if (HDC3020_SelectMeasurementMode(senID, HDC302X_CMD_AUTO_MEASUREMENT_1_PER_SECOND_LPM0) != HAL_OK) {
         return HAL_ERROR; // Starting auto-measurement mode failed
@@ -203,12 +233,10 @@ HAL_StatusTypeDef HDC3020_SoftReset(uint8_t senID) {
  */
 HAL_StatusTypeDef HDC302x_SetConfiguration(uint8_t senID, const HDC302x_Config_t *config) {
     uint8_t buffer[3]; // Configuration value (2 bytes) + CRC (1 byte)
-
     // Prepare the buffer
     buffer[0] = (uint8_t)(config->CFG_VAL >> 8); // MSB of configuration value
     buffer[1] = (uint8_t)(config->CFG_VAL & 0xFF); // LSB of configuration value
     buffer[2] = config->CFG_CRC; // Pre-calculated CRC value
-
     // Write the configuration value and CRC to the sensor
     return HAL_I2C_Master_Transmit(&hi2c2, HDC3020_Sensors[senID].Address, buffer, sizeof(buffer), I2C_TIMEOUT);
 }
@@ -220,12 +248,12 @@ HAL_StatusTypeDef HDC302x_SetConfiguration(uint8_t senID, const HDC302x_Config_t
  * including sending the appropriate command using `SendDeviceCommand`
  * and storing the status in the corresponding sensor structure.
  *
- * @param sensor_index Sensor index (0 or 1).
+ * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
-HAL_StatusTypeDef HDC3020_ReadStatusRegister(uint8_t sensor_index) {
+HAL_StatusTypeDef HDC3020_ReadStatusRegister(uint8_t senID) {
     // Read the status register using HDC302x_ReadMultipleResults with result_count = 1
-		return HDC302x_ReadCmdResults(sensor_index, HDC302X_READ_STATUS, &HDC3020_Sensors[sensor_index].Status.Val.Value, 1);// Single result
+		return HDC302x_ReadCmdResults(senID, HDC302X_READ_STATUS, &HDC3020_Sensors[senID].Status.Val.Value, 1);// Single result
 }
 
 /**
@@ -249,19 +277,22 @@ HAL_StatusTypeDef HDC3020_ClearStatusRegister(uint8_t sensor_index) {
 
 /**
  * @brief Read the temperature and humidity from the sensor.
- * @param senID Sensor ID (0 or 1).
+ * @param sensor_index Sensor ID (0 or 1).
  * @param data Pointer to store the read data.
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_ReadTemperatureAndHumidity(uint8_t sensor_index, HDC302x_Data_t *data) {
-    uint16_t results[2]; // Raw temperature and humidity
+    uint16_t results[2]; // Raw temperature and humidity (big-endian format from the sensor)
     // Read raw temperature and humidity
     if (HDC302x_ReadCmdResults(sensor_index, HDC302X_CMD_MEASURE_READ, results, 2) != HAL_OK) {
         return HAL_ERROR; // Communication or CRC failure
     }
+    // Convert results from big-endian to little-endian
+    uint16_t rawHumidity = results[0];//(results[0] >> 8) | (results[0] << 8); // Swap bytes for humidity
+    uint16_t rawTemperature = results[1];//(results[1] >> 8) | (results[1] << 8); // Swap bytes for temperature
     // Convert raw data to physical values
-    data->Temperature = (results[1] * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2; // Convert raw temp to °C
-    data->Humidity = results[0] * HDC302X_RH_COEFF; // Convert raw humidity to %
+    data->Temperature = (rawTemperature * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2; // Convert raw temp to °C
+    data->Humidity = rawHumidity * HDC302X_RH_COEFF; // Convert raw humidity to %
     return HAL_OK;
 }
 
@@ -331,35 +362,30 @@ HAL_StatusTypeDef HDC3020_GetMeasurementHistory(uint8_t senID, HDC302x_History_t
 HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlertValue, HDC302x_Data_t lowAlertValue, HDC302x_Data_t highAlertClear, HDC302x_Data_t lowAlertClear) {
     uint16_t threshold = 0; // Encoded thresholds
     uint8_t crc = 0;        // Calculated CRC
-
     // Encode and set high alert threshold
     threshold = EncodeThreshold(&highAlertValue);
     crc = CalculateCRC((uint8_t *)&threshold);
     if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_SET_HIGH, threshold, crc) != HAL_OK) {
         return HAL_ERROR; // Failed to set high alert threshold
     }
-
     // Encode and set low alert threshold
     threshold = EncodeThreshold(&lowAlertValue);
     crc = CalculateCRC((uint8_t *)&threshold);
     if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_SET_LOW, threshold, crc) != HAL_OK) {
         return HAL_ERROR; // Failed to set low alert threshold
     }
-
     // Encode and set high clear threshold
     threshold = EncodeThreshold(&highAlertClear);
     crc = CalculateCRC((uint8_t *)&threshold);
     if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_CLEAR_HIGH, threshold, crc) != HAL_OK) {
         return HAL_ERROR; // Failed to set high clear threshold
     }
-
     // Encode and set low clear threshold
     threshold = EncodeThreshold(&lowAlertClear);
     crc = CalculateCRC((uint8_t *)&threshold);
     if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_CLEAR_LOW, threshold, crc) != HAL_OK) {
         return HAL_ERROR; // Failed to set low clear threshold
     }
-
     return HAL_OK; // Successfully set all thresholds
 }
 
@@ -367,7 +393,7 @@ HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlert
  * @brief Get the alert limits for temperature and humidity from the HDC302x sensor.
  *
  * This function reads the high and low alert thresholds and their respective clear thresholds
- * for temperature and humidity from the sensor and stores them in the provided structures.
+ * for temperature and humidity from the sensor and decodes them into `HDC302x_Data_t` structures.
  *
  * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
  * @param highAlertValue Pointer to store high alert threshold values for temperature and humidity.
@@ -377,35 +403,33 @@ HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlert
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAlertValue, HDC302x_Data_t *lowAlertValue, HDC302x_Data_t *highAlertClear, HDC302x_Data_t *lowAlertClear) {
-    uint16_t thresholds[2]; // Raw values for temperature and humidity
-    // Read high alert thresholds
-    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_SET_HIGH, thresholds, 2) != HAL_OK) {
-        return HAL_ERROR; // Failed to read high alert thresholds
-    }
-    highAlertValue->Temperature = (thresholds[0] * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2;
-    highAlertValue->Humidity = thresholds[1] * HDC302X_RH_COEFF;
+    uint16_t rawThreshold; // Raw 16-bit threshold value
 
-    // Read low alert thresholds
-    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_SET_LOW, thresholds, 2) != HAL_OK) {
-        return HAL_ERROR; // Failed to read low alert thresholds
+    // Read high alert threshold
+    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_SET_HIGH, &rawThreshold, 1) != HAL_OK) {
+        return HAL_ERROR; // Failed to read high alert threshold
     }
-    lowAlertValue->Temperature = (thresholds[0] * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2;
-    lowAlertValue->Humidity = thresholds[1] * HDC302X_RH_COEFF;
+    DecodeThreshold(rawThreshold, highAlertValue); // Decode high alert threshold
 
-    // Read high alert clear thresholds
-    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_HIGH, thresholds, 2) != HAL_OK) {
-        return HAL_ERROR; // Failed to read high alert clear thresholds
+    // Read low alert threshold
+    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_SET_LOW, &rawThreshold, 1) != HAL_OK) {
+        return HAL_ERROR; // Failed to read low alert threshold
     }
-    highAlertClear->Temperature = (thresholds[0] * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2;
-    highAlertClear->Humidity = thresholds[1] * HDC302X_RH_COEFF;
+    DecodeThreshold(rawThreshold, lowAlertValue); // Decode low alert threshold
 
-    // Read low alert clear thresholds
-    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_LOW, thresholds, 2) != HAL_OK) {
-        return HAL_ERROR; // Failed to read low alert clear thresholds
+    // Read high alert clear threshold
+    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_HIGH, &rawThreshold, 1) != HAL_OK) {
+        return HAL_ERROR; // Failed to read high alert clear threshold
     }
-    lowAlertClear->Temperature = (thresholds[0] * HDC302X_TEMP_COEFF1) - HDC302X_TEMP_COEFF2;
-    lowAlertClear->Humidity = thresholds[1] * HDC302X_RH_COEFF;
-    return HAL_OK; // All thresholds successfully read
+    DecodeThreshold(rawThreshold, highAlertClear); // Decode high alert clear threshold
+
+    // Read low alert clear threshold
+    if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_LOW, &rawThreshold, 1) != HAL_OK) {
+        return HAL_ERROR; // Failed to read low alert clear threshold
+    }
+    DecodeThreshold(rawThreshold, lowAlertClear); // Decode low alert clear threshold
+
+    return HAL_OK; // Successfully read and decoded all thresholds
 }
 
 /**
@@ -414,49 +438,16 @@ HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAler
  * This function programs the combined temperature and humidity offset values into the sensor.
  *
  * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param RH_Offset Offset for relative humidity (in percentage, e.g., +8.203125% or -7.8125%).
- * @param T_Offset Offset for temperature (in degrees Celsius, e.g., +7.177734375°C or -10.9375°C).
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
- */
-/**
- * @brief Set the temperature and humidity offset values for the HDC3020 sensor.
- *
- * This function programs the combined temperature and humidity offset values into the sensor.
- *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param RH_Offset Offset for relative humidity (in percentage, e.g., +8.203125% or -7.8125%).
- * @param T_Offset Offset for temperature (in degrees Celsius, e.g., +7.177734375°C or -10.9375°C).
+ * @param RH_Offset Offset for relative humidity (in percentage, e.g., +8.2% or -7.8%).
+ * @param T_Offset Offset for temperature (in degrees Celsius, e.g., +7.1°C or -10.9°C).
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offset) {
-    uint16_t combinedOffset = 0; // Combined 16-bit offset value
-
-    // Calculate RH offset directly
-    if (RH_Offset < 0) {
-        combinedOffset |= 0x8000; // Set RH sign bit (Bit 15)
-        RH_Offset = -RH_Offset;  // Convert to positive for calculation
-    }
-    if (RH_Offset >= 12.5f)    { combinedOffset |= (1 << 14); RH_Offset -= 12.5f; }
-    if (RH_Offset >= 6.25f)    { combinedOffset |= (1 << 13); RH_Offset -= 6.25f; }
-    if (RH_Offset >= 3.125f)   { combinedOffset |= (1 << 12); RH_Offset -= 3.125f; }
-    if (RH_Offset >= 1.5625f)  { combinedOffset |= (1 << 11); RH_Offset -= 1.5625f; }
-    if (RH_Offset >= 0.78125f) { combinedOffset |= (1 << 10); RH_Offset -= 0.78125f; }
-    if (RH_Offset >= 0.390625f){ combinedOffset |= (1 << 9);  RH_Offset -= 0.390625f; }
-    if (RH_Offset >= 0.1953125f){ combinedOffset |= (1 << 8); }
-
-    // Calculate T offset directly
-    if (T_Offset < 0) {
-        combinedOffset |= 0x0080; // Set T sign bit (Bit 7)
-        T_Offset = -T_Offset;    // Convert to positive for calculation
-    }
-    if (T_Offset >= 10.9375f)   { combinedOffset |= (1 << 6); T_Offset -= 10.9375f; }
-    if (T_Offset >= 5.46875f)   { combinedOffset |= (1 << 5); T_Offset -= 5.46875f; }
-    if (T_Offset >= 2.734375f)  { combinedOffset |= (1 << 4); T_Offset -= 2.734375f; }
-    if (T_Offset >= 1.3671875f) { combinedOffset |= (1 << 3); T_Offset -= 1.3671875f; }
-    if (T_Offset >= 0.68359375f){ combinedOffset |= (1 << 2); T_Offset -= 0.68359375f; }
-    if (T_Offset >= 0.341796875f){ combinedOffset |= (1 << 1); T_Offset -= 0.341796875f; }
-    if (T_Offset >= 0.1708984375f){ combinedOffset |= (1 << 0); }
-
+    // Calculate RH and T offsets
+    uint8_t RH_offset = calculateOffset(RH_Offset, RH_LSB); // RH offset with sign bit (Bit 15)
+    uint8_t T_offset = calculateOffset(T_Offset, T_LSB);    // T offset with sign bit (Bit 7)
+		// Combine RH and T offsets into a 16-bit value (big-endian format)
+    uint16_t combinedOffset = (T_offset << 8) | RH_offset;
     // Write the combined offset value to the sensor
     return HDC302x_WriteCommandWithData(
         senID,
@@ -469,8 +460,8 @@ HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offs
 /**
  * @brief Verify Programmed RH and Temperature Offset Values.
  *
- * This function sends a command to read the RH and temperature offset values and validates
- * the CRC to ensure data integrity.
+ * This function reads the programmed RH and temperature offset values, decodes them,
+ * and calculates the respective floating-point offsets.
  *
  * @param senID Sensor ID (0 or 1).
  * @param rhOffset Pointer to store the RH offset value.
@@ -483,22 +474,38 @@ HAL_StatusTypeDef HDC3020_VerifyOffset(uint8_t senID, float *rhOffset, float *tO
     if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_PROGRAM_READ_OFFSET_VALUES, &combinedOffset, 1) != HAL_OK) {
         return HAL_ERROR; // Failed to read offset
     }
-
-    // Extract RH Offset (Bits 14–8) and decode
+    // Extract RH Offset (Bits 14-8) and decode
     uint8_t rawRHOffset = (combinedOffset >> 8) & 0x7F; // 7 bits for RH offset
-    if (combinedOffset & 0x8000) { // RH sign bit (Bit 15)
-        *rhOffset = -(rawRHOffset * 0.1953125f); // Apply negative scaling
-    } else {
-        *rhOffset = rawRHOffset * 0.1953125f; // Positive scaling
-    }
-    // Extract T Offset (Bits 6–0) and decode
+    *rhOffset = (combinedOffset & 0x8000)  // Check RH sign bit (Bit 15)
+                ? -(rawRHOffset * HDC302X_RH_COEFF_INV) // Negative offset
+                : (rawRHOffset * HDC302X_RH_COEFF_INV); // Positive offset
+    // Extract T Offset (Bits 6-0) and decode
     uint8_t rawTOffset = combinedOffset & 0x7F; // 7 bits for T offset
-    if (combinedOffset & 0x0080) { // T sign bit (Bit 7)
-        *tOffset = -(rawTOffset * 0.1708984375f); // Apply negative scaling
-    } else {
-        *tOffset = rawTOffset * 0.1708984375f; // Positive scaling
-    }
+    *tOffset = (combinedOffset & 0x0080)  // Check T sign bit (Bit 7)
+                ? -(rawTOffset * HDC302X_TEMP_COEFF1_INV) // Negative offset
+                : (rawTOffset * HDC302X_TEMP_COEFF1_INV); // Positive offset
     return HAL_OK; // Successfully verified offsets
+}
+
+/**
+ * @brief Check if the heater on the HDC302x sensor is currently enabled.
+ *
+ * This function reads the status register of the specified sensor and
+ * returns the heater status bit.
+ *
+ * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
+ * @return uint8_t Heater status:
+ *         - 1: Heater is enabled.
+ *         - 0: Heater is disabled.
+ *         - 9: Error reading the status register.
+ */
+uint8_t HDC3020_IsHeaterOn(uint8_t senID) {
+    // Read the status register
+    if (HDC3020_ReadStatusRegister(senID) != HAL_OK) {
+        return 9; // Error reading the status register
+    }
+    // Return the heater status bit
+    return HDC3020_Sensors[senID].Status.Val.BitField.heater_status;
 }
 
 /**
@@ -519,22 +526,16 @@ HAL_StatusTypeDef HDC3020_ControlHeater(uint8_t senID, const HDC302x_HeaterConfi
             return HAL_ERROR; // Failed to disable heater
         }
         return HAL_OK; // Heater successfully disabled
-    }
-
-    // Enable and configure the heater
-    uint16_t heaterConfig = config->HEATER_VAL; // Heater configuration value
-    uint8_t heaterCRC = config->HCRC;           // Heater configuration CRC
-
-    // Send the heater configuration command
-    if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_HEATER_CONFIG, heaterConfig, heaterCRC) != HAL_OK) {
-        return HAL_ERROR; // Failed to configure heater
-    }
-
-    // Enable the heater
-    if (HDC302x_WriteCommand(senID, HDC302X_CMD_HEATER_ENABLE) != HAL_OK) {
-        return HAL_ERROR; // Failed to enable heater
-    }
-
+    } else {
+				// Enable the heater
+				if (HDC302x_WriteCommand(senID, HDC302X_CMD_HEATER_ENABLE) != HAL_OK) {
+						return HAL_ERROR; // Failed to enable heater
+				}
+				// Send the heater configuration command
+				if (HDC302x_WriteCommandWithData(senID, HDC302X_CMD_HEATER_CONFIG, config->HEATER_VAL, config->HCRC) != HAL_OK) {
+						return HAL_ERROR; // Failed to configure heater
+				}
+		}	
     return HAL_OK; // Heater successfully enabled and configured
 }
 
@@ -563,8 +564,7 @@ HAL_StatusTypeDef HDC302x_ProgramAlertThresholdsToNVM(uint8_t senID) {
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_ProgramReadDefaultState(uint8_t senID, uint8_t programDefault, uint16_t *state) {
-
-    if (programDefault) {
+		if (programDefault) {
         // Program the default state
         return HDC302x_WriteCommandWithData(senID, HDC302X_CMD_PROGRAM_READ_DEFAULT_STATE, *state, CalculateCRC((uint8_t *)state));
     } else {

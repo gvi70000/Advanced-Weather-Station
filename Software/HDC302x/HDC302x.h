@@ -24,24 +24,21 @@
 /** @defgroup HDC302x_Interrupts Interrupt Configuration
  * @{
  */
-#define HDC302X_INT_ENABLE_MASK     0x0800 /**< Interrupt enable mask for data ready */
+#define HDC302X_SIGN_MASK     0x80
 
-/** @defgroup HDC302x_Thresholds Temperature and Humidity Thresholds
- * @{
- */
-#define HDC302X_TEMP_THRESHOLD      ((20.0f + 40.0f) / 165.0f) * 65536.0f	/**< Default temperature threshold (20°C) */
-#define HDC302X_HUM_THRESHOLD       (50.0f / 100.0f) * 65536.0f						/**< Default humidity threshold (50%) */
-
-
+// Constants for LSB values
+#define RH_LSB	0.1953125f		// LSB for RH offset
+#define T_LSB		0.1708984375f	// LSB for Temperature offset
+	
 /** @defgroup HDC302x_Constants Conversion Constants
  * @{
  */
-#define HDC302X_RH_COEFF        0.00152587890625f							///< Humidity conversion coefficient
-#define HDC302X_TEMP_COEFF1     0.0025177001953125f						///< Temperature conversion coefficient 1
-#define HDC302X_TEMP_COEFF2     40.0f													///< Temperature conversion coefficient 2
-#define HDC302X_TEMP_COEFF1_INV (1.0f / HDC302X_TEMP_COEFF1)	///< Inverse of temperature conversion coefficient
-#define HDC302X_RH_COEFF_INV    (1.0f / HDC302X_RH_COEFF)			///< Inverse of humidity conversion coefficient
-
+#define HDC302X_RH_COEFF        (100.0f/65535.0f)						///< Humidity conversion coefficient
+#define HDC302X_RH_COEFF_INV    (65535.0f / 100.0f)			///< Inverse of humidity conversion coefficient
+#define HDC302X_TEMP_COEFF1     (175.0f/65535.0f)					///< Temperature conversion coefficient 1
+#define HDC302X_TEMP_COEFF2     45.0f													///< Temperature conversion coefficient 2
+#define HDC302X_TEMP_COEFF1_INV (65535.0f / 175.0f)	///< Inverse of temperature conversion coefficient
+#define HDC302X_TEMP_COEFF3     (45.0f * HDC302X_TEMP_COEFF1_INV)
 /** @defgroup Dew_Point_Constants Dew Point Calculation Constants
  * @{
  */
@@ -253,6 +250,7 @@ typedef struct {
 
 HAL_StatusTypeDef HDC302x_Init(uint8_t senID);
 HAL_StatusTypeDef HDC3020_SoftReset(uint8_t senID);
+HAL_StatusTypeDef HDC302x_SetConfiguration(uint8_t senID, const HDC302x_Config_t *config);
 HAL_StatusTypeDef HDC3020_ReadStatusRegister(uint8_t senID);
 HAL_StatusTypeDef HDC3020_ClearStatusRegister(uint8_t senID);
 HAL_StatusTypeDef HDC302x_ReadTemperatureAndHumidity(uint8_t senID, HDC302x_Data_t *data);
@@ -262,8 +260,10 @@ HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlert
 HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAlertValue, HDC302x_Data_t *lowAlertValue, HDC302x_Data_t *highAlertClear, HDC302x_Data_t *lowAlertClear);
 HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offset);
 HAL_StatusTypeDef HDC3020_VerifyOffset(uint8_t senID, float *rhOffset, float *tOffset);
+uint8_t HDC3020_IsHeaterOn(uint8_t senID);
 HAL_StatusTypeDef HDC3020_ControlHeater(uint8_t senID, const HDC302x_HeaterConfig_t *config);
 HAL_StatusTypeDef HDC302x_ProgramAlertThresholdsToNVM(uint8_t senID);
+HAL_StatusTypeDef HDC302x_ProgramReadDefaultState(uint8_t senID, uint8_t programDefault, uint16_t *state);
 HAL_StatusTypeDef HDC302x_ReadManufacturerID(uint8_t senID, uint16_t *manufacturerID);
 float CalculateDewPoint(float temperature, float humidity);
 #endif // HDC302X_H
