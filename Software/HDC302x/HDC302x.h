@@ -1,3 +1,4 @@
+
 /**
  * @file HDC302x.h
  * @brief Header file for the HDC302x temperature and humidity sensor library.
@@ -33,10 +34,10 @@
 /** @defgroup HDC302x_Constants Conversion Constants
  * @{
  */
-#define HDC302X_RH_COEFF        (100.0f/65535.0f)						///< Humidity conversion coefficient
-#define HDC302X_RH_COEFF_INV    (65535.0f / 100.0f)			///< Inverse of humidity conversion coefficient
-#define HDC302X_TEMP_COEFF1     (175.0f/65535.0f)					///< Temperature conversion coefficient 1
-#define HDC302X_TEMP_COEFF2     45.0f													///< Temperature conversion coefficient 2
+#define HDC302X_RH_COEFF        (100.0f/65535.0f)		///< Humidity conversion coefficient
+#define HDC302X_RH_COEFF_INV    (65535.0f / 100.0f)	///< Inverse of humidity conversion coefficient
+#define HDC302X_TEMP_COEFF1     (175.0f/65535.0f)		///< Temperature conversion coefficient 1
+#define HDC302X_TEMP_COEFF2     45.0f								///< Temperature conversion coefficient 2
 #define HDC302X_TEMP_COEFF1_INV (65535.0f / 175.0f)	///< Inverse of temperature conversion coefficient
 #define HDC302X_TEMP_COEFF3     (45.0f * HDC302X_TEMP_COEFF1_INV)
 /** @defgroup Dew_Point_Constants Dew Point Calculation Constants
@@ -49,67 +50,63 @@
  * @brief Sensor commands. They have the bytes swaped for STM32 little-endian
  */
 /** Trigger-On Demand Mode Commands */
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LOW_NOISE         0x0024 ///< On-demand measurement (low noise)
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LOW_POWER_1       0x0B24 ///< On-demand measurement (low power 1)
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LOW_POWER_2       0x1624 ///< On-demand measurement (low power 2)
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LOW_POWER_3       0xFF24 ///< On-demand measurement (low power 3)
+#define HDC302X_CMD_MEASURE_DEMAND_LPM0	0x0024 ///< On-demand measurement (low noise)
+#define HDC302X_CMD_MEASURE_DEMAND_LPM1	0x0B24 ///< On-demand measurement (low power 1)
+#define HDC302X_CMD_MEASURE_DEMAND_LPM2	0x1624 ///< On-demand measurement (low power 2)
+#define HDC302X_CMD_MEASURE_DEMAND_LPM3	0xFF24 ///< On-demand measurement (low power 3)
 
 /** Auto Measurement Mode 0.5Hz */
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_EVERY_2S_LPM0    0x3220 ///< Auto measurement: 1 every 2 seconds (LPM0)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_EVERY_2S_LPM1    0x2420 ///< Auto measurement: 1 every 2 seconds (LPM1)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_EVERY_2S_LPM2    0x2F20 ///< Auto measurement: 1 every 2 seconds (LPM2)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_EVERY_2S_LPM3    0xFF20 ///< Auto measurement: 1 every 2 seconds (LPM3)
+#define HDC302X_CMD_MEASURE_2S_LPM0		0x3220 ///< Auto measurement: 1 every 2 seconds (LPM0)
+#define HDC302X_CMD_MEASURE_2S_LPM1		0x2420 ///< Auto measurement: 1 every 2 seconds (LPM1)
+#define HDC302X_CMD_MEASURE_2S_LPM2		0x2F20 ///< Auto measurement: 1 every 2 seconds (LPM2)
+#define HDC302X_CMD_MEASURE_2S_LPM3		0xFF20 ///< Auto measurement: 1 every 2 seconds (LPM3)
 
 /** Auto Measurement Mode 1Hz */
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_PER_SECOND_LPM0  0x3021 ///< Auto measurement: 1 per second (LPM0)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_PER_SECOND_LPM1  0x2621 ///< Auto measurement: 1 per second (LPM1)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_PER_SECOND_LPM2  0x2D21 ///< Auto measurement: 1 per second (LPM2)
-#define HDC302X_CMD_AUTO_MEASUREMENT_1_PER_SECOND_LPM3  0xFF21 ///< Auto measurement: 1 per second (LPM3)
+#define HDC302X_CMD_MEASURE_01_LPM0		0x3021 ///< Auto measurement: 1 per second (LPM0)
+#define HDC302X_CMD_MEASURE_01_LPM1		0x2621 ///< Auto measurement: 1 per second (LPM1)
+#define HDC302X_CMD_MEASURE_01_LPM2		0x2D21 ///< Auto measurement: 1 per second (LPM2)
+#define HDC302X_CMD_MEASURE_01_LPM3		0xFF21 ///< Auto measurement: 1 per second (LPM3)
 
 /** Auto Measurement Mode 2Hz */
-#define HDC302X_CMD_AUTO_MEASUREMENT_2_PER_SECOND_LPM0  0x3622 ///< Auto measurement: 2 per second (LPM0)
-#define HDC302X_CMD_AUTO_MEASUREMENT_2_PER_SECOND_LPM1  0x2022 ///< Auto measurement: 2 per second (LPM1)
-#define HDC302X_CMD_AUTO_MEASUREMENT_2_PER_SECOND_LPM2  0x2B22 ///< Auto measurement: 2 per second (LPM2)
-#define HDC302X_CMD_AUTO_MEASUREMENT_2_PER_SECOND_LPM3  0xFF22 ///< Auto measurement: 2 per second (LPM3)
+#define HDC302X_CMD_MEASURE_02_LPM0		0x3622 ///< Auto measurement: 2 per second (LPM0)
+#define HDC302X_CMD_MEASURE_02_LPM1		0x2022 ///< Auto measurement: 2 per second (LPM1)
+#define HDC302X_CMD_MEASURE_02_LPM2		0x2B22 ///< Auto measurement: 2 per second (LPM2)
+#define HDC302X_CMD_MEASURE_02_LPM3		0xFF22 ///< Auto measurement: 2 per second (LPM3)
 
 /** Auto Measurement Mode 4Hz */
-#define HDC302X_CMD_AUTO_MEASUREMENT_4_PER_SECOND_LPM0  0x3423 ///< Auto measurement: 4 per second (LPM0)
-#define HDC302X_CMD_AUTO_MEASUREMENT_4_PER_SECOND_LPM1  0x2223 ///< Auto measurement: 4 per second (LPM1)
-#define HDC302X_CMD_AUTO_MEASUREMENT_4_PER_SECOND_LPM2  0x2923 ///< Auto measurement: 4 per second (LPM2)
-#define HDC302X_CMD_AUTO_MEASUREMENT_4_PER_SECOND_LPM3  0xFF23 ///< Auto measurement: 4 per second (LPM3)
+#define HDC302X_CMD_MEASURE_04_LPM0		0x3423 ///< Auto measurement: 4 per second (LPM0)
+#define HDC302X_CMD_MEASURE_04_LPM1		0x2223 ///< Auto measurement: 4 per second (LPM1)
+#define HDC302X_CMD_MEASURE_04_LPM2		0x2923 ///< Auto measurement: 4 per second (LPM2)
+#define HDC302X_CMD_MEASURE_04_LPM3		0xFF23 ///< Auto measurement: 4 per second (LPM3)
 
 /** Auto Measurement Mode 10Hz */
-#define HDC302X_CMD_AUTO_MEASUREMENT_10_PER_SECOND_LPM0 0x3727 ///< Auto measurement: 10 per second (LPM0)
-#define HDC302X_CMD_AUTO_MEASUREMENT_10_PER_SECOND_LPM1 0x2127 ///< Auto measurement: 10 per second (LPM1)
-#define HDC302X_CMD_AUTO_MEASUREMENT_10_PER_SECOND_LPM2 0x2A27 ///< Auto measurement: 10 per second (LPM2)
-#define HDC302X_CMD_AUTO_MEASUREMENT_10_PER_SECOND_LPM3 0xFF27 ///< Auto measurement: 10 per second (LPM3)
+#define HDC302X_CMD_MEASURE_10_LPM0		0x3727 ///< Auto measurement: 10 per second (LPM0)
+#define HDC302X_CMD_MEASURE_10_LPM1		0x2127 ///< Auto measurement: 10 per second (LPM1)
+#define HDC302X_CMD_MEASURE_10_LPM2		0x2A27 ///< Auto measurement: 10 per second (LPM2)
+#define HDC302X_CMD_MEASURE_10_LPM3		0xFF27 ///< Auto measurement: 10 per second (LPM3)
 
-/** Trigger-On Demand Mode */
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LPM0             0x062C ///< Trigger-On Demand Mode (LPM0)
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LPM1             0x0D2C ///< Trigger-On Demand Mode (LPM1)
-#define HDC302X_CMD_TRIGGER_ON_DEMAND_LPM2             0x102C ///< Trigger-On Demand Mode (LPM2)
-#define HDC302X_CMD_RETURN_TO_TRIGGER                  0x9330 ///< Exit, then return to Trigger-on Demand Mode
+#define HDC302X_CMD_RETURN_TO_TRIGGER	0x9330 ///< Exit, then return to Trigger-on Demand Mode
 
 /** Measurement Commands */
 #define HDC302X_CMD_MEASURE_READ                       0x00E0 ///< Measurement Readout of T and RH
 #define HDC302X_CMD_READ_RH_ONLY                       0x01E0 ///< Measurement Readout of RH only
 /** Measurement History and Statistics Commands */
-#define HDC302X_CMD_READ_HISTORY_MIN_TEMPERATURE       0x02E0 ///< Measurement History Readout of Minimum T
-#define HDC302X_CMD_READ_HISTORY_MAX_TEMPERATURE       0x03E0 ///< Measurement History Readout of Maximum T
-#define HDC302X_CMD_READ_HISTORY_MIN_RH                0x04E0 ///< Measurement History Readout of Minimum RH
-#define HDC302X_CMD_READ_HISTORY_MAX_RH                0x05E0 ///< Measurement History Readout of Maximum RH
+#define HDC302X_CMD_READ_HISTORY_MIN_T		0x02E0 ///< Measurement History Readout of Minimum T
+#define HDC302X_CMD_READ_HISTORY_MAX_T		0x03E0 ///< Measurement History Readout of Maximum T
+#define HDC302X_CMD_READ_HISTORY_MIN_RH		0x04E0 ///< Measurement History Readout of Minimum RH
+#define HDC302X_CMD_READ_HISTORY_MAX_RH		0x05E0 ///< Measurement History Readout of Maximum RH
 
 /** Configure ALERT Thresholds of T and RH */
-#define HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_SET_LOW  0x0061 ///< Configures Thresholds for "Set Low Alert"
-#define HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_SET_HIGH 0x1D61 ///< Configures Thresholds for "Set High Alert"
-#define HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_CLEAR_LOW 0x0B61 ///< Configures Thresholds for "Clear Low Alert"
-#define HDC302X_CMD_CONFIGURE_ALERT_THRESHOLD_CLEAR_HIGH 0x1661 ///< Configures Thresholds for "Clear High Alert"
+#define HDC302X_CMD_SET_ALERT_LOW			0x0061 ///< Configures Thresholds for "Set Low Alert"
+#define HDC302X_CMD_SET_ALERT_HIGH		0x1D61 ///< Configures Thresholds for "Set High Alert"
+#define HDC302X_CMD_CLR_ALERT_LOW			0x0B61 ///< Configures Thresholds for "Clear Low Alert"
+#define HDC302X_CMD_CLR_ALERT_HIGH		0x1661 ///< Configures Thresholds for "Clear High Alert"
 
 /** Read ALERT Thresholds of T and RH */
-#define HDC302X_CMD_READ_ALERT_THRESHOLD_SET_LOW       0x02E1 ///< Read Thresholds for "Set Low Alert"
-#define HDC302X_CMD_READ_ALERT_THRESHOLD_SET_HIGH      0x1FE1 ///< Read Thresholds for "Set High Alert"
-#define HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_LOW     0x09E1 ///< Read Thresholds for "Clear Low Alert"
-#define HDC302X_CMD_READ_ALERT_THRESHOLD_CLEAR_HIGH    0x14E1 ///< Read Thresholds for "Clear High Alert"
+#define HDC302X_CMD_GET_ALERT_SET_LOW			0x02E1 ///< Read Thresholds for "Set Low Alert"
+#define HDC302X_CMD_GET_ALERT_SET_HIGH		0x1FE1 ///< Read Thresholds for "Set High Alert"
+#define HDC302X_CMD_GET_ALERT_CLR_LOW			0x09E1 ///< Read Thresholds for "Clear Low Alert"
+#define HDC302X_CMD_GET_ALERT_CLR_HIGH		0x14E1 ///< Read Thresholds for "Clear High Alert"
 
 /** Integrated Heater Commands */
 #define HDC302X_CMD_HEATER_ENABLE                      0x6D30 ///< Enable heater
@@ -259,7 +256,7 @@ HAL_StatusTypeDef HDC3020_GetMeasurementHistory(uint8_t senID, HDC302x_History_t
 HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlertValue, HDC302x_Data_t lowAlertValue, HDC302x_Data_t highAlertClear, HDC302x_Data_t lowAlertClear);
 HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAlertValue, HDC302x_Data_t *lowAlertValue, HDC302x_Data_t *highAlertClear, HDC302x_Data_t *lowAlertClear);
 HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offset);
-HAL_StatusTypeDef HDC3020_VerifyOffset(uint8_t senID, float *rhOffset, float *tOffset);
+HAL_StatusTypeDef HDC3020_GetOffset(uint8_t senID, float *rhOffset, float *tOffset);
 uint8_t HDC3020_IsHeaterOn(uint8_t senID);
 HAL_StatusTypeDef HDC3020_ControlHeater(uint8_t senID, const HDC302x_HeaterConfig_t *config);
 HAL_StatusTypeDef HDC302x_ProgramAlertThresholdsToNVM(uint8_t senID);
