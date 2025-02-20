@@ -442,6 +442,7 @@ typedef struct __attribute__((packed)) {
 } AS3935_REGS_t;
 
 // Function prototypes
+void PB0_SetMode(uint8_t mode);
 HAL_StatusTypeDef AS3935_Init(void);
 HAL_StatusTypeDef AS3935_ReadAllRegisters(void);
 HAL_StatusTypeDef AS3935_WakeUp(void);
@@ -462,5 +463,5 @@ HAL_StatusTypeDef AS3935_ReadTRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_ReadSRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_CalibrateOscillators(void);
 HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void);
-uint8_t AS3935_TuneAntenna(void);
+void Tune_Antenna(void);
 #endif // AS3935_H
