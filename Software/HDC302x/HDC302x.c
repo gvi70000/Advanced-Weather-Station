@@ -13,41 +13,43 @@
 static HDC302x_t HDC3020_Sensors[2]; // Sensor connected to 0x44 0x45
 
 /**
- * @brief Calculate CRC checksum for the HDC302x.
+ * @brief Calculate CRC-8 checksum for the HDC302x.
  *
- * This function calculates the CRC-8/NRSC-5 checksum as described in the datasheet.
- * It is compatible with both the sensor's transmitted data and byte-swapped values sent to the sensor.
+ * This function calculates the CRC-8/NRSC-5 checksum as described in the HDC302x datasheet.
+ * The CRC is used for data integrity verification when communicating with the sensor.
  *
- * @param data Pointer to the two-byte data array.
- * @param byteSwapped Set to true if the bytes are swapped in the data being sent to the sensor.
+ * @param data Pointer to a two-byte data array to be processed.
  * @return The calculated 8-bit CRC checksum.
  */
 static uint8_t CalculateCRC(uint8_t *data) {
-    uint8_t crc = 0xFF; // Initial value
+    uint8_t crc = HDC302X_CRC_INIT; // Initial value
     for (uint8_t i = 0; i < 2; i++) { // Process 2 bytes
         crc ^= data[i];
         for (uint8_t j = 0; j < 8; j++) {
-            crc = (crc & 0x80) ? (crc << 1) ^ 0x31 : (crc << 1);
+            crc = (crc & HDC302X_SIGN_MASK) ? (crc << 1) ^ HDC302X_CRC_POLY : (crc << 1);
         }
     }
     return crc;
 }
 
 /**
- * @brief Encode temperature and humidity thresholds into a 16-bit value with little-endian byte order.
+ * @brief Encode temperature and humidity thresholds into a 16-bit value (little-endian format).
  *
- * This function converts temperature and humidity values into a 16-bit threshold representation
- * as per the datasheet, with 7 MSBs for humidity and 9 MSBs for temperature. The returned value
- * is swapped to little-endian format.
+ * This function encodes humidity and temperature values into a 16-bit representation,
+ * as per the HDC302x datasheet. The encoding uses:
+ * - **7 most significant bits (MSBs) for humidity**
+ * - **9 MSBs for temperature**
  *
- * @param threshold Pointer to the HDC302x_Data_t structure containing temperature and humidity values.
- * @return Encoded 16-bit threshold value in little-endian format.
+ * The final encoded value is returned in **little-endian** format.
+ *
+ * @param threshold Pointer to the `HDC302x_Data_t` structure containing temperature and humidity values.
+ * @return Encoded 16-bit threshold value (little-endian format).
  */
 static uint16_t EncodeThreshold(HDC302x_Data_t *threshold) {
     uint16_t rawRH = (uint16_t)(threshold->Humidity * HDC302X_RH_COEFF_INV);
     uint16_t rawTemp = (uint16_t)(threshold->Temperature * HDC302X_TEMP_COEFF1_INV + HDC302X_TEMP_COEFF3);
-    uint16_t msbRH = (rawRH >> 9) & 0x7F;
-    uint16_t msbTemp = (rawTemp >> 7) & 0x1FF;
+    uint16_t msbRH = (rawRH >> 9) & HDC302X_HUMIDITY_MSB_MASK;
+    uint16_t msbTemp = (rawTemp >> 7) & HDC302X_TEMPERATURE_MSB_MASK;
     uint16_t encoded = (msbRH << 9) | msbTemp;
 
     // Swap bytes to match little-endian format
@@ -55,43 +57,51 @@ static uint16_t EncodeThreshold(HDC302x_Data_t *threshold) {
 }
 
 /**
- * @brief Decode a 16-bit threshold value into temperature and humidity and store in a structure.
+ * @brief Decode a 16-bit threshold value into temperature and humidity values.
  *
- * This function decodes the 16-bit big-endian threshold value by extracting the 7 MSBs
- * for humidity and the 9 MSBs for temperature, converting them to floating-point values,
- * and storing them in the provided `HDC302x_Data_t` structure.
+ * This function decodes the 16-bit threshold value stored in **big-endian** format.
+ * The decoding process extracts:
+ * - **7 MSBs for humidity**
+ * - **9 MSBs for temperature**
  *
- * @param rawThreshold The raw 16-bit threshold value (big-endian).
- * @param data Pointer to an `HDC302x_Data_t` structure to store the decoded temperature and humidity values.
+ * The extracted values are then converted to floating-point representations
+ * and stored in the provided `HDC302x_Data_t` structure.
+ *
+ * @param rawThreshold The raw 16-bit threshold value (big-endian format).
+ * @param data Pointer to an `HDC302x_Data_t` structure where decoded temperature and humidity values will be stored.
  */
 static void DecodeThreshold(uint16_t rawThreshold, HDC302x_Data_t *data) {
-    uint8_t msbRH = (rawThreshold >> 9) & 0x7F;
-    uint16_t msbTemp = rawThreshold & 0x1FF;
+    uint8_t msbRH = (rawThreshold >> 9) & HDC302X_HUMIDITY_MSB_MASK;
+    uint16_t msbTemp = rawThreshold & HDC302X_TEMPERATURE_MSB_MASK;
 
     data->Humidity = (msbRH * 100.0f) / 127.0f;
     data->Temperature = ((msbTemp * 175.0f) / 511.0f) - 45.0f;
 }
 
 /**
- * @brief Write a command to the sensor.
+ * @brief Write a 16-bit command to the HDC302x sensor.
  *
- * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for 0x44, 1 for 0x45).
- * @param command The 16-bit command to send (already byte-swapped).
- * @return HAL_StatusTypeDef Status of the I2C operation.
+ * This function transmits a 16-bit command to the sensor using I2C.
+ * The command must be pre-swapped to big-endian format before calling this function.
+ *
+ * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for address 0x44, 1 for address 0x45).
+ * @param command The 16-bit command to send (must be pre-swapped to big-endian format).
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 static HAL_StatusTypeDef HDC302x_WriteCommand(uint8_t sensor_index, uint16_t command) {
     return HAL_I2C_Master_Transmit(&hi2c2, HDC3020_Sensors[sensor_index].Address, (uint8_t *)&command, 2, I2C_TIMEOUT);
 }
 
 /**
- * @brief Write a command with 16-bit data and CRC to the sensor.
+ * @brief Write a 16-bit command with 16-bit data and CRC to the HDC302x sensor.
  *
- * This function sends a 16-bit command, 16-bit data, and a CRC byte in a single I2C transaction.
+ * This function sends a command, followed by a 16-bit data value, and a CRC byte
+ * in a single I2C transaction. The command and data must be pre-swapped to big-endian format.
  *
- * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for 0x44, 1 for 0x45).
- * @param command The 16-bit command to send (already byte-swapped if needed).
- * @param data The 16-bit data to send (already byte-swapped if needed).
- * @param crc The CRC byte to append to the transmission.
+ * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for address 0x44, 1 for address 0x45).
+ * @param command The 16-bit command to send (must be pre-swapped to big-endian format).
+ * @param data The 16-bit data value to send (must be pre-swapped to big-endian format).
+ * @param crc The CRC-8 checksum for the data being transmitted.
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 static HAL_StatusTypeDef HDC302x_WriteCommandWithData(uint8_t sensor_index, uint16_t command, uint16_t data, uint8_t crc) {
@@ -107,13 +117,16 @@ static HAL_StatusTypeDef HDC302x_WriteCommandWithData(uint8_t sensor_index, uint
 }
 
 /**
- * @brief Read multiple data results from the sensor and return them in little-endian format.
+ * @brief Read multiple 16-bit results from the HDC302x sensor and return them in little-endian format.
  *
- * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for 0x44, 1 for 0x45).
- * @param command The 16-bit command to read (already byte-swapped).
- * @param results Pointer to store multiple 16-bit results (converted to little-endian).
+ * This function sends a read command to the sensor and retrieves multiple 16-bit results.
+ * Each 16-bit result is followed by a CRC byte for data integrity verification.
+ *
+ * @param sensor_index Index of the sensor in HDC3020_Sensors (0 for address 0x44, 1 for address 0x45).
+ * @param command The 16-bit read command to send (must be pre-swapped to big-endian format).
+ * @param results Pointer to a buffer where the retrieved 16-bit results will be stored (converted to little-endian).
  * @param result_count Number of 16-bit results to read.
- * @return HAL_StatusTypeDef Status of the I2C operation.
+ * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR if CRC verification fails or I2C communication fails.
  */
 static HAL_StatusTypeDef HDC302x_ReadCmdResults(uint8_t sensor_index, uint16_t command, uint16_t *results, uint8_t result_count) {
     uint8_t recv_buffer[6]; // Buffer for results + CRCs (ensure enough space)
@@ -143,15 +156,20 @@ static HAL_StatusTypeDef HDC302x_ReadCmdResults(uint8_t sensor_index, uint16_t c
 /**
  * @brief Initialize the HDC302x sensor.
  *
- * This function performs the following steps:
- * - Configures the sensor address based on the ID.
+ * This function initializes the HDC302x sensor by performing the following steps:
+ * - Sets the I2C address based on the sensor ID.
  * - Performs a soft reset.
+ * - Reads and verifies the manufacturer ID.
  * - Clears the status register.
- * - Configures default alert limits for temperature and humidity.
- * - Starts auto-measurement at 1 Hz with the lowest noise.
+ * - (Optional) Configures and stores the sensor settings in NVM.
+ * - (Optional) Sets and verifies offset values for temperature and humidity.
+ * - (Optional) Sets and stores alert thresholds in NVM.
+ * - Starts auto-measurement at 1 Hz with the lowest noise mode.
  *
- * @param senID Sensor ID (0 or 1).
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @note Some operations, such as NVM writes, are commented out to avoid repeated EEPROM programming.
+ *
+ * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
+ * @return HAL_StatusTypeDef HAL_OK if initialization is successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_Init(uint8_t senID) {
 		uint16_t mID = 0;
@@ -168,16 +186,20 @@ HAL_StatusTypeDef HDC302x_Init(uint8_t senID) {
     if (HDC3020_ClearStatusRegister(senID) != HAL_OK) {
         return HAL_ERROR; // Clearing the status register failed
     }
-		HAL_Delay(100);
-		if (HDC302x_SetConfiguration(senID, &HDC302X_CONFIG_1HZ_LOWEST_NOISE) != HAL_OK) {
-			return HAL_ERROR;
-		}
+		// Use this only once as it will store the setting in NVM, mandatory delay
+//		if (HDC302x_SetConfiguration(senID, &HDC302X_CONFIG_1HZ_LOWEST_NOISE) != HAL_OK) {
+//			return HAL_ERROR;
+//		}
+//		HAL_Delay(77);
 		
 		float o_rh = 1.5;
 		float o_t = 5.3;
 		if (HDC3020_SetOffset(senID, o_rh, o_t) != HAL_OK) {
 			return HAL_ERROR;
 		}
+//		if (HDC302x_TransferOffsetsToNVM(senID) != HAL_OK) {
+//			return HAL_ERROR; // Setting alert limits failed
+//		}
 //		HAL_Delay(100);
 //		if (HDC3020_GetOffset(senID, &o_rh, &o_t) != HAL_OK) {
 //			return HAL_ERROR;
@@ -185,17 +207,22 @@ HAL_StatusTypeDef HDC302x_Init(uint8_t senID) {
     // Step 3: Configure default alert limits
     // Default limits: RH (0% - 100%) and Temp (-40°C to 125°C)
 		
-    HDC302x_Data_t highAlertValue = { .Temperature = 120.0f, .Humidity = 2.0f };
-		HDC302x_Data_t lowAlertValue = { .Temperature = 120.0f, .Humidity = 2.0f };
-		HDC302x_Data_t highAlertClear = { .Temperature = 120.0f, .Humidity = 2.0f };
-		HDC302x_Data_t lowAlertClear = { .Temperature = 120.0f, .Humidity = 2.0f };
+//    HDC302x_Data_t highAlertValue = { .Temperature = 120.0f, .Humidity = 2.0f };
+//		HDC302x_Data_t lowAlertValue = { .Temperature = 120.0f, .Humidity = 2.0f };
+//		HDC302x_Data_t highAlertClear = { .Temperature = 120.0f, .Humidity = 2.0f };
+//		HDC302x_Data_t lowAlertClear = { .Temperature = 120.0f, .Humidity = 2.0f };
+//		
+//    if (HDC302x_SetAlertLimits(senID, highAlertValue, lowAlertValue, highAlertClear, lowAlertClear) != HAL_OK) {
+//        return HAL_ERROR; // Setting alert limits failed
+//    }
+//		if (HDC302x_GetAlertLimits(senID, &highAlertValue, &lowAlertValue, &highAlertClear, &lowAlertClear) != HAL_OK) {
+//			return HAL_ERROR; // Setting alert limits failed
+//		}
+//		if (HDC302x_TransferAlertLimitsToNVM(senID) != HAL_OK) {
+//			return HAL_ERROR; // Setting alert limits failed
+//		}
+//		HAL_Delay(77);
 		
-    if (HDC302x_SetAlertLimits(senID, highAlertValue, lowAlertValue, highAlertClear, lowAlertClear) != HAL_OK) {
-        return HAL_ERROR; // Setting alert limits failed
-    }
-		if (HDC302x_GetAlertLimits(senID, &highAlertValue, &lowAlertValue, &highAlertClear, &lowAlertClear) != HAL_OK) {
-			return HAL_ERROR; // Setting alert limits failed
-		}
     // Step 4: Start auto-measurement mode with the lowest noise at 1 Hz
     if (HDC3020_SelectMeasurementMode(senID, HDC302X_CMD_MEASURE_01_LPM0) != HAL_OK) {
         return HAL_ERROR; // Starting auto-measurement mode failed
@@ -207,10 +234,12 @@ HAL_StatusTypeDef HDC302x_Init(uint8_t senID) {
 /**
  * @brief Perform a soft reset on the HDC302x sensor.
  *
- * This function sends the soft reset command to the sensor and allows time for the device to reset.
+ * This function sends a soft reset command to the sensor, allowing it to restart 
+ * and reinitialize its internal state. A delay is included to ensure the sensor 
+ * has sufficient time to reset before further communication.
  *
- * @param senID Sensor ID (0 or 1).
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @return HAL_StatusTypeDef HAL_OK if the reset is successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_SoftReset(uint8_t senID) {
     // Send the soft reset command
@@ -223,13 +252,18 @@ HAL_StatusTypeDef HDC3020_SoftReset(uint8_t senID) {
 }
 
 /**
- * @brief Set the configuration of the HDC302x sensor.
+ * @brief Configure the HDC302x sensor.
  *
- * This function writes a configuration value and its CRC to the sensor to set its operating mode.
+ * This function writes a configuration value and its corresponding CRC to the sensor 
+ * to set its operating mode. The configuration is stored in the sensor's volatile 
+ * memory unless explicitly written to NVM.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param config Pointer to the HDC302x_Config_t structure containing the configuration value and CRC.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @note To save the configuration in non-volatile memory (NVM), use the 
+ * `HDC302X_CMD_PROGRAM_READ_DEFAULT_STATE` command.
+ *
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param config Pointer to the `HDC302x_Config_t` structure containing the configuration value and CRC.
+ * @return HAL_StatusTypeDef HAL_OK if the configuration is set successfully, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_SetConfiguration(uint8_t senID, const HDC302x_Config_t *config) {
     uint8_t buffer[5]; // Configuration value (2 bytes) + CRC (1 byte)
@@ -242,13 +276,12 @@ HAL_StatusTypeDef HDC302x_SetConfiguration(uint8_t senID, const HDC302x_Config_t
 }
 
 /**
- * @brief Read the status register of the HDC3020 sensor and store it in the corresponding structure.
+ * @brief Read the status register of the HDC3020 sensor.
  *
- * This function performs the I2C sequence to read the status register,
- * including sending the appropriate command using `SendDeviceCommand`
- * and storing the status in the corresponding sensor structure.
+ * This function sends the appropriate command to the sensor and reads 
+ * the status register value, storing it in the sensor's data structure.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_ReadStatusRegister(uint8_t senID) {
@@ -259,10 +292,11 @@ HAL_StatusTypeDef HDC3020_ReadStatusRegister(uint8_t senID) {
 /**
  * @brief Clear the status register of the HDC3020 sensor.
  *
- * This function uses the `SendDeviceCommand` function to clear the status register
- * by sending the predefined command.
+ * This function sends the `HDC302X_CLEAR_STATUS` command to reset 
+ * the status register and clears the stored status value in the 
+ * corresponding sensor structure.
  *
- * @param senID Sensor ID (0 or 1).
+ * @param sensor_index Sensor ID (0 for address 0x44, 1 for address 0x45).
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_ClearStatusRegister(uint8_t sensor_index) {
@@ -276,10 +310,15 @@ HAL_StatusTypeDef HDC3020_ClearStatusRegister(uint8_t sensor_index) {
 }
 
 /**
- * @brief Read the temperature and humidity from the sensor.
- * @param sensor_index Sensor ID (0 or 1).
- * @param data Pointer to store the read data.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @brief Read temperature and humidity data from the HDC302x sensor.
+ *
+ * This function reads the raw 16-bit temperature and humidity values from the sensor,
+ * converts them into floating-point values using the appropriate scaling factors, 
+ * and stores them in the provided `HDC302x_Data_t` structure.
+ *
+ * @param sensor_index Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param data Pointer to an `HDC302x_Data_t` structure to store the converted temperature (°C) and humidity (%RH).
+ * @return HAL_StatusTypeDef HAL_OK if the data is read and converted successfully, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_ReadTemperatureAndHumidity(uint8_t sensor_index, HDC302x_Data_t *data) {
     uint16_t results[2]; // Raw temperature and humidity (big-endian format from the sensor)
@@ -297,13 +336,14 @@ HAL_StatusTypeDef HDC302x_ReadTemperatureAndHumidity(uint8_t sensor_index, HDC30
 }
 
 /**
- * @brief Select the measurement mode for the HDC3020 sensor.
+ * @brief Set the measurement mode for the HDC302x sensor.
  *
- * This function sends the specified measurement mode command to the sensor to configure its operation.
+ * This function configures the sensor's measurement mode by sending the specified 
+ * command. The measurement mode determines the sampling rate and power consumption.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param command The 16-bit command representing the desired measurement mode (already byte-swapped).
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param command The 16-bit command representing the desired measurement mode (must be pre-swapped to big-endian format).
+ * @return HAL_StatusTypeDef HAL_OK if the mode is set successfully, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_SelectMeasurementMode(uint8_t senID, uint16_t command) {
     // Return the result of the command transmission
@@ -311,14 +351,14 @@ HAL_StatusTypeDef HDC3020_SelectMeasurementMode(uint8_t senID, uint16_t command)
 }
 
 /**
- * @brief Retrieve the measurement history from the HDC3020 sensor.
+ * @brief Retrieve the measurement history from the HDC302x sensor.
  *
- * This function reads the minimum and maximum temperature and humidity values from the sensor and stores them
- * in the provided `HDC302x_History_t` structure.
+ * This function reads the minimum and maximum recorded temperature and humidity values 
+ * from the sensor and stores them in the provided `HDC302x_History_t` structure.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
  * @param history Pointer to an `HDC302x_History_t` structure to store the measurement history.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @return HAL_StatusTypeDef HAL_OK if the history data is successfully retrieved, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_GetMeasurementHistory(uint8_t senID, HDC302x_History_t *history) {
     uint16_t rawMinTemp, rawMaxTemp, rawMinHumidity, rawMaxHumidity;
@@ -347,17 +387,36 @@ HAL_StatusTypeDef HDC3020_GetMeasurementHistory(uint8_t senID, HDC302x_History_t
 }
 
 /**
+ * @brief Store alert threshold limits in the HDC302x sensor's non-volatile memory (NVM).
+ *
+ * This function writes the currently configured alert limits to the sensor's NVM, ensuring 
+ * they persist across power cycles.
+ *
+ * @note NVM writes should be used sparingly to avoid exceeding EEPROM endurance limits.
+ *
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @return HAL_StatusTypeDef HAL_OK if the operation is successful, HAL_ERROR otherwise.
+ */
+HAL_StatusTypeDef HDC302x_TransferAlertLimitsToNVM(uint8_t senID) {
+    if (HDC302x_WriteCommand(senID, HDC302X_CMD_PROGRAM_ALERT_THRESHOLDS_TO_NVM) != HAL_OK) {
+        return HAL_ERROR; // Return the error if the operation failed
+    }
+		return HAL_OK;
+}
+
+/**
  * @brief Set the alert limits for temperature and humidity on the HDC302x sensor.
  *
- * This function configures the high and low alert limits and their respective clear thresholds
- * for temperature and humidity.
+ * This function configures the high and low alert thresholds, as well as their 
+ * respective clear values, for temperature and humidity. These values determine 
+ * when alerts are triggered and reset.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param highAlertValue High alert threshold values for temperature and humidity.
- * @param lowAlertValue Low alert threshold values for temperature and humidity.
- * @param highAlertClear High alert clear values for temperature and humidity.
- * @param lowAlertClear Low alert clear values for temperature and humidity.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param highAlertValue High alert threshold values for temperature (°C) and humidity (%RH).
+ * @param lowAlertValue Low alert threshold values for temperature (°C) and humidity (%RH).
+ * @param highAlertClear High alert clear values for temperature (°C) and humidity (%RH).
+ * @param lowAlertClear Low alert clear values for temperature (°C) and humidity (%RH).
+ * @return HAL_StatusTypeDef HAL_OK if the thresholds are successfully set, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlertValue, HDC302x_Data_t lowAlertValue, HDC302x_Data_t highAlertClear, HDC302x_Data_t lowAlertClear) {
     uint16_t threshold = 0;
@@ -399,17 +458,18 @@ HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlert
 }
 
 /**
- * @brief Get the alert limits for temperature and humidity from the HDC302x sensor.
+ * @brief Get the current alert limits for temperature and humidity from the HDC302x sensor.
  *
- * This function reads the high and low alert thresholds and their respective clear thresholds
- * for temperature and humidity from the sensor and decodes them into `HDC302x_Data_t` structures.
+ * This function reads the high and low alert thresholds, as well as their 
+ * respective clear values, for temperature and humidity from the sensor.
+ * The retrieved values are decoded and stored in the provided structures.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param highAlertValue Pointer to store high alert threshold values for temperature and humidity.
- * @param lowAlertValue Pointer to store low alert threshold values for temperature and humidity.
- * @param highAlertClear Pointer to store high alert clear values for temperature and humidity.
- * @param lowAlertClear Pointer to store low alert clear values for temperature and humidity.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param highAlertValue Pointer to store high alert threshold values for temperature (°C) and humidity (%RH).
+ * @param lowAlertValue Pointer to store low alert threshold values for temperature (°C) and humidity (%RH).
+ * @param highAlertClear Pointer to store high alert clear values for temperature (°C) and humidity (%RH).
+ * @param lowAlertClear Pointer to store low alert clear values for temperature (°C) and humidity (%RH).
+ * @return HAL_StatusTypeDef HAL_OK if the thresholds are successfully retrieved, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAlertValue, HDC302x_Data_t *lowAlertValue, HDC302x_Data_t *highAlertClear, HDC302x_Data_t *lowAlertClear) {
     uint16_t rawThreshold;
@@ -446,13 +506,34 @@ HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAler
 }
 
 /**
- * @brief Set the temperature and humidity offset values for the HDC3020 sensor.
+ * @brief Store the programmed temperature and humidity offset values into the HDC302x sensor's non-volatile memory (NVM).
  *
- * This function programs the combined temperature and humidity offset values into the sensor.
+ * This function writes the offset calibration values to the sensor’s EEPROM, ensuring they persist across power cycles.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param RH_Offset Offset for relative humidity (in percentage, e.g., +8.2% or -7.8%).
- * @param T_Offset Offset for temperature (in degrees Celsius, e.g., +7.1°C or -10.9°C).
+ * @note NVM writes should be used sparingly to avoid exceeding EEPROM endurance limits.
+ *
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @return HAL_StatusTypeDef HAL_OK if the operation is successful, HAL_ERROR otherwise.
+ */
+HAL_StatusTypeDef HDC302x_TransferOffsetsToNVM(uint8_t senID) {
+    if (HDC302x_WriteCommand(senID, HDC302X_CMD_PROGRAM_READ_OFFSET_VALUES) != HAL_OK) {
+        return HAL_ERROR; // Return the error if the operation failed
+    }
+		return HAL_OK;
+}
+
+
+/**
+ * @brief Set the temperature and humidity offset values for the HDC302x sensor.
+ *
+ * This function encodes the offset values for temperature and humidity and programs them into the sensor.
+ * The values are converted into an appropriate 16-bit format as per the HDC302x datasheet.
+ *
+ * @note The offsets must be written to NVM separately using `HDC302x_TransferOffsetsToNVM()` to persist after a reset.
+ *
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param RH_Offset Offset for relative humidity in percentage (%RH), e.g., +8.2% or -7.8%.
+ * @param T_Offset Offset for temperature in degrees Celsius (°C), e.g., +7.1°C or -10.9°C.
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offset) {
@@ -473,7 +554,7 @@ HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offs
     uint16_t hCode = (uint16_t)(RH_Offset * 65535 / 100);
 
     // Encode the offsets
-    uint16_t combinedOffset = ((hCode << 1) & 0x7F00) | ((tCode >> 6) & 0x7F) | CodeMask;
+    uint16_t combinedOffset = ((hCode << 1) & 0x7F00) | ((tCode >> 6) & HDC302X_HUMIDITY_MSB_MASK) | CodeMask;
 
     // Swap bytes to match STM32 endianness
     combinedOffset = (combinedOffset >> 8) | (combinedOffset << 8);
@@ -492,14 +573,14 @@ HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offs
 }
 
 /**
- * @brief Verify Programmed RH and Temperature Offset Values.
+ * @brief Retrieve and decode the programmed temperature and humidity offset values from the HDC302x sensor.
  *
- * This function reads the programmed RH and temperature offset values, decodes them,
- * and calculates the respective floating-point offsets.
+ * This function reads the offset values stored in the sensor, decodes them back into floating-point
+ * temperature and humidity offsets, and stores them in the provided variables.
  *
- * @param senID Sensor ID (0 or 1).
- * @param rhOffset Pointer to store the RH offset value.
- * @param tOffset Pointer to store the T offset value.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param rhOffset Pointer to store the retrieved humidity offset (%RH).
+ * @param tOffset Pointer to store the retrieved temperature offset (°C).
  * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_GetOffset(uint8_t senID, float *rhOffset, float *tOffset) {
@@ -514,18 +595,18 @@ HAL_StatusTypeDef HDC3020_GetOffset(uint8_t senID, float *rhOffset, float *tOffs
     printf("Read Combined Offset: 0x%04X\n", combinedOffset);
 
     // Extract RH Offset and Temperature Offset
-    uint8_t RH_offset = (combinedOffset >> 8) & 0xFF;  // High byte
-    uint8_t T_offset  = combinedOffset & 0xFF;         // Low byte
+    uint8_t RH_offset = (combinedOffset >> 8) & HDC302X_CRC_INIT;  // High byte
+    uint8_t T_offset  = combinedOffset & HDC302X_CRC_INIT;         // Low byte
 
     printf("Extracted RH Offset Byte: 0x%02X, Extracted T Offset Byte: 0x%02X\n", RH_offset, T_offset);
 
     // Extract sign bits (Bit 7)
-    uint8_t RH_negative = !(RH_offset & 0x80);
-    uint8_t T_negative  = !(T_offset & 0x80);
+    uint8_t RH_negative = !(RH_offset & HDC302X_SIGN_MASK);
+    uint8_t T_negative  = !(T_offset & HDC302X_SIGN_MASK);
 
     // Remove sign bits
-    RH_offset &= 0x7F;
-    T_offset  &= 0x7F;
+    RH_offset &= HDC302X_HUMIDITY_MSB_MASK;
+    T_offset  &= HDC302X_HUMIDITY_MSB_MASK;
 
     // Convert back to floating-point values
     *rhOffset = RH_offset * 0.1953125f; // Convert RH back to % units
@@ -566,11 +647,13 @@ uint8_t HDC3020_IsHeaterOn(uint8_t senID) {
  * @brief Control the heater of the HDC302x sensor.
  *
  * This function enables or disables the heater based on the provided configuration.
- * If the configuration is `HDC302X_HEATER_OFF`, the heater is disabled.
+ * If the heater configuration is `HDC302X_HEATER_OFF`, the heater will be disabled.
+ * Otherwise, the function will send commands to enable and configure the heater.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param config Pointer to the heater configuration (HDC302x_HeaterConfig_t). Use `HDC302X_HEATER_OFF` to disable the heater.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param config Pointer to the `HDC302x_HeaterConfig_t` structure containing the heater configuration.
+ *               Use `HDC302X_HEATER_OFF` to disable the heater.
+ * @return HAL_StatusTypeDef HAL_OK if the operation is successful, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC3020_ControlHeater(uint8_t senID, const HDC302x_HeaterConfig_t *config) {
     // Check if the heater should be disabled
@@ -594,55 +677,28 @@ HAL_StatusTypeDef HDC3020_ControlHeater(uint8_t senID, const HDC302x_HeaterConfi
 }
 
 /**
- * @brief Program alert thresholds to NVM (EEPROM) on the HDC302x sensor.
- *
- * @param senID Sensor ID (0 or 1).
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
- */
-HAL_StatusTypeDef HDC302x_ProgramAlertThresholdsToNVM(uint8_t senID) {
-    // Send the program alert thresholds command
-    if (HDC302x_WriteCommand(senID, HDC302X_CMD_PROGRAM_ALERT_THRESHOLDS_TO_NVM) != HAL_OK) {
-        return HAL_ERROR; // Command transmission failed
-    }
-    // Delay to allow programming to complete
-    HAL_Delay(10); // Datasheet recommends a delay of at least 10 ms for NVM programming
-    return HAL_OK;
-}
-
-/**
- * @brief Program or read the default power-on/reset measurement state for the HDC302x sensor.
- *
- * @param senID Sensor ID (0 or 1).
- * @param programDefault Set to true to program default state; false to read current state.
- * @param state Pointer to a 16-bit value containing the measurement state.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
- */
-HAL_StatusTypeDef HDC302x_ProgramReadDefaultState(uint8_t senID, uint8_t programDefault, uint16_t *state) {
-		if (programDefault) {
-        // Program the default state
-        return HDC302x_WriteCommandWithData(senID, HDC302X_CMD_PROGRAM_READ_DEFAULT_STATE, *state, CalculateCRC((uint8_t *)state));
-    } else {
-        // Read the default state
-        if (HDC302x_ReadCmdResults(senID, HDC302X_CMD_PROGRAM_READ_DEFAULT_STATE, state, 1) != HAL_OK) {
-            return HAL_ERROR; // Read operation failed
-        }
-        return HAL_OK;
-    }
-}
-
-/**
  * @brief Read the Manufacturer ID from the HDC302x sensor.
  *
- * This function sends the command to read the Manufacturer ID and retrieves the 16-bit ID value.
+ * This function sends the command to read the 16-bit Manufacturer ID and retrieves the value.
+ * The Manufacturer ID can be used to verify communication with the sensor.
  *
- * @param senID Sensor ID (0 for 0x44, 1 for 0x45).
- * @param manufacturerID Pointer to store the 16-bit Manufacturer ID.
- * @return HAL_StatusTypeDef HAL_OK if successful, HAL_ERROR otherwise.
+ * @param senID Sensor ID (0 for address 0x44, 1 for address 0x45).
+ * @param manufacturerID Pointer to store the retrieved 16-bit Manufacturer ID.
+ * @return HAL_StatusTypeDef HAL_OK if the Manufacturer ID is successfully read, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef HDC302x_ReadManufacturerID(uint8_t senID, uint16_t *manufacturerID) {
     return HDC302x_ReadCmdResults(senID, HDC302X_CMD_READ_MANUFACTURER_ID, manufacturerID, 1);// Single result
 }
 
+/**
+ * @brief Calculate the dew point based on temperature and humidity.
+ *
+ * This function calculates the dew point temperature using the **Magnus-Tetens** formula.
+ *
+ * @param temperature Temperature in degrees Celsius (°C).
+ * @param humidity Relative humidity in percentage (%RH).
+ * @return float Dew point temperature in degrees Celsius (°C).
+ */
 float CalculateDewPoint(float temperature, float humidity) {
     float alpha = (DEW_POINT_CONST_A * temperature) / (DEW_POINT_CONST_B + temperature) + logf(humidity / 100.0f);
     float dew_point = (DEW_POINT_CONST_B * alpha) / (DEW_POINT_CONST_A - alpha);

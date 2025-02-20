@@ -22,29 +22,26 @@
 #define HDC302X_SENSOR_1_ADDR (0x44 << 1)  ///< I2C address for Sensor 1 (0x44)
 #define HDC302X_SENSOR_2_ADDR (0x45 << 1)  ///< I2C address for Sensor 2 (0x45)
 
-/** @defgroup HDC302x_Interrupts Interrupt Configuration
- * @{
- */
-#define HDC302X_SIGN_MASK     0x80
-
-// Constants for LSB values
-#define RH_LSB	0.1953125f		// LSB for RH offset
-#define T_LSB		0.1708984375f	// LSB for Temperature offset
-	
 /** @defgroup HDC302x_Constants Conversion Constants
  * @{
  */
-#define HDC302X_RH_COEFF        (100.0f/65535.0f)		///< Humidity conversion coefficient
-#define HDC302X_RH_COEFF_INV    (65535.0f / 100.0f)	///< Inverse of humidity conversion coefficient
-#define HDC302X_TEMP_COEFF1     (175.0f/65535.0f)		///< Temperature conversion coefficient 1
-#define HDC302X_TEMP_COEFF2     45.0f								///< Temperature conversion coefficient 2
-#define HDC302X_TEMP_COEFF1_INV (65535.0f / 175.0f)	///< Inverse of temperature conversion coefficient
-#define HDC302X_TEMP_COEFF3     (45.0f * HDC302X_TEMP_COEFF1_INV)
-/** @defgroup Dew_Point_Constants Dew Point Calculation Constants
- * @{
- */
-#define DEW_POINT_CONST_A       17.27f ///< Magnus-Tetens constant A
-#define DEW_POINT_CONST_B       237.7f ///< Magnus-Tetens constant B
+#define HDC302X_RH_COEFF							(100.0f/65535.0f)		///< Humidity conversion coefficient
+#define HDC302X_RH_COEFF_INV					(65535.0f / 100.0f)	///< Inverse of humidity conversion coefficient
+#define HDC302X_TEMP_COEFF1						(175.0f/65535.0f)		///< Temperature conversion coefficient 1
+#define HDC302X_TEMP_COEFF2						45.0f								///< Temperature conversion coefficient 2
+#define HDC302X_TEMP_COEFF1_INV				(65535.0f / 175.0f)	///< Inverse of temperature conversion coefficient
+#define HDC302X_TEMP_COEFF3						(45.0f * HDC302X_TEMP_COEFF1_INV)
+
+#define RH_LSB												0.1953125f		// LSB for RH offset
+#define T_LSB													0.1708984375f	// LSB for Temperature offset
+#define HDC302X_CRC_INIT							0xFF  ///< Initial CRC value for CRC-8/NRSC-5 checksum
+#define HDC302X_CRC_POLY							0x31  ///< Polynomial used for CRC-8/NRSC-5 checksum
+#define HDC302X_SIGN_MASK							0x80
+#define HDC302X_HUMIDITY_MSB_MASK			0x7F  ///< Mask to extract the 7 MSBs for humidity
+#define HDC302X_TEMPERATURE_MSB_MASK	0x1FF ///< Mask to extract the 9 MSBs for temperature
+
+#define DEW_POINT_CONST_A							17.27f ///< Magnus-Tetens constant A
+#define DEW_POINT_CONST_B							237.7f ///< Magnus-Tetens constant B
 
 /**
  * @brief Sensor commands. They have the bytes swaped for STM32 little-endian
@@ -253,8 +250,10 @@ HAL_StatusTypeDef HDC3020_ClearStatusRegister(uint8_t senID);
 HAL_StatusTypeDef HDC302x_ReadTemperatureAndHumidity(uint8_t senID, HDC302x_Data_t *data);
 HAL_StatusTypeDef HDC3020_SelectMeasurementMode(uint8_t senID, uint16_t command);
 HAL_StatusTypeDef HDC3020_GetMeasurementHistory(uint8_t senID, HDC302x_History_t *history);
+HAL_StatusTypeDef HDC302x_TransferAlertLimitsToNVM(uint8_t senID);
 HAL_StatusTypeDef HDC302x_SetAlertLimits(uint8_t senID, HDC302x_Data_t highAlertValue, HDC302x_Data_t lowAlertValue, HDC302x_Data_t highAlertClear, HDC302x_Data_t lowAlertClear);
 HAL_StatusTypeDef HDC302x_GetAlertLimits(uint8_t senID, HDC302x_Data_t *highAlertValue, HDC302x_Data_t *lowAlertValue, HDC302x_Data_t *highAlertClear, HDC302x_Data_t *lowAlertClear);
+HAL_StatusTypeDef HDC302x_TransferOffsetsToNVM(uint8_t senID);
 HAL_StatusTypeDef HDC3020_SetOffset(uint8_t senID, float RH_Offset, float T_Offset);
 HAL_StatusTypeDef HDC3020_GetOffset(uint8_t senID, float *rhOffset, float *tOffset);
 uint8_t HDC3020_IsHeaterOn(uint8_t senID);
