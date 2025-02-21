@@ -68,10 +68,13 @@ HAL_StatusTypeDef AS3935_Init(void) {
         return HAL_ERROR;
     }
     HAL_Delay(AS3935_CMD_DELAY); // Wait 2ms for wake-up
-		
+    // Load default values
+    if (AS3935_SendDirectCommand(PRESET_DEFAULT) != HAL_OK) {
+        return HAL_ERROR;
+    }
 		AS3935_ReadAllRegisters();
 		Tune_Antenna();
-		if (AS3935_setTuningCapacitor(TUN_CAP_64PF) != HAL_OK) {
+		if (AS3935_setTuningCapacitor(TUN_CAP_120PF) != HAL_OK) {
         return HAL_ERROR;
     }
 	
@@ -94,29 +97,35 @@ HAL_StatusTypeDef AS3935_Init(void) {
     }
 		HAL_Delay(AS3935_CMD_DELAY); // Wait 250ms for calibration
 		
-    // Call the tuning function to optimize antenna settings
-//    uint8_t optimalTuningCap = AS3935_TuneAntenna();
-//    if (optimalTuningCap == 0xFF) {
-//        printf("Antenna tuning failed!\n");
-//        return HAL_ERROR;
-//    }	
-		
-    // Send calibrate command
-    if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
-        return HAL_ERROR;
-    }
-		if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
-        return HAL_ERROR; // Failed to configure interrupts and frequency
-    }
-    HAL_Delay(250); // Wait 250ms for calibration
-		if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
-        return HAL_ERROR; // Failed to configure interrupts and frequency
-    }
-    // Verify calibration status
-		// ToDo! Check what is wrong with the frequency
-    if (AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1) != HAL_OK || !AS3935_Sensor.SRCO.Val.BitField.SRCO_CALIB_DONE) {
-        return HAL_ERROR; // Calibration failed
-    }
+				// Send calibrate command
+				if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
+						return HAL_ERROR;
+				}
+				//0x08 bit 6 = 1
+				if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+						return HAL_ERROR; // Failed to configure interrupts and frequency
+				}
+				HAL_Delay(2); // Wait 250ms for calibration
+				//0x08 bit 6 = 0
+				if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+						return HAL_ERROR; // Failed to configure interrupts and frequency
+				}
+				// Verify calibration status
+				AS3935_Sensor.SRCO.Val.Value = 0;
+				// ToDo! Check what is wrong with the frequency
+				AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1);
+				AS3935_Sensor.SRCO.Val.Value &= 0x40;
+				AS3935_Sensor.SRCO.Val.Value >>= 6;
+
+				AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1);
+				AS3935_Sensor.TRCO.Val.Value &= 0x40;
+				AS3935_Sensor.TRCO.Val.Value >>= 6;
+				
+				if (!AS3935_Sensor.SRCO.Val.Value && !AS3935_Sensor.TRCO.Val.Value) {
+						//printf("OK %d\n", cap_value); // // Calibration failed
+				} else {
+						return HAL_ERROR; // // Calibration failed
+				}
     return HAL_OK; // Initialization successful
 }
 
@@ -461,18 +470,18 @@ HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void) {
 extern TIM_HandleTypeDef htim3;
 
 static uint32_t MeasureFrequencyWithTimer(void) {
-    uint32_t captureValue[101] = {0}; // Array to store 101 capture values
-    const uint32_t timerClock = 2000000; // TIM3 clock frequency (72 MHz)
+    const uint8_t sampleCnt = 51;  // Need 51 edges to get 50 periods
+		const uint8_t periods = 50;  
+    uint32_t captureValue[51] = {0}; 
+    const uint32_t timerClock = 72000000; // TIM3 clock frequency (72 MHz)
     uint32_t totalPeriod = 0;
 
     // Start TIM3 in input capture mode
     HAL_TIM_IC_Start(&htim3, TIM_CHANNEL_3);
 
-    // Capture 101 consecutive rising edges
-    for (uint8_t i = 0; i < 101; i++) {
-        while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET) {
-            // Wait indefinitely for the capture event
-        }
+    // Capture 51 consecutive rising edges
+    for (uint8_t i = 0; i < sampleCnt; i++) {
+        while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_CC3) == RESET);
         captureValue[i] = __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_3);
         __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_CC3);
     }
@@ -480,8 +489,8 @@ static uint32_t MeasureFrequencyWithTimer(void) {
     // Stop TIM3
     HAL_TIM_IC_Stop(&htim3, TIM_CHANNEL_3);
 
-    // Calculate total period over 101 captures
-    for (uint8_t i = 0; i < 100; i++) { // 100 intervals between 101 captures
+    // Calculate total period over 50 periods
+    for (uint8_t i = 0; i < periods; i++) {  // Now iterating 50 times
         if (captureValue[i + 1] >= captureValue[i]) {
             totalPeriod += (captureValue[i + 1] - captureValue[i]);
         } else {
@@ -490,48 +499,84 @@ static uint32_t MeasureFrequencyWithTimer(void) {
     }
 
     // Calculate average period
-    uint32_t averagePeriod = totalPeriod / 100; // 100 intervals for 101 captures
+    uint32_t averagePeriod = totalPeriod / periods; // Now dividing by 50
 
     // Calculate frequency
-    return (averagePeriod > 0) ? (timerClock / averagePeriod) : 0; // Avoid division by zero
+    return (averagePeriod > 0) ? (timerClock / averagePeriod) : 0;
 }
 
+void tuneCalibration(){
+		uint8_t cap_value = 0;
+	    for (cap_value = TUN_CAP_0PF; cap_value <= TUN_CAP_120PF; cap_value++) {
+        AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = cap_value;
+        AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+				// Send calibrate command
+				if (AS3935_SendDirectCommand(CALIB_RCO) != HAL_OK) {
+						printf("ERR CALIB_RCO\n");
+				}
+				//0x08 bit 6 = 1
+				if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_SRCO_ONLY) != HAL_OK) {
+						printf("ERR OSC_DISPLAY_SRCO_ONLY\n"); // Failed to configure interrupts and frequency
+				}
+				HAL_Delay(2); // Wait 250ms for calibration
+				//0x08 bit 6 = 0
+				if (AS3935_SetOscillatorDisplay(OSC_DISPLAY_DISABLED) != HAL_OK) {
+						printf("ERR OSC_DISPLAY_DISABLED\n"); // Failed to configure interrupts and frequency
+				}
+				// Verify calibration status
+				AS3935_Sensor.SRCO.Val.Value = 0;
+				// ToDo! Check what is wrong with the frequency
+				AS3935_ReadRegister(CALIB_SRCO, &AS3935_Sensor.SRCO.Val.Value, 1);
+				AS3935_Sensor.SRCO.Val.Value &= 0x40;
+				AS3935_Sensor.SRCO.Val.Value >>= 6;
+
+				AS3935_ReadRegister(CALIB_TRCO, &AS3935_Sensor.TRCO.Val.Value, 1);
+				AS3935_Sensor.TRCO.Val.Value &= 0x40;
+				AS3935_Sensor.TRCO.Val.Value >>= 6;
+				
+				if (!AS3935_Sensor.SRCO.Val.Value || !AS3935_Sensor.TRCO.Val.Value) {
+						printf("OK %d\n", cap_value); // // Calibration failed
+				} else {
+					printf("KO %d\n", cap_value); // // Calibration failed
+				}
+			}
+	
+}
 void Tune_Antenna(void) {
     uint8_t cap_value = 0;
-    uint8_t reg_value;
     uint32_t measured_freq;
-		// Set LCO Frequency Division Ratio 16
-		reg_value = 0b00000000;
-		AS3935_WriteRegister(0x03, &reg_value, 1);
-    // Enable Antenna Frequency Output on IRQ Pin
-		reg_value = 0b10000000;
-    AS3935_WriteRegister(0x08, &reg_value, 1);
+		printf("TIM3 Clock: %d Hz\n", HAL_RCC_GetPCLK1Freq() * ((RCC->CFGR & RCC_CFGR_PPRE1) ? 2 : 1));
+    // Set LCO Frequency Division Ratio 16
+    AS3935_Sensor.INT_FREQ.Val.BitField.LCO_FDIV = LCO_FDIV_RATIO_16;
+    AS3935_WriteRegister(INT_MASK_ANT, &AS3935_Sensor.INT_FREQ.Val.Value, 1);
 
-		HAL_Delay(10);
+    // Enable Antenna Frequency Output on IRQ Pin
+    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = OSC_DISPLAY_LCO_ONLY;
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
+
+    HAL_Delay(10);
 
     // Tune Capacitor to Achieve 500 kHz Resonance Frequency
     for (cap_value = TUN_CAP_0PF; cap_value <= TUN_CAP_120PF; cap_value++) {
-        AS3935_ReadRegister(FREQ_DISP_IRQ, &reg_value, 1);
-        reg_value = (reg_value & 0xF0) | cap_value;
-				//AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = cap_value;
-        AS3935_WriteRegister(FREQ_DISP_IRQ, &reg_value, 1);
+        AS3935_Sensor.IRQ.Val.BitField.TUN_CAP = cap_value;
+        AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 
-        HAL_Delay(10);
-        measured_freq = MeasureFrequencyWithTimer();
+        HAL_Delay(2);
+        measured_freq = 16 * MeasureFrequencyWithTimer();
 
-        printf("Capacitor Value: %d, Measured Frequency: %d Hz", cap_value, measured_freq);
+        printf("Capacitor Value: %d, Measured Frequency: %d Hz dF %d", cap_value, measured_freq, TARGET_FREQUENCY - measured_freq);
         if (measured_freq < TARGET_FREQUENCY - FREQUENCY_TOLERANCE) {
             printf(" - Too Low\n");
         } else if (measured_freq > TARGET_FREQUENCY + FREQUENCY_TOLERANCE) {
             printf(" - Too High\n");
         } else {
             printf(" - Within Range\n");
-            break;
+            //break;
         }
     }
-
+		//112p long wire sensor
+		//
     // Disable Antenna Frequency Output on IRQ Pin
-    AS3935_ReadRegister(FREQ_DISP_IRQ, &reg_value, 1);
-    reg_value &= ~(1 << 7);
-    AS3935_WriteRegister(FREQ_DISP_IRQ, &reg_value, 1);
+    AS3935_Sensor.IRQ.Val.BitField.OSC_DISP = OSC_DISPLAY_DISABLED;
+    AS3935_WriteRegister(FREQ_DISP_IRQ, &AS3935_Sensor.IRQ.Val.Value, 1);
 }

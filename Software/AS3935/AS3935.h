@@ -463,5 +463,6 @@ HAL_StatusTypeDef AS3935_ReadTRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_ReadSRCOCalibrationStatus(void);
 HAL_StatusTypeDef AS3935_CalibrateOscillators(void);
 HAL_StatusTypeDef AS3935_RecalibrateAfterPowerDown(void);
+void tuneCalibration();
 void Tune_Antenna(void);
 #endif // AS3935_H
