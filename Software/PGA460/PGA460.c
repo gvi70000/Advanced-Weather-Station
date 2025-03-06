@@ -1,20 +1,32 @@
 #include <string.h>
+#include <stdio.h>
 #include "usart.h"
 #include "PGA460_REG.h"
 #include "Transducers.h"
 #include "PGA460.h"
-
+#include "debug.h"
 // Initialize the array of ultrasonic sensors
 PGA460_Sensor_t myUltraSonicArray[ULTRASONIC_SENSOR_COUNT];
 
+extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart5;
+extern UART_HandleTypeDef huart1;
+
 // Helper function to calculate checksum for a data frame
-static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint16_t length) {
-    uint16_t sum = 0;
-    for (uint16_t i = 0; i < length; i++) {
-        sum += data[i];
+static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
+    uint16_t carry = 0;
+
+    for (uint8_t i = 0; i < len; i++) {
+        carry += data[i];
+        if (carry > 0xFF) {
+            carry -= 255;
+        }
     }
-    return ~((uint8_t)(sum & 0xFF));
+
+    carry = ~carry & 0xFF;
+    return (uint8_t)carry;
 }
+
 
 // Function to send a command to the PGA460
 static HAL_StatusTypeDef PGA460_SendData(uint8_t sensorID, PGA460_Command_t command, const uint8_t *data, uint8_t dataSize) {
@@ -31,7 +43,7 @@ static HAL_StatusTypeDef PGA460_SendData(uint8_t sensorID, PGA460_Command_t comm
     }
 
     frame[dataSize + 2] = PGA460_CalculateChecksum(&frame[1], dataSize + 1); // Append checksum
-    return HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, dataSize + 3, HAL_MAX_DELAY);
+    return HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, dataSize + 3, UART_TIMEOUT);
 }
 
 // Function to receive a response from the PGA460
@@ -39,33 +51,106 @@ static HAL_StatusTypeDef PGA460_ReceiveData(uint8_t sensorID, uint8_t *response,
     if (sensorID >= ULTRASONIC_SENSOR_COUNT) {
         return HAL_ERROR; // Invalid sensor ID
     }
-    return HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, response, responseSize, HAL_MAX_DELAY);
+    return HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, response, responseSize, UART_TIMEOUT);
+}
+
+static HAL_StatusTypeDef PGA460_CheckSensor(const uint8_t sensorIndex) { 
+    uint8_t response[2] = {0};
+    uint8_t retries = 3;
+
+    while (retries--) {
+        // Read both status registers (0x4C and 0x4D)
+        if (PGA460_RegisterRead(sensorIndex, REG_DEV_STAT0, &response[0]) == HAL_OK && PGA460_RegisterRead(sensorIndex, REG_DEV_STAT1, &response[1]) == HAL_OK) {
+
+            DEBUG("Sensor %d: Status registers - REG_DEV_STAT0: 0x%02X, REG_DEV_STAT1: 0x%02X\n", 
+                  sensorIndex, response[0], response[1]);
+            return HAL_OK;
+        }
+        
+        DEBUG("Sensor %d: Communication error! Retrying... (%d tries left)\n", sensorIndex, retries);
+        HAL_Delay(10);
+    }
+
+    DEBUG("Sensor %d: Communication error! Could not read status registers.\n", sensorIndex);
+    return HAL_ERROR;
 }
 
 // Function to initialize 3x PGA460 sensors
 void PGA460_Init() {
-		
-    myUltraSonicArray[0].PGA460_Data = transducer;
-		myUltraSonicArray[0].uartPort = &huart1;
-	  myUltraSonicArray[1].PGA460_Data = transducer;
-		myUltraSonicArray[1].uartPort = &huart4;
-	  myUltraSonicArray[2].PGA460_Data = transducer;
-		myUltraSonicArray[2].uartPort = &huart5;
+    UART_HandleTypeDef *uartPorts[ULTRASONIC_SENSOR_COUNT] = { &huart1, &huart4, &huart5 };
+
+    for (uint8_t i = 0; i < ULTRASONIC_SENSOR_COUNT; i++) {
+        myUltraSonicArray[i].PGA460_Data = transducer;
+        myUltraSonicArray[i].uartPort = uartPorts[i];
+
+        DEBUG("Checking PGA460 Sensor %d...\n", i);
+
+        // Check if sensor is responding
+        if (PGA460_CheckSensor(i) != HAL_OK) {
+            DEBUG("Sensor %d: Not found! Skipping initialization.\n", i);
+            continue;
+        }
+
+        DEBUG("Initializing PGA460 Sensor %d...\n", i);
+
+        // Read FVOLT_DEC register (Address = 0x25) to verify if EEPROM is written
+        uint8_t checkValue = 0;
+        if (PGA460_RegisterRead(i, 0x25, &checkValue) != HAL_OK) {
+            DEBUG("Sensor %d: EEPROM Read Failed!\n", i);
+            continue;
+        }
+
+        // If EEPROM is not written (FVOLT_DEC should be 0x3C)
+        if (checkValue != 0x3C) {
+            DEBUG("Sensor %d: EEPROM not set (FVOLT_DEC = 0x%02X), writing default values...\n", i, checkValue);
+            if (PGA460_EEPROMBulkWrite(i) != HAL_OK) {
+                DEBUG("Sensor %d: EEPROM Write Failed!\n", i);
+            } else {
+                DEBUG("Sensor %d: EEPROM Successfully Written!\n", i);
+            }
+        } else {
+            DEBUG("Sensor %d: EEPROM already configured (FVOLT_DEC = 0x%02X).\n", i, checkValue);
+        }
+    }
+    DEBUG("PGA460 Initialization Complete.\n");
 }
 
 // Register read function
-HAL_StatusTypeDef PGA460_RegisterRead(uint8_t sensorID, uint8_t regAddr, uint8_t *regValue) {
-    uint8_t data[] = { regAddr };
-    HAL_StatusTypeDef status = PGA460_SendData(sensorID, PGA460_CMD_REGISTER_READ, data, 1);
-    if (status != HAL_OK) return status;
+HAL_StatusTypeDef PGA460_RegisterRead(const uint8_t sensorID, uint8_t regAddr, uint8_t *regValue) {
+    uint8_t frame[4] = {PGA460_SYNC, PGA460_CMD_REGISTER_READ, regAddr, 0x00};  
+    // Compute checksum correctly (excluding sync byte)
+    frame[3] = PGA460_CalculateChecksum(&frame[1], 3);
 
-    return PGA460_ReceiveData(sensorID, regValue, 1);
+    // Transmit command frame
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, sizeof(frame), UART_TIMEOUT) != HAL_OK) {
+        DEBUG("Sensor %d: Register Read Command Transmission Failed! Address 0x%02X\n", sensorID, regAddr);
+        return HAL_ERROR;
+    }
+
+    // Wait for and receive response: [Diagnostic Byte, Register Data, Checksum]
+		uint8_t response[3];
+		if(HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, (uint8_t *)response, sizeof(response), UART_TIMEOUT) != HAL_OK){
+        DEBUG("Sensor %d: Register Read Failed! Address 0x%02X\n", sensorID, regAddr);
+        return HAL_ERROR;
+		}
+    // Store received register value
+    *regValue = response[1];
+    return HAL_OK;
 }
 
 // Register write function
 HAL_StatusTypeDef PGA460_RegisterWrite(uint8_t sensorID, uint8_t regAddr, uint8_t regValue) {
-    uint8_t data[] = { regAddr, regValue };
-    return PGA460_SendData(sensorID, PGA460_CMD_REGISTER_WRITE, data, 2);
+    uint8_t frame[5] = {PGA460_SYNC, PGA460_CMD_REGISTER_WRITE, regAddr, regValue, 0x00};  
+    // Compute checksum correctly (excluding sync byte)
+    frame[4] = PGA460_CalculateChecksum(&frame[1], 4);
+
+    // Transmit command frame
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, sizeof(frame), UART_TIMEOUT) != HAL_OK) {
+        DEBUG("Sensor %d: Register Write Command Transmission Failed! Address 0x%02X\n", sensorID, regAddr);
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
 }
 
 // EEPROM bulk read
@@ -77,8 +162,35 @@ HAL_StatusTypeDef PGA460_EEPROMBulkRead(uint8_t sensorID, uint8_t *dataBuffer) {
 }
 
 // EEPROM bulk write
-HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID, const uint8_t *dataBuffer) {
-    return PGA460_SendData(sensorID, PGA460_CMD_EEPROM_BULK_WRITE, dataBuffer, 43);
+HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID) {
+    uint8_t frame[46];
+
+    // Construct command frame
+    frame[0] = PGA460_SYNC;
+    frame[1] = PGA460_CMD_EEPROM_BULK_WRITE;
+
+    // Copy predefined transducer struct into frame starting at frame[2]
+    memcpy(&frame[2], &transducer, 43);
+
+    // Compute checksum (excluding sync byte)
+    frame[45] = PGA460_CalculateChecksum(&frame[1], 44);
+
+    // Transmit command frame via UART
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, sizeof(frame), UART_TIMEOUT) != HAL_OK) {
+        DEBUG("Sensor %d: EEPROM Bulk Write Failed!\n", sensorID);
+        return HAL_ERROR;
+    }
+
+    HAL_Delay(50);  // Ensure EEPROM write completes
+
+    // Optional: Read back a register to verify EEPROM write success
+    uint8_t verifyReg = 0;
+    if (PGA460_RegisterRead(sensorID, 0x00, &verifyReg) != HAL_OK) {
+        DEBUG("Sensor %d: EEPROM Write Verification Failed!\n", sensorID);
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
 }
 
 // Ultrasonic measurement result

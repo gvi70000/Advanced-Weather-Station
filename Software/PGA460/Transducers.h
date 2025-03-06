@@ -297,7 +297,7 @@ const PGA460_t transducer = {
     .SAT_FDIAG_TH.Val = 0xEE, // Threshold level
 
     // Voltage diagnostic and scaling
-    .FVOLT_DEC.Val = 0x1C, // VPWR_OV_TH = 12.3V, other diagnostic scaling settings
+    .FVOLT_DEC.Val = 0x3C, // VPWR_OV_TH = 17.7V, other diagnostic scaling settings
 
     // Decoupling time and AFE gain range
     .DECPL_TEMP.Val = 0x8F, // Decoupling time, temperature, and AFE gain range

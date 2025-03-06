@@ -15,6 +15,11 @@
 	// Content in these registers is lost during power cycle and low-power mode.
 	// Address 2Ch-3Fh and address 4Eh-5Eh are reserved for Texas Instruments internal use and are not accessible to the user.
 
+	// Sync byte for baud rate auto-detection
+	#define PGA460_SYNC					0x55  
+	#define PGA460_PASS					0x0D  	
+	#define PGA460_UNLOCK_ST1   0x68
+	#define PGA460_UNLOCK_ST2   0x69
 	// EEPROM Register Macros (addresses 0x00 to 0x2B)
 	#define REG_USER_DATA1      0x00  // R/W - Reset: 0x00
 	#define REG_USER_DATA2      0x01  // R/W - Reset: 0x00
@@ -951,10 +956,8 @@
 //		PGA460_t registers;
 //		uint8_t rawData[sizeof(PGA460_t)];
 //	} PGA460_Data_t;
-
 typedef struct __attribute__((packed)) {
     UART_HandleTypeDef *uartPort;  // Matches the type of huart1, huart4, huart5
     PGA460_t PGA460_Data;
 } PGA460_Sensor_t;
-
 #endif // PGA460_REG_H

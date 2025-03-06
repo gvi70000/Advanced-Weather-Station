@@ -44,11 +44,12 @@ typedef enum {
 } PGA460_Command_t;
 
 // Public Function Prototypes
+void PGA460_ProcessReceivedData(uint8_t uartID, uint8_t *data, uint16_t length);
 void PGA460_Init();
 HAL_StatusTypeDef PGA460_RegisterRead(uint8_t sensorID, uint8_t regAddr, uint8_t *regValue);
 HAL_StatusTypeDef PGA460_RegisterWrite(uint8_t sensorID, uint8_t regAddr, uint8_t regValue);
 HAL_StatusTypeDef PGA460_EEPROMBulkRead(uint8_t sensorID, uint8_t *dataBuffer);
-HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID, const uint8_t *dataBuffer);;
+HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID);
 HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(uint8_t sensorID, uint8_t *dataBuffer, uint16_t objectCount);
 HAL_StatusTypeDef PGA460_TemperatureAndNoiseMeasurement(uint8_t sensorID, uint8_t *temperature, uint8_t *noise);
 HAL_StatusTypeDef PGA460_TemperatureAndNoiseResult(uint8_t sensorID, uint8_t *temperature, uint8_t *noise);
