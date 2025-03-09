@@ -45,11 +45,7 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0xA0, // Dead time and deglitch settings
 
-#ifdef USE_OWU
-    .PULSE_P1.Val = 0x82, // Pulse configuration for One-Wire UART
-#else
     .PULSE_P1.Val = 0x02, // 2 pulses for OUTA burst (Preset 1)
-#endif
     .PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
@@ -122,11 +118,7 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0xA0, // Dead time and deglitch settings
 
-#ifdef USE_OWU
-    .PULSE_P1.Val = 0x88, // Pulse configuration for One-Wire UART
-#else
     .PULSE_P1.Val = 0x08, // 8 pulses for OUTA burst (Preset 1)
-#endif
     .PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
@@ -199,11 +191,7 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0xA0, // Dead time and deglitch settings
 
-#ifdef USE_OWU
-    .PULSE_P1.Val = 0x84, // Pulse configuration for One-Wire UART
-#else
     .PULSE_P1.Val = 0x04, // 4 pulses for OUTA burst (Preset 1)
-#endif
     .PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
@@ -276,11 +264,7 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0x80, // Dead time and deglitch settings
 
-		#ifdef USE_OWU
-			.PULSE_P1.Val = 0x88, // Pulse configuration for One-Wire UART
-		#else
-			.PULSE_P1.Val = 0x0A, // 10 pulses for OUTA burst (Preset 1)
-		#endif
+		.PULSE_P1.Val = 0x0A, // 10 pulses for OUTA burst (Preset 1)
     .PULSE_P2.Val = 0x04, // 10 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
@@ -353,11 +337,7 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0xA0, // Dead time and deglitch settings
 
-#ifdef USE_OWU
-    .PULSE_P1.Val = 0x84, // Pulse configuration for One-Wire UART
-#else
     .PULSE_P1.Val = 0x04, // 4 pulses for OUTA burst (Preset 1)
-#endif
     .PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
@@ -390,5 +370,21 @@ const PGA460_t transducer = {
     .P2_GAIN_CTRL.Val = 0x09  // Gain control settings for Preset 2
 };
 #endif
+
+const uint8_t THRESHOLD_25[32] = {0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x42, 0x10, 0x84, 0x21, 0x08, 0x40, 0x40, 0x40, 0x40, 0x00,
+																	0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x42, 0x10, 0x84, 0x21, 0x08, 0x40, 0x40, 0x40, 0x40, 0x00};
+
+const uint8_t THRESHOLD_50[32] = {0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x84, 0x21, 0x08, 0x42, 0x10, 0x80, 0x80, 0x80, 0x80, 0x00,
+																	0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x84, 0x21, 0x08, 0x42, 0x10, 0x80, 0x80, 0x80, 0x80, 0x00};
+
+const uint8_t THRESHOLD_75[32] = {0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0xC6, 0x31, 0x8C, 0x63, 0x18, 0xC0, 0xC0, 0xC0, 0xC0, 0x00,
+																	0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0xC6, 0x31, 0x8C, 0x63, 0x18, 0xC0, 0xC0, 0xC0, 0xC0, 0x00};
+
+const uint8_t THRESHOLD_CUSTOM[32] = {0x41, 0x44, 0x10, 0x06, 0x69, 0x99, 0xDD, 0x4C, 0x31, 0x08, 0x42, 0x18, 0x20, 0x24, 0x2A, 0x00,
+																			0x41, 0x44, 0x10, 0x06, 0x09, 0x99, 0xDD, 0x4C, 0x31, 0x08, 0x42, 0x24, 0x30, 0x36, 0x3C, 0x00};
+
+const uint8_t TGV_25[7] = {0x88, 0x88, 0x88, 0x41, 0x04, 0x10, 0x40};
+const uint8_t TGV_50[7] = {0x88, 0x88, 0x88, 0x82, 0x08, 0x20, 0x80};
+const uint8_t TGV_75[7] = {0x88, 0x88, 0x88, 0xC3, 0x0C, 0x30, 0xC0};
 
 #endif /* __Transducers_H */

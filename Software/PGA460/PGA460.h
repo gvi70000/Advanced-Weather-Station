@@ -10,6 +10,18 @@
 // Number of ultrasonic sensors in the array
 #define ULTRASONIC_SENSOR_COUNT 3
 
+typedef enum {
+    PGA460_MEAS_DISTANCE	= 0,	// Retrieve distance measurement (in meters)
+    PGA460_MEAS_WIDTH			= 1,	// Retrieve width of echo signal (in microseconds)
+    PGA460_MEAS_AMPLITUDE	= 2		// Retrieve peak amplitude of echo signal (8-bit raw value)
+} PGA460_MeasResult_t;
+
+typedef enum {
+ PGA460_CMD_GET_TEMP = 0x00,
+ PGA460_CMD_GET_NOISE = 0x01
+} PGA460_CmdType_t;
+
+#define PGA460_TEMP_ERR 999.0f
 // Enum for PGA460 commands
 typedef enum {
     // UART Command Codes
@@ -44,103 +56,79 @@ typedef enum {
 } PGA460_Command_t;
 
 // Public Function Prototypes
-void PGA460_ProcessReceivedData(uint8_t uartID, uint8_t *data, uint16_t length);
-void PGA460_Init();
-HAL_StatusTypeDef PGA460_RegisterRead(uint8_t sensorID, uint8_t regAddr, uint8_t *regValue);
-HAL_StatusTypeDef PGA460_RegisterWrite(uint8_t sensorID, uint8_t regAddr, uint8_t regValue);
-HAL_StatusTypeDef PGA460_EEPROMBulkRead(uint8_t sensorID, uint8_t *dataBuffer);
+
+/* -------------------------------------------------
+ * Initialization Functions
+ * ------------------------------------------------- */
+HAL_StatusTypeDef PGA460_Init(void);
+HAL_StatusTypeDef PGA460_CheckStatus(const uint8_t sensorID);
+
+/* -------------------------------------------------
+ * Register Read/Write Functions
+ * ------------------------------------------------- */
+HAL_StatusTypeDef PGA460_RegisterRead(const uint8_t sensorID, const uint8_t regAddr, uint8_t *regValue);
+HAL_StatusTypeDef PGA460_RegisterWrite(const uint8_t sensorID, const uint8_t regAddr, const uint8_t regValue);
+
+/* -------------------------------------------------
+ * EEPROM Functions
+ * ------------------------------------------------- */
+HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, PGA460_Sensor_t *dataBuffer);
 HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID);
-HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(uint8_t sensorID, uint8_t *dataBuffer, uint16_t objectCount);
-HAL_StatusTypeDef PGA460_TemperatureAndNoiseMeasurement(uint8_t sensorID, uint8_t *temperature, uint8_t *noise);
-HAL_StatusTypeDef PGA460_TemperatureAndNoiseResult(uint8_t sensorID, uint8_t *temperature, uint8_t *noise);
-HAL_StatusTypeDef PGA460_TransducerEchoDataDump(uint8_t sensorID, uint8_t *dataBuffer);
-HAL_StatusTypeDef PGA460_SystemDiagnostics(uint8_t sensorID, uint8_t *diagnostics);
-HAL_StatusTypeDef PGA460_TimeVaryingGainBulkRead(uint8_t sensorID, uint8_t *gainData);
-HAL_StatusTypeDef PGA460_TimeVaryingGainBulkWrite(uint8_t sensorID, const uint8_t *gainData);
-HAL_StatusTypeDef PGA460_ThresholdBulkRead(uint8_t sensorID, uint8_t *thresholdData);
-HAL_StatusTypeDef PGA460_ThresholdBulkWrite(uint8_t sensorID, const uint8_t *thresholdData);
+HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID);
 
-// Bandpass filter bandwidth
-void setBandpassFilterBandwidth(PGA460_Sensor_t *sensor, uint8_t bandWidth);
-uint8_t getBandpassFilterBandwidth(PGA460_Sensor_t *sensor);
+/* -------------------------------------------------
+ * Configuration Functions
+ * ------------------------------------------------- */
+HAL_StatusTypeDef PGA460_InitTimeVaryingGain(const uint8_t sensorID, const PGA460_GainRange_t gain_range, const PGA460_TVG_Level_t timeVaryingGain);
 
-// Initial gain
-void setInitialGain(PGA460_Sensor_t *sensor, uint8_t gain);
-uint8_t getInitialGain(PGA460_Sensor_t *sensor);
+/* -------------------------------------------------
+ * Measurement Functions
+ * ------------------------------------------------- */
+HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd, const uint8_t numObjUpdate);
+HAL_StatusTypeDef PGA460_PullUltrasonicMeasResult(const uint8_t sensorID, uint8_t *resultBuffer);
+float PGA460_ProcessUltrasonicMeasResult(const uint8_t sensorID, const uint8_t objIndex, const PGA460_MeasResult_t type);
+HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID, uint8_t *dataBuffer, const uint16_t objectCount);
+float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType_t mode);
+HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult);
+HAL_StatusTypeDef PGA460_GetTimeVaryingGain(const uint8_t sensorID, uint8_t *gainData);
+HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *thresholdData);
+HAL_StatusTypeDef PGA460_GetEchoDataDump(const uint8_t sensorID, uint8_t *dataBuffer);
 
-// Burst frequency
-void setFrequency(PGA460_Sensor_t *sensor, uint8_t frequency);
-uint8_t getFrequency(PGA460_Sensor_t *sensor);
+/* -------------------------------------------------
+ * Bandpass & Gain Configuration Functions
+ * ------------------------------------------------- */
+void setBandpassFilterBandwidth(const uint8_t sensorID, uint8_t bandWidth);
+uint8_t getBandpassFilterBandwidth(const uint8_t sensorID);
+void setInitialGain(const uint8_t sensorID, uint8_t gain);
+uint8_t getInitialGain(const uint8_t sensorID);
 
-// Deglitch period
-void setDeglitchPeriod(PGA460_Sensor_t *sensor, uint8_t deglitchPeriod);
-uint8_t getDeglitchPeriod(PGA460_Sensor_t *sensor);
+/* -------------------------------------------------
+ * Frequency & Timing Configuration
+ * ------------------------------------------------- */
+void setFrequency(const uint8_t sensorID, uint8_t frequency);
+uint8_t getFrequency(const uint8_t sensorID);
+void setDeglitchPeriod(const uint8_t sensorID, uint8_t deglitchPeriod);
+uint8_t getDeglitchPeriod(const uint8_t sensorID);
+void setBurstPulseDeadTime(const uint8_t sensorID, uint8_t burstPulseDeadTime);
+uint8_t getBurstPulseDeadTime(const uint8_t sensorID);
+void setBurstPulseP1(const uint8_t sensorID, uint8_t burstPulseP1);
+void setBurstPulseP2(const uint8_t sensorID, uint8_t burstPulseP2);
 
-// Burst pulse dead time
-void setBurstPulseDeadTime(PGA460_Sensor_t *sensor, uint8_t burstPulseDeadTime);
-uint8_t getBurstPulseDeadTime(PGA460_Sensor_t *sensor);
+/* -------------------------------------------------
+ * Device Configuration Functions
+ * ------------------------------------------------- */
+void setAddress(const uint8_t sensorID, uint8_t address);
+void setCurrentLimitStatus(const uint8_t sensorID, uint8_t currentLimitStatus);
+void setSleepModeTimer(const uint8_t sensorID, uint8_t sleepModeTimer);
+void setDecoupleTimeOrTemperature(const uint8_t sensorID, uint8_t decoupleValue);
+void setNoiseLevel(const uint8_t sensorID, uint8_t noiseLevel);
 
-// Burst pulses for Preset1
-void setBurstPulseP1(PGA460_Sensor_t *sensor, uint8_t burstPulseP1);
+/* -------------------------------------------------
+ * Temperature & Scale Configuration
+ * ------------------------------------------------- */
+void setTemperatureScaleOffset(const uint8_t sensorID, int8_t tempOffset);
+int8_t getTemperatureScaleOffset(const uint8_t sensorID);
+void setTemperatureScaleGain(const uint8_t sensorID, int8_t tempGain);
+int8_t getTemperatureScaleGain(const uint8_t sensorID);
 
-// Burst pulses for Preset2
-void setBurstPulseP2(PGA460_Sensor_t *sensor, uint8_t burstPulseP2);
-
-// UART address
-void setAddress(PGA460_Sensor_t *sensor, uint8_t address);
-
-// Current limit status
-void setCurrentLimitStatus(PGA460_Sensor_t *sensor, uint8_t currentLimitStatus);
-
-// Current limit value for Preset1
-void setCurrentLimitValP1(PGA460_Sensor_t *sensor, uint16_t currentLimitValP1);
-uint16_t getCurrentLimitValP1(PGA460_Sensor_t *sensor);
-
-// Current limit value for Preset2
-void setCurrentLimitValP2(PGA460_Sensor_t *sensor, uint16_t currentLimitValP2);
-uint16_t getCurrentLimitValP2(PGA460_Sensor_t *sensor);
-
-// Lowpass filter cutoff frequency
-void setLowpassFilterCutoffFrequency(PGA460_Sensor_t *sensor, uint8_t lowpassFilterCutoffFrequency);
-uint8_t getLowpassFilterCutoffFrequency(PGA460_Sensor_t *sensor);
-
-// Record time for Preset1
-void setRecordTimeP1(PGA460_Sensor_t *sensor, uint16_t recordTimeP1);
-uint16_t getRecordTimeP1(PGA460_Sensor_t *sensor);
-
-// Record time for Preset2
-void setRecordTimeP2(PGA460_Sensor_t *sensor, uint16_t recordTimeP2);
-uint16_t getRecordTimeP2(PGA460_Sensor_t *sensor);
-
-// Frequency diagnostic window length
-void setFrequencyDiagnosticWindowLength(PGA460_Sensor_t *sensor, uint8_t frequencyDiagnosticWindowLength);
-uint8_t getFrequencyDiagnosticWindowLength(PGA460_Sensor_t *sensor);
-
-// Frequency diagnostic start time
-void setFrequencyDiagnosticStartTime(PGA460_Sensor_t *sensor, uint16_t frequencyDiagnosticStartTime);
-uint16_t getFrequencyDiagnosticStartTime(PGA460_Sensor_t *sensor);
-
-// Saturation diagnostic threshold
-void setSaturationDiagThreshold(PGA460_Sensor_t *sensor, uint8_t satThreshold);
-
-// Voltage diagnostic threshold
-void setVoltageDiagThreshold(PGA460_Sensor_t *sensor, uint8_t voltageDiagThreshold);
-uint8_t getVoltageDiagThreshold(PGA460_Sensor_t *sensor);
-
-// Sleep mode timer
-void setSleepModeTimer(PGA460_Sensor_t *sensor, uint8_t sleepModeTimer);
-
-// Decouple time or temperature
-void setDecoupleTimeOrTemperature(PGA460_Sensor_t *sensor, uint8_t decoupleValue);
-
-// Noise level
-void setNoiseLevel(PGA460_Sensor_t *sensor, uint8_t noiseLevel);
-
-// Temperature scale offset
-void setTemperatureScaleOffset(PGA460_Sensor_t *sensor, int8_t tempOffset);
-int8_t getTemperatureScaleOffset(PGA460_Sensor_t *sensor);
-
-// Temperature scale gain
-void setTemperatureScaleGain(PGA460_Sensor_t *sensor, int8_t tempGain);
-// int8_t getTemperatureScaleGain(PGA460_Sensor_t *sensor);
 #endif // PGA460_H

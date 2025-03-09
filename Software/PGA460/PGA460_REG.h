@@ -16,10 +16,9 @@
 	// Address 2Ch-3Fh and address 4Eh-5Eh are reserved for Texas Instruments internal use and are not accessible to the user.
 
 	// Sync byte for baud rate auto-detection
-	#define PGA460_SYNC					0x55  
-	#define PGA460_PASS					0x0D  	
-	#define PGA460_UNLOCK_ST1   0x68
-	#define PGA460_UNLOCK_ST2   0x69
+	#define PGA460_SYNC						0x55  
+	#define PGA460_UNLOCK_EEPROM	0x68
+	#define PGA460_LOCK_EEPROM		0x69
 	// EEPROM Register Macros (addresses 0x00 to 0x2B)
 	#define REG_USER_DATA1      0x00  // R/W - Reset: 0x00
 	#define REG_USER_DATA2      0x01  // R/W - Reset: 0x00
@@ -856,6 +855,22 @@
 	} P2_THR_15_t;
 
 	typedef struct __attribute__((packed)) {
+    union {
+        uint8_t Value;
+        struct __attribute__((packed)) {
+            uint8_t DEVICE_BUSY       : 1; // Bit 0: PGA460 Device Busy
+            uint8_t BAUD_RATE_ERROR   : 1; // Bit 1: Sync field bit rate too high/low
+            uint8_t SYNC_WIDTH_ERROR  : 1; // Bit 2: Consecutive sync field bit widths do not match
+            uint8_t CHECKSUM_ERROR    : 1; // Bit 3: Invalid checksum received
+            uint8_t COMMAND_ERROR     : 1; // Bit 4: Invalid command sent from controller
+            uint8_t GENERAL_ERROR     : 1; // Bit 5: General communication error (details below)
+            uint8_t EEPROM_CRC_ERROR  : 1; // Bit 6: EEPROM CRC error or TRM CRC error
+            uint8_t RESERVED          : 1; // Bit 7: Reserved (Logic 0)
+        } BitField;
+    } Val;
+} PGA460_Diagnostic_t;
+
+	typedef struct __attribute__((packed)) {
 		uint8_t USER_DATA1;						// Address 0x00
 		uint8_t USER_DATA2;						// Address 0x01
 		uint8_t USER_DATA3;						// Address 0x02
@@ -903,59 +918,68 @@
 		
 		EE_CNTRL_t EE_CNTRL; 					// EE_CNTRL register (Address 0x40) User EEPROM control register
 		
-		uint8_t BPF_A2_MSB;			// Bandpass filter A2 coefficient most-significant byte value (Address 0x41)
-		uint8_t BPF_A2_LSB;			// Bandpass filter A2 coefficient least-significant byte value (Address 0x42)
-		uint8_t BPF_A3_MSB;			// Bandpass filter A3 coefficient most-significant byte value (Address 0x43)
-		uint8_t BPF_A3_LSB;			// Bandpass filter A3 coefficient least-significant byte value (Address 0x44)
-		uint8_t BPF_B1_MSB;			// Bandpass filter B1 coefficient most-significant byte value (Address 0x45)
-		uint8_t BPF_B1_LSB;			// Bandpass filter B1 coefficient least-significant byte value (Address 0x46)
-		uint8_t LPF_A2_MSB;			// Lowpass filter A2 coefficient most-significant byte value (Address 0x47) only 7 bits
-		uint8_t LPF_A2_LSB;			// Lowpass filter A2 coefficient least-significant byte value (Address 0x48)
-		uint8_t LPF_B1_MSB;			// Lowpass filter A2 coefficient most-significant byte value (Address 0x49) only 7 bits
-		uint8_t LPF_B1_LSB;			// Lowpass filter A2 coefficient least-significant byte value (Address 0x4A)
-		TEST_MUX_t TEST_MUX;		// TEST_MUX Register (Address = 4Bh)
-		DEV_STAT0_t DEV_STAT0;	// DEV_STAT0 Register (Address = 4Ch) 
-		DEV_STAT1_t DEV_STAT1;	// DEV_STAT1 Register (Address = 4Dh)
+		uint8_t BPF_A2_MSB;						// Bandpass filter A2 coefficient most-significant byte value (Address 0x41)
+		uint8_t BPF_A2_LSB;						// Bandpass filter A2 coefficient least-significant byte value (Address 0x42)
+		uint8_t BPF_A3_MSB;						// Bandpass filter A3 coefficient most-significant byte value (Address 0x43)
+		uint8_t BPF_A3_LSB;						// Bandpass filter A3 coefficient least-significant byte value (Address 0x44)
+		uint8_t BPF_B1_MSB;						// Bandpass filter B1 coefficient most-significant byte value (Address 0x45)
+		uint8_t BPF_B1_LSB;						// Bandpass filter B1 coefficient least-significant byte value (Address 0x46)
+		uint8_t LPF_A2_MSB;						// Lowpass filter A2 coefficient most-significant byte value (Address 0x47) only 7 bits
+		uint8_t LPF_A2_LSB;						// Lowpass filter A2 coefficient least-significant byte value (Address 0x48)
+		uint8_t LPF_B1_MSB;						// Lowpass filter A2 coefficient most-significant byte value (Address 0x49) only 7 bits
+		uint8_t LPF_B1_LSB;						// Lowpass filter A2 coefficient least-significant byte value (Address 0x4A)
+		TEST_MUX_t TEST_MUX;					// TEST_MUX Register (Address = 4Bh)
+		DEV_STAT0_t DEV_STAT0;				// DEV_STAT0 Register (Address = 4Ch) 
+		DEV_STAT1_t DEV_STAT1;				// DEV_STAT1 Register (Address = 4Dh)
 		
-		P1_THR_0_t P1_THR_0;		// P1_THR_0 Register (Address = 5Fh)
-		P1_THR_1_t P1_THR_1;		// P1_THR_1 Register (Address = 60h)
-		P1_THR_2_t P1_THR_2;		// P1_THR_2 Register (Address = 61h)
-		P1_THR_3_t P1_THR_3;		// P1_THR_3 Register (Address = 62h)	
-		P1_THR_4_t P1_THR_4;		// P1_THR_4 Register (Address = 63h)
-		P1_THR_5_t P1_THR_5;		// P1_THR_5 Register (Address = 64h)	
-		P1_THR_6_t P1_THR_6;		// P1_THR_6 Register (Address = 65h)
-		P1_THR_7_t P1_THR_7;		// P1_THR_7 Register (Address = 66h)
-		P1_THR_8_t P1_THR_8;		// P1_THR_8 Register (Address = 67h)
-		P1_THR_9_t P1_THR_9;		// P1_THR_9 Register (Address = 68h)
-		P1_THR_10_t P1_THR_10;	// P1_THR_10 Register (Address = 69h)
-		uint8_t P1_THR_11;			// P1_THR_11 Register (Address = 6Ah) TH_P1_L9
-		uint8_t P1_THR_12;			// P1_THR_12 Register (Address = 6Bh) TH_P1_L10
-		uint8_t P1_THR_13;			// P1_THR_13 Register (Address = 6Ch) TH_P1_L11
-		uint8_t P1_THR_14;			// P1_THR_13 Register (Address = 6Dh) TH_P1_L12
-		P1_THR_15_t P1_THR_15;	// P1_THR_15 Register (Address = 6Eh) TH_P1_OFF
-		P2_THR_0_t P2_THR_0;		// P2_THR_0 Register (Address = 6Fh)
-		P2_THR_1_t P2_THR_1;		// P2_THR_1 Register (Address = 70h)
-		P2_THR_2_t P2_THR_2;		// P2_THR_2 Register (Address = 71h)
-		P2_THR_3_t P2_THR_3;		// P2_THR_3 Register (Address = 72h)	
-		P2_THR_4_t P2_THR_4;		// P2_THR_4 Register (Address = 73h)
-		P2_THR_5_t P2_THR_5;		// P2_THR_5 Register (Address = 74h)	
-		P2_THR_6_t P2_THR_6;		// P2_THR_6 Register (Address = 75h)
-		P2_THR_7_t P2_THR_7;		// P2_THR_7 Register (Address = 76h)
-		P2_THR_8_t P2_THR_8;		// P2_THR_8 Register (Address = 77h)
-		P2_THR_9_t P2_THR_9;		// P2_THR_9 Register (Address = 78h)
-		P2_THR_10_t P2_THR_10;	// P2_THR_10 Register (Address = 79h)
-		uint8_t P2_THR_11;			// P2_THR_11 Register (Address = 7Ah) TH_P2_L9
-		uint8_t P2_THR_12;			// P2_THR_12 Register (Address = 7Bh) TH_P2_L10
-		uint8_t P2_THR_13;			// P2_THR_13 Register (Address = 7Ch) TH_P2_L11
-		uint8_t P2_THR_14;			// P1_THR_13 Register (Address = 7Dh) TH_P2_L12	
-		P2_THR_15_t P2_THR_15;	// P2_THR_15 Register (Address = 7Eh) TH_P2_OFF
-		uint8_t THR_CRC;				// P1_THR_13 Register (Address = 7Fh) Threshold map configuration registers data CRC value
+		P1_THR_0_t P1_THR_0;					// P1_THR_0 Register (Address = 5Fh)
+		P1_THR_1_t P1_THR_1;					// P1_THR_1 Register (Address = 60h)
+		P1_THR_2_t P1_THR_2;					// P1_THR_2 Register (Address = 61h)
+		P1_THR_3_t P1_THR_3;					// P1_THR_3 Register (Address = 62h)	
+		P1_THR_4_t P1_THR_4;					// P1_THR_4 Register (Address = 63h)
+		P1_THR_5_t P1_THR_5;					// P1_THR_5 Register (Address = 64h)	
+		P1_THR_6_t P1_THR_6;					// P1_THR_6 Register (Address = 65h)
+		P1_THR_7_t P1_THR_7;					// P1_THR_7 Register (Address = 66h)
+		P1_THR_8_t P1_THR_8;					// P1_THR_8 Register (Address = 67h)
+		P1_THR_9_t P1_THR_9;					// P1_THR_9 Register (Address = 68h)
+		P1_THR_10_t P1_THR_10;				// P1_THR_10 Register (Address = 69h)
+		uint8_t P1_THR_11;						// P1_THR_11 Register (Address = 6Ah) TH_P1_L9
+		uint8_t P1_THR_12;						// P1_THR_12 Register (Address = 6Bh) TH_P1_L10
+		uint8_t P1_THR_13;						// P1_THR_13 Register (Address = 6Ch) TH_P1_L11
+		uint8_t P1_THR_14;						// P1_THR_13 Register (Address = 6Dh) TH_P1_L12
+		P1_THR_15_t P1_THR_15;				// P1_THR_15 Register (Address = 6Eh) TH_P1_OFF
+		P2_THR_0_t P2_THR_0;					// P2_THR_0 Register (Address = 6Fh)
+		P2_THR_1_t P2_THR_1;					// P2_THR_1 Register (Address = 70h)
+		P2_THR_2_t P2_THR_2;					// P2_THR_2 Register (Address = 71h)
+		P2_THR_3_t P2_THR_3;					// P2_THR_3 Register (Address = 72h)	
+		P2_THR_4_t P2_THR_4;					// P2_THR_4 Register (Address = 73h)
+		P2_THR_5_t P2_THR_5;					// P2_THR_5 Register (Address = 74h)	
+		P2_THR_6_t P2_THR_6;					// P2_THR_6 Register (Address = 75h)
+		P2_THR_7_t P2_THR_7;					// P2_THR_7 Register (Address = 76h)
+		P2_THR_8_t P2_THR_8;					// P2_THR_8 Register (Address = 77h)
+		P2_THR_9_t P2_THR_9;					// P2_THR_9 Register (Address = 78h)
+		P2_THR_10_t P2_THR_10;				// P2_THR_10 Register (Address = 79h)
+		uint8_t P2_THR_11;						// P2_THR_11 Register (Address = 7Ah) TH_P2_L9
+		uint8_t P2_THR_12;						// P2_THR_12 Register (Address = 7Bh) TH_P2_L10
+		uint8_t P2_THR_13;						// P2_THR_13 Register (Address = 7Ch) TH_P2_L11
+		uint8_t P2_THR_14;						// P1_THR_13 Register (Address = 7Dh) TH_P2_L12	
+		P2_THR_15_t P2_THR_15;				// P2_THR_15 Register (Address = 7Eh) TH_P2_OFF
+		uint8_t THR_CRC;							// P1_THR_13 Register (Address = 7Fh) Threshold map configuration registers data CRC value
 	} PGA460_t;
 
-//	typedef union {
-//		PGA460_t registers;
-//		uint8_t rawData[sizeof(PGA460_t)];
-//	} PGA460_Data_t;
+	typedef enum {
+    PGA460_GAIN_32_64dB = 0xCF,  // 32-64dB
+    PGA460_GAIN_46_78dB = 0x8F,  // 46-78dB
+    PGA460_GAIN_52_84dB = 0x4F,  // 52-84dB
+    PGA460_GAIN_58_90dB = 0x0F   // 58-90dB
+} PGA460_GainRange_t;
+
+typedef enum {
+    PGA460_TVG_25_PERCENT = 0,  // 25% of range
+    PGA460_TVG_50_PERCENT = 1,  // 50% of range
+    PGA460_TVG_75_PERCENT = 2   // 75% of range
+} PGA460_TVG_Level_t;
+
 typedef struct __attribute__((packed)) {
     UART_HandleTypeDef *uartPort;  // Matches the type of huart1, huart4, huart5
     PGA460_t PGA460_Data;
