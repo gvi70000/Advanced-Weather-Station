@@ -394,6 +394,51 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
     return result;
 }
 
+HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTempC) {
+    float pgaTempC = 0.0f;
+    int8_t offset = 0;
+    uint8_t tempTrim = 0;
+
+    // Step 1: Read PGA460's internal temperature
+    pgaTempC = PGA460_ReadTemperatureOrNoise(sensorID, PGA460_CMD_GET_TEMP);
+    
+    // Check for invalid readings
+    if (pgaTempC == PGA460_TEMP_ERR) {
+        DEBUG("Sensor %d: Failed to read internal temperature!\n", sensorID);
+        return HAL_ERROR;
+    }
+
+    DEBUG("Sensor %d: PGA460 Reported Temperature = %.2fC\n", sensorID, pgaTempC);
+
+    // Step 2: Calculate the required temperature offset (round to nearest integer)
+    offset = (int8_t)(externalTempC - pgaTempC);
+
+    // Clamp offset to valid range (-64 to +63)
+    if (offset > 63) offset = 63;
+    if (offset < -64) offset = -64;
+
+    // Step 3: Read the current TEMP_TRIM register value
+    if (PGA460_RegisterRead(sensorID, REG_TEMP_TRIM, &tempTrim) != HAL_OK) {
+        DEBUG("Sensor %d: Failed to read TEMP_TRIM register!\n", sensorID);
+        return HAL_ERROR;
+    }
+
+    DEBUG("Sensor %d: Current TEMP_TRIM = 0x%02X\n", sensorID, tempTrim);
+
+    // Step 4: Apply Temperature Offset (Bits 6-0 should be modified)
+    tempTrim = (tempTrim & 0x80) | (offset & 0x7F);
+
+    // Step 5: Write the new TEMP_TRIM value back
+    if (PGA460_RegisterWrite(sensorID, REG_TEMP_TRIM, tempTrim) != HAL_OK) {
+        DEBUG("Sensor %d: Failed to write TEMP_TRIM register!\n", sensorID);
+        return HAL_ERROR;
+    }
+
+    DEBUG("Sensor %d: New TEMP_TRIM set to 0x%02X (Offset: %dC)\n", sensorID, tempTrim, offset);
+
+    return HAL_OK;
+}
+
 HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult) {
     uint8_t response[4] = {0x00, 0x00, 0x00, 0x00};
 
