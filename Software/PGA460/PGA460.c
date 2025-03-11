@@ -13,6 +13,35 @@ extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart5;
 extern UART_HandleTypeDef huart1;
 
+const CommandArray commands[PGA_CMD_COUNT] = {
+    {{PGA460_SYNC, PGA460_CMD_BURST_AND_LISTEN_PRESET1, 255 - PGA460_CMD_BURST_AND_LISTEN_PRESET1}}, // PGA460_CMD_BURST_AND_LISTEN_PRESET1
+    {{PGA460_SYNC, PGA460_CMD_BURST_AND_LISTEN_PRESET2, 255 - PGA460_CMD_BURST_AND_LISTEN_PRESET2}}, // PGA460_CMD_BURST_AND_LISTEN_PRESET2
+    {{PGA460_SYNC, PGA460_CMD_LISTEN_ONLY_PRESET1, 255 - PGA460_CMD_LISTEN_ONLY_PRESET1}}, // PGA460_CMD_LISTEN_ONLY_PRESET1
+    {{PGA460_SYNC, PGA460_CMD_LISTEN_ONLY_PRESET2, 255 - PGA460_CMD_LISTEN_ONLY_PRESET2}}, // PGA460_CMD_LISTEN_ONLY_PRESET2
+    {{PGA460_SYNC, PGA460_CMD_TEMP_AND_NOISE_MEASUREMENT, 255 - PGA460_CMD_TEMP_AND_NOISE_MEASUREMENT}}, // PGA460_CMD_TEMP_AND_NOISE_MEASUREMENT
+    {{PGA460_SYNC, PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT, 255 - PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT}}, // PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT
+    {{PGA460_SYNC, PGA460_CMD_TEMP_AND_NOISE_RESULT, 255 - PGA460_CMD_TEMP_AND_NOISE_RESULT}}, // PGA460_CMD_TEMP_AND_NOISE_RESULT
+    {{PGA460_SYNC, PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP, 255 - PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP}}, // PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP
+    {{PGA460_SYNC, PGA460_CMD_SYSTEM_DIAGNOSTICS, 255 - PGA460_CMD_SYSTEM_DIAGNOSTICS}}, // PGA460_CMD_SYSTEM_DIAGNOSTICS
+    {{PGA460_SYNC, PGA460_CMD_REGISTER_READ, 255 - PGA460_CMD_REGISTER_READ}}, // PGA460_CMD_REGISTER_READ
+    {{PGA460_SYNC, PGA460_CMD_REGISTER_WRITE, 255 - PGA460_CMD_REGISTER_WRITE}}, // PGA460_CMD_REGISTER_WRITE
+    {{PGA460_SYNC, PGA460_CMD_EEPROM_BULK_READ, 255 - PGA460_CMD_EEPROM_BULK_READ}}, // PGA460_CMD_EEPROM_BULK_READ
+    {{PGA460_SYNC, PGA460_CMD_EEPROM_BULK_WRITE, 255 - PGA460_CMD_EEPROM_BULK_WRITE}}, // PGA460_CMD_EEPROM_BULK_WRITE
+    {{PGA460_SYNC, PGA460_CMD_TVG_BULK_READ, 255 - PGA460_CMD_TVG_BULK_READ}}, // PGA460_CMD_TVG_BULK_READ
+    {{PGA460_SYNC, PGA460_CMD_TVG_BULK_WRITE, 255 - PGA460_CMD_TVG_BULK_WRITE}}, // PGA460_CMD_TVG_BULK_WRITE
+    {{PGA460_SYNC, PGA460_CMD_THRESHOLD_BULK_READ, 255 - PGA460_CMD_THRESHOLD_BULK_READ}}, // PGA460_CMD_THRESHOLD_BULK_READ
+    {{PGA460_SYNC, PGA460_CMD_THRESHOLD_BULK_WRITE, 255 - PGA460_CMD_THRESHOLD_BULK_WRITE}}, // PGA460_CMD_THRESHOLD_BULK_WRITE
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P1, 255 - PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P1}}, // PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P1
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P2, 255 - PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P2}}, // PGA460_CMD_BROADCAST_BURST_AND_LISTEN_P2
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_LISTEN_ONLY_P1, 255 - PGA460_CMD_BROADCAST_LISTEN_ONLY_P1}}, // PGA460_CMD_BROADCAST_LISTEN_ONLY_P1
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_LISTEN_ONLY_P2, 255 - PGA460_CMD_BROADCAST_LISTEN_ONLY_P2}}, // PGA460_CMD_BROADCAST_LISTEN_ONLY_P2
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_TEMP_NOISE_MEASURE, 255 - PGA460_CMD_BROADCAST_TEMP_NOISE_MEASURE}}, // PGA460_CMD_BROADCAST_TEMP_NOISE_MEASURE
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_REGISTER_WRITE, 255 - PGA460_CMD_BROADCAST_REGISTER_WRITE}}, // PGA460_CMD_BROADCAST_REGISTER_WRITE
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_EEPROM_BULK_WRITE, 255 - PGA460_CMD_BROADCAST_EEPROM_BULK_WRITE}}, // PGA460_CMD_BROADCAST_EEPROM_BULK_WRITE
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_TVG_BULK_WRITE, 255 - PGA460_CMD_BROADCAST_TVG_BULK_WRITE}}, // PGA460_CMD_BROADCAST_TVG_BULK_WRITE
+    {{PGA460_SYNC, PGA460_CMD_BROADCAST_THRESHOLD_BULK_WRITE, 255 - PGA460_CMD_BROADCAST_THRESHOLD_BULK_WRITE}}  // PGA460_CMD_BROADCAST_THRESHOLD_BULK_WRITE
+};
+
 // Helper function to calculate checksum for a data frame
 static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
     uint16_t carry = 0;
@@ -39,15 +68,6 @@ void PGA460_ReadAllSensors(void) {
         }
 
         for (uint8_t obj = 0; obj < PGA_OBJECTS_TRACKED; obj++) {
-            myUltraSonicArray[sensorID].ultrasonicData.objects[obj].distance =
-                PGA460_ProcessUltrasonicMeasResult(sensorID, obj, PGA460_MEAS_DISTANCE);
-
-            myUltraSonicArray[sensorID].ultrasonicData.objects[obj].width =
-                PGA460_ProcessUltrasonicMeasResult(sensorID, obj, PGA460_MEAS_WIDTH);
-
-            myUltraSonicArray[sensorID].ultrasonicData.objects[obj].amplitude =
-                PGA460_ProcessUltrasonicMeasResult(sensorID, obj, PGA460_MEAS_AMPLITUDE);
-
             DEBUG("Sensor %d, Obj %d: Distance = %d m, Width = %u us, Amplitude = %u\n",
                   sensorID, obj + 1,
                   myUltraSonicArray[sensorID].ultrasonicData.objects[obj].distance,
@@ -186,7 +206,7 @@ HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, PGA460_Sensor_t 
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
 
     // Step 1: Send EEPROM Bulk Read Command
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_EEPROM_BULK_READ].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_EEPROM_BULK_READ].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Bulk Read Command Failed!\n", sensorID);
         return HAL_ERROR;
     }
@@ -313,69 +333,12 @@ HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Comm
     return HAL_OK;
 }
 
-HAL_StatusTypeDef PGA460_PullUltrasonicMeasResult(const uint8_t sensorID, uint8_t *resultBuffer) {
-    //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT, 0x00};
-    //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
-
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
-        DEBUG("Sensor %d: Measurement Result Request Failed!\n", sensorID);
-        return HAL_ERROR;
-    }
-
-    // Receive measurement results (5 bytes: Header + Distance + Width + Amplitude)
-    if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, resultBuffer, PGA_OBJ_DATA_SIZE, UART_TIMEOUT) != HAL_OK) {
-        DEBUG("Sensor %d: Failed to Receive Measurement Results!\n", sensorID);
-        return HAL_ERROR;
-    }
-
-    DEBUG("Sensor %d: Measurement Results Received Successfully!\n", sensorID);
-    return HAL_OK;
-}
-
-float PGA460_ProcessUltrasonicMeasResult(const uint8_t sensorID, const uint8_t objIndex, const PGA460_MeasResult_t type) {
-    const float speedOfSound = 343.0f;
-    uint8_t resultBuffer[PGA_OBJ_DATA_SIZE] = {0};  // Dynamically sized buffer
-
-    if (PGA460_PullUltrasonicMeasResult(sensorID, resultBuffer) != HAL_OK) {
-        return -1.0f;
-    }
-
-    if (objIndex >= PGA_OBJECTS_TRACKED) {
-        DEBUG("Error: Object index out of range! Max: %d\n", PGA_OBJECTS_TRACKED - 1);
-        return -1.0f;
-    }
-
-    uint8_t offset = 2 + (objIndex * 4);  // Data starts at byte 2, each object has 4 bytes
-
-    float result = 0.0f;
-    switch (type) {
-        case PGA460_MEAS_DISTANCE:
-            {
-                uint16_t tof = (resultBuffer[offset] << 8) | resultBuffer[offset + 1];
-                result = (tof / 2.0f) * (1e-6f) * speedOfSound;
-            }
-            break;
-        case PGA460_MEAS_WIDTH:
-            result = resultBuffer[offset + 2] * 16.0f;  // Convert to microseconds
-            break;
-        case PGA460_MEAS_AMPLITUDE:
-            result = (float)resultBuffer[offset + 3];  // Raw amplitude (8-bit)
-            break;
-    }
-
-    DEBUG("Sensor %d: Object %d - %s: %.2f\n", sensorID, objIndex, 
-          (type == PGA460_MEAS_DISTANCE) ? "Distance (m)" : 
-          (type == PGA460_MEAS_WIDTH) ? "Width (us)" : "Amplitude (8-bit)", result);
-
-    return result;
-}
-
 HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID) {
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT, 0x00};
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
-	DEBUG("PGA_OBJ_DATA_SIZE %d!\n", PGA_OBJ_DATA_SIZE);
+		DEBUG("PGA_OBJ_DATA_SIZE %d!\n", PGA_OBJ_DATA_SIZE);
     // Send command via UART
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Measurement Result Request Failed!\n", sensorID);
         return HAL_ERROR;
     }
@@ -433,7 +396,7 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
     //buffer[1] = PGA460_CMD_TEMP_AND_NOISE_RESULT;
     //buffer[2] = PGA460_CalculateChecksum(&buffer[1], 1);
 
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_TEMP_AND_NOISE_RESULT].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_TEMP_AND_NOISE_RESULT].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Temperature/Noise Result Request Failed!\n", sensorID);
         return result;
     }
@@ -516,7 +479,7 @@ HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint
         //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_SYSTEM_DIAGNOSTICS, 0x00};
         //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
 
-        if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_SYSTEM_DIAGNOSTICS].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+        if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_SYSTEM_DIAGNOSTICS].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
             DEBUG("Sensor %d: System Diagnostics Request Failed!\n", sensorID);
             return HAL_ERROR;
         }
@@ -567,7 +530,7 @@ HAL_StatusTypeDef PGA460_GetTimeVaryingGain(const uint8_t sensorID, uint8_t *gai
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_TVG_BULK_READ, 0x00};
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
     // Send command
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_TVG_BULK_READ].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_TVG_BULK_READ].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: TVG Bulk Read Request Failed!\n", sensorID);
         return HAL_ERROR;
     }
@@ -586,7 +549,7 @@ HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *threshol
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_THRESHOLD_BULK_READ, 0x00};
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
     // Send command
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_THRESHOLD_BULK_READ].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_THRESHOLD_BULK_READ].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Threshold Bulk Read Request Failed!\n", sensorID);
         return HAL_ERROR;
     }
@@ -605,7 +568,7 @@ HAL_StatusTypeDef PGA460_GetEchoDataDump(const uint8_t sensorID, uint8_t *dataBu
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP, 0x00};
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
     // Send command
-    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commandArrays[PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP].array, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
+    if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump Request Failed!\n", sensorID);
         return HAL_ERROR;
     }

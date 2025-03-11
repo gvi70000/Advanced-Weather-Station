@@ -35,8 +35,6 @@ HAL_StatusTypeDef PGA460_InitTimeVaryingGain(const uint8_t sensorID, const PGA46
  * Measurement Functions
  * ------------------------------------------------- */
 HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd, const uint8_t numObjUpdate);
-HAL_StatusTypeDef PGA460_PullUltrasonicMeasResult(const uint8_t sensorID, uint8_t *resultBuffer);
-float PGA460_ProcessUltrasonicMeasResult(const uint8_t sensorID, const uint8_t objIndex, const PGA460_MeasResult_t type);
 HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID);
 float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType_t mode);
 HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTempC);
