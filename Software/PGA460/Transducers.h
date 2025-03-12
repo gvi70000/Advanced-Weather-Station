@@ -264,8 +264,8 @@ const PGA460_t transducer = {
     // Dead time and comparator deglitch period
     .DEADTIME.Val = 0x80, // Dead time and deglitch settings
 
-		.PULSE_P1.Val = 0x0A, // 10 pulses for OUTA burst (Preset 1)
-    .PULSE_P2.Val = 0x04, // 10 pulses for OUTA burst (Preset 2)
+		.PULSE_P1.Val = 0x08, // 8 pulses for OUTA burst (Preset 1)
+    .PULSE_P2.Val = 0x12, // 10 pulses for OUTA burst (Preset 2)
 
     // Current limit settings
     .CURR_LIM_P1.Val = 0x32, // 400mA (Preset 1) [Current limit = 7×CURR_LIM+50 mA]

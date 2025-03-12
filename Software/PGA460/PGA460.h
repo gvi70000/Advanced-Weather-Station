@@ -4,8 +4,13 @@
 #include "stm32f3xx_hal.h"
 #include "PGA460_REG.h"
 
+typedef struct __attribute__((packed)) {
+    float Temperature;  // Temperature from BMP581 and HDC3020
+    float SoundSpeed;
+} PGA460_EnvData_t;
 // Public Function Prototypes
 
+void calculateSpeedOfSound(float Height, float Temperature, float RH, float Pressure);
 void PGA460_ReadAllSensors(void);
 /* -------------------------------------------------
  * Initialization Functions
@@ -22,8 +27,9 @@ HAL_StatusTypeDef PGA460_RegisterWrite(const uint8_t sensorID, const uint8_t reg
 /* -------------------------------------------------
  * EEPROM Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, PGA460_Sensor_t *dataBuffer);
+HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, uint8_t *dataBuffer);
 HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID);
+HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID);
 HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID);
 
 /* -------------------------------------------------
@@ -41,7 +47,7 @@ HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTe
 HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult);
 HAL_StatusTypeDef PGA460_GetTimeVaryingGain(const uint8_t sensorID, uint8_t *gainData);
 HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *thresholdData);
-HAL_StatusTypeDef PGA460_GetEchoDataDump(const uint8_t sensorID, uint8_t *dataBuffer);
+HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset);
 
 /* -------------------------------------------------
  * Bandpass & Gain Configuration Functions

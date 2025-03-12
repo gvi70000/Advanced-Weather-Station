@@ -3,12 +3,13 @@
 
 	#include <stdint.h>
 	#include "usart.h"
+
 	#define PGA_CMD_SIZE 3
 	#define PGA_CMD_COUNT 26
 	// PGA460 supports up to 8 objects per measurement
 	#define PGA_MAX_OBJECTS					8
 	// Number of objects we want to track (Must be ≤ PGA_MAX_OBJECTS)
-	#define PGA_OBJECTS_TRACKED    8  
+	#define PGA_OBJECTS_TRACKED    1  
 
 	#if PGA_OBJECTS_TRACKED > PGA_MAX_OBJECTS
 			#error "PGA_OBJECTS_TRACKED cannot be greater than PGA_MAX_OBJECTS!"
