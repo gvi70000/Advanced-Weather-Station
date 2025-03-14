@@ -1046,6 +1046,13 @@ typedef enum {
     PGA460_TVG_75_PERCENT = 2   // 75% of range
 } PGA460_TVG_Level_t;
 
+typedef enum {
+    PGA460_TRH_25 = 0,  // 25% of range
+    PGA460_TRH_50 = 1,  // 50% of range
+    PGA460_TRH_75 = 2,  // 75% of range
+		PGA460_TRH_CC = 3   // Custom
+} PGA460_TRH_Level_t;
+
 typedef struct __attribute__((packed)) {
     uint16_t distance;  // Time-of-flight distance (2 bytes)
     uint8_t width;      // Echo width (1 byte)

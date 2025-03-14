@@ -47,6 +47,7 @@ HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTe
 HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult);
 HAL_StatusTypeDef PGA460_GetTimeVaryingGain(const uint8_t sensorID, uint8_t *gainData);
 HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *thresholdData);
+HAL_StatusTypeDef PGA460_SetThresholdLevel(const uint8_t sensorID, PGA460_TRH_Level_t thresholdLevel);
 HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset);
 
 /* -------------------------------------------------
