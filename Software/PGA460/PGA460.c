@@ -119,7 +119,6 @@ void calculateWind(uint32_t ToF_up[3], uint32_t ToF_down[3], float speed_of_soun
     }
 }
 
-// Helper function to calculate checksum for a data frame
 static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
     uint16_t carry = 0;
     for (uint8_t i = 0; i < len; i++) {
@@ -128,8 +127,65 @@ static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
             carry -= 255;
         }
     }
-    carry = ~carry & 0xFF;
-    return (uint8_t)carry;
+    uint8_t checksum = (uint8_t)(~carry & 0xFF);
+    return checksum;
+//    uint8_t crc = 0xFF;
+//    for (uint8_t i = 0; i < len; i++) {
+//        crc ^= data[i];
+//        for (uint8_t j = 0; j < 8; j++) {
+//            if (crc & 0x80)
+//                crc = (crc << 1) ^ 0x07;  // Polynomial x^8 + x^2 + x + 1
+//            else
+//                crc <<= 1;
+//        }
+//    }
+//    return crc;
+}
+
+void PGA460_DebugEEPROM(uint8_t sensorID) {
+    uint8_t buffer[45] = {0};
+
+    DEBUG("---------- PGA460 EEPROM DEBUG SENSOR %d ----------\n", sensorID);
+
+    // Step 1: Check UART Communication
+    if (PGA460_CheckStatus(sensorID) != HAL_OK) {
+        DEBUG("Sensor %d: Communication ERROR. RXD/TXD issue or sensor unpowered.\n", sensorID);
+        return;
+    }
+    DEBUG("Sensor %d: UART communication OK.\n", sensorID);
+
+    // Step 2: EEPROM Bulk Read
+    if (PGA460_EEPROMBulkRead(sensorID, buffer) != HAL_OK) {
+        DEBUG("Sensor %d: EEPROM read failed. Check DECP capacitor or Vpwr stability.\n", sensorID);
+        return;
+    }
+
+    // Step 3: Print EEPROM contents
+    DEBUG("Sensor %d: EEPROM contents:\n", sensorID);
+    for (int i = 0; i < 45; i++) {
+        DEBUG("0x%02X ", buffer[i]);
+        if ((i + 1) % 16 == 0) DEBUG("\n");
+    }
+
+    // Step 4: CRC Check
+    uint8_t eeprom_crc = buffer[44];
+    uint8_t calc_crc = PGA460_CalculateChecksum(&buffer[1], 43);  // skip diagnostic byte (0), read 43 bytes
+    if (eeprom_crc == calc_crc) {
+        DEBUG("Sensor %d: CRC OK (0x%02X)\n", sensorID, eeprom_crc);
+    } else {
+        DEBUG("Sensor %d: CRC ERROR! Read 0x%02X, Expected 0x%02X\n", sensorID, eeprom_crc, calc_crc);
+    }
+
+    // Step 5: Echo diagnostic byte
+    uint8_t diag = buffer[0];
+    DEBUG("Sensor %d: Diagnostic byte = 0x%02X ", sensorID, diag);
+    if (diag != 0x00) {
+        DEBUG("(error present)\n");
+    } else {
+        DEBUG("(no error)\n");
+    }
+
+    DEBUG("---------------------------------------------------\n");
 }
 
 void PGA460_ReadAllSensors(void) {
@@ -212,10 +268,19 @@ HAL_StatusTypeDef PGA460_Init(void) {
         }
 
         // **Step 7: Bulk Write EEPROM (Transducer Settings)**
+				((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[38] = 0x8F;
         if (PGA460_EEPROMBulkWrite(i) != HAL_OK) {
             DEBUG("Sensor %d: EEPROM Bulk Write failed.\n", i);
             return HAL_ERROR;
         }
+				DEBUG("Byte[38] in EEPROM write buffer = 0x%02X\n", ((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[38]);
+				((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[0x2B] = PGA460_CalculateChecksum((uint8_t*)&myUltraSonicArray[i].PGA460_Data, 0x2B);
+				// Burn EEPROM so settings persist across power cycles
+				if (PGA460_BurnEEPROM(i) != HAL_OK) {
+						DEBUG("Sensor %d: EEPROM Burn failed.\n", i);
+						return HAL_ERROR;
+				}
+
         if (PGA460_VerifyEEPROM(i) != HAL_OK) {
             DEBUG("Sensor %d: EEPROM Check failed.\n", i);
             //return HAL_ERROR;
@@ -227,12 +292,7 @@ HAL_StatusTypeDef PGA460_Init(void) {
             //return HAL_ERROR;
         }
 
-        // **Step 9: Burn EEPROM (Optional - If Settings Need to Persist)**
-//        if (PGA460_BurnEEPROM(i) != HAL_OK) {
-//            DEBUG("Sensor %d: BurnEEPROM failed.\n", i);
-//            return HAL_ERROR;
-//        }
-					DEBUG("\n\n");
+				DEBUG("\n\n");
     }
 
     DEBUG("PGA460 Initialization Complete.\n");

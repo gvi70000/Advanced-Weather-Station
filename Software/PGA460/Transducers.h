@@ -256,7 +256,7 @@ const PGA460_t transducer = {
     .TVGAIN6.Val = 0xDC, // Timing point 6 and frequency shift control
 
     // Gain control
-    .INIT_GAIN.Val = 0x03, // GAIN = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
+    .INIT_GAIN.Val = 0x20, //0x03, // GAIN = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
 
     // Frequency settings
     .FREQ = 0x32, // Frequency = 0.2 × FREQ + 30 [kHz]
@@ -281,7 +281,7 @@ const PGA460_t transducer = {
     .SAT_FDIAG_TH.Val = 0xEE, // Threshold level
 
     // Voltage diagnostic and scaling
-    .FVOLT_DEC.Val = 0x3C, // VPWR_OV_TH = 17.7V, other diagnostic scaling settings
+    .FVOLT_DEC.Val = 0x02, //0x3C, // VPWR_OV_TH = 17.7V, other diagnostic scaling settings
 
     // Decoupling time and AFE gain range
     .DECPL_TEMP.Val = 0x8F, // Decoupling time, temperature, and AFE gain range

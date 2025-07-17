@@ -10,6 +10,7 @@ typedef struct __attribute__((packed)) {
 } PGA460_EnvData_t;
 // Public Function Prototypes
 
+void PGA460_DebugEEPROM(uint8_t sensorID);
 void calculateSpeedOfSound(float Height, float Temperature, float RH, float Pressure);
 void PGA460_ReadAllSensors(void);
 /* -------------------------------------------------

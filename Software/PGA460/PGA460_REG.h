@@ -36,7 +36,7 @@
 	// Sync byte for baud rate auto-detection
 	#define PGA460_SYNC						0x55  
 	#define PGA460_UNLOCK_EEPROM	0x68
-	#define PGA460_LOCK_EEPROM		0x69
+	#define PGA460_LOCK_EEPROM		0x6D
 	// EEPROM Register Macros (addresses 0x00 to 0x2B)
 	#define REG_USER_DATA1      0x00  // R/W - Reset: 0x00
 	#define REG_USER_DATA2      0x01  // R/W - Reset: 0x00
