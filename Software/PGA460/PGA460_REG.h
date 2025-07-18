@@ -36,7 +36,7 @@
 	// Sync byte for baud rate auto-detection
 	#define PGA460_SYNC						0x55  
 	#define PGA460_UNLOCK_EEPROM	0x68
-	#define PGA460_LOCK_EEPROM		0x6D
+	#define PGA460_LOCK_EEPROM		0x69
 	// EEPROM Register Macros (addresses 0x00 to 0x2B)
 	#define REG_USER_DATA1      0x00  // R/W - Reset: 0x00
 	#define REG_USER_DATA2      0x01  // R/W - Reset: 0x00
@@ -964,7 +964,7 @@
 		uint8_t P1_THR_11;						// P1_THR_11 Register (Address = 6Ah) TH_P1_L9
 		uint8_t P1_THR_12;						// P1_THR_12 Register (Address = 6Bh) TH_P1_L10
 		uint8_t P1_THR_13;						// P1_THR_13 Register (Address = 6Ch) TH_P1_L11
-		uint8_t P1_THR_14;						// P1_THR_13 Register (Address = 6Dh) TH_P1_L12
+		uint8_t P1_THR_14;						// P1_THR_14 Register (Address = 6Dh) TH_P1_L12
 		P1_THR_15_t P1_THR_15;				// P1_THR_15 Register (Address = 6Eh) TH_P1_OFF
 		P2_THR_0_t P2_THR_0;					// P2_THR_0 Register (Address = 6Fh)
 		P2_THR_1_t P2_THR_1;					// P2_THR_1 Register (Address = 70h)

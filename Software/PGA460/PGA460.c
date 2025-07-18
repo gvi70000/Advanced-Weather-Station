@@ -129,44 +129,28 @@ static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
     }
     uint8_t checksum = (uint8_t)(~carry & 0xFF);
     return checksum;
-//    uint8_t crc = 0xFF;
-//    for (uint8_t i = 0; i < len; i++) {
-//        crc ^= data[i];
-//        for (uint8_t j = 0; j < 8; j++) {
-//            if (crc & 0x80)
-//                crc = (crc << 1) ^ 0x07;  // Polynomial x^8 + x^2 + x + 1
-//            else
-//                crc <<= 1;
-//        }
-//    }
-//    return crc;
 }
 
 void PGA460_DebugEEPROM(uint8_t sensorID) {
     uint8_t buffer[45] = {0};
-
     DEBUG("---------- PGA460 EEPROM DEBUG SENSOR %d ----------\n", sensorID);
-
     // Step 1: Check UART Communication
     if (PGA460_CheckStatus(sensorID) != HAL_OK) {
         DEBUG("Sensor %d: Communication ERROR. RXD/TXD issue or sensor unpowered.\n", sensorID);
         return;
     }
     DEBUG("Sensor %d: UART communication OK.\n", sensorID);
-
     // Step 2: EEPROM Bulk Read
     if (PGA460_EEPROMBulkRead(sensorID, buffer) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM read failed. Check DECP capacitor or Vpwr stability.\n", sensorID);
         return;
     }
-
     // Step 3: Print EEPROM contents
     DEBUG("Sensor %d: EEPROM contents:\n", sensorID);
     for (int i = 0; i < 45; i++) {
         DEBUG("0x%02X ", buffer[i]);
         if ((i + 1) % 16 == 0) DEBUG("\n");
     }
-
     // Step 4: CRC Check
     uint8_t eeprom_crc = buffer[44];
     uint8_t calc_crc = PGA460_CalculateChecksum(&buffer[1], 43);  // skip diagnostic byte (0), read 43 bytes
@@ -175,7 +159,6 @@ void PGA460_DebugEEPROM(uint8_t sensorID) {
     } else {
         DEBUG("Sensor %d: CRC ERROR! Read 0x%02X, Expected 0x%02X\n", sensorID, eeprom_crc, calc_crc);
     }
-
     // Step 5: Echo diagnostic byte
     uint8_t diag = buffer[0];
     DEBUG("Sensor %d: Diagnostic byte = 0x%02X ", sensorID, diag);
@@ -184,7 +167,6 @@ void PGA460_DebugEEPROM(uint8_t sensorID) {
     } else {
         DEBUG("(no error)\n");
     }
-
     DEBUG("---------------------------------------------------\n");
 }
 
@@ -195,12 +177,11 @@ void PGA460_ReadAllSensors(void) {
             DEBUG("Sensor %d: Burst-and-Listen Command Failed!\n", sensorID);
             continue;
         }
-				HAL_Delay(10);
+		HAL_Delay(10);
         if (PGA460_GetUltrasonicMeasurement(sensorID) != HAL_OK) {
             DEBUG("Sensor %d: Measurement Retrieval Failed!\n", sensorID);
             continue;
         }
-
         HAL_Delay(200);
     }
 }
@@ -208,93 +189,68 @@ void PGA460_ReadAllSensors(void) {
 // Function to initialize 3x PGA460 sensors
 HAL_StatusTypeDef PGA460_Init(void) {
     UART_HandleTypeDef *uartPorts[ULTRASONIC_SENSOR_COUNT] = { &huart1, &huart4, &huart5 };
-
     for (uint8_t i = 0; i < ULTRASONIC_SENSOR_COUNT; i++) {
-        myUltraSonicArray[i].PGA460_Data = transducer;
-        memcpy(&myUltraSonicArray[i].PGA460_Data.P1_THR_0, &THRESHOLD_50[0], 32); // Copy threshold settings
+        // **Step 1: Assign UART and copy transducer configuration**
         myUltraSonicArray[i].uartPort = uartPorts[i];
-
-        // **Step 1: Set Up Communication Mode**
-        DEBUG("Sensor %d: Initializing Communication...\n", i);
+        myUltraSonicArray[i].PGA460_Data = transducer;  // Default EEPROM values
+        // Initialize UART
         HAL_UART_Init(myUltraSonicArray[i].uartPort);
-
-        // **Step 2: Check Sensor Status**
-        if (PGA460_CheckStatus(i) != HAL_OK) {
-            DEBUG("Sensor %d: Sensor check failed. Skipping initialization.\n", i);
-            return HAL_ERROR;
-        }
-        if (PGA460_VerifyEEPROM(i) != HAL_OK) {
-            DEBUG("Sensor %d: EEPROM Check failed.\n", i);
-            //return HAL_ERROR;
-        }
-        // **Step 3: Write Threshold to Clear THR_CRC_ERR**
-        if (PGA460_SetThresholdLevel(i, PGA460_TRH_75) != HAL_OK) {
-            DEBUG("Sensor %d: Threshold Write Failed!\n", i);
-            return HAL_ERROR;
-        }
-        DEBUG("Sensor %d: Threshold Written Successfully.\n", i);
-
-        // **Step 4: Read EEPROM Control Register**
-        PGA460_RegisterRead(i, REG_EE_CTRL, &myUltraSonicArray[i].PGA460_Data.EE_CNTRL.Val.Value);
-        DEBUG("Sensor %d: EEPROM Control Register (EE_CTRL) = 0x%02X\n", i, myUltraSonicArray[i].PGA460_Data.EE_CNTRL.Val.Value);
-
-        // **Step 5: Run System Diagnostics**
-        float diagValue = 0.0;
-        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagValue) == HAL_OK) {
-            DEBUG("Sensor %d: Frequency Diagnostic = %.2f kHz\n", i, diagValue);
-        } else {
-            DEBUG("Sensor %d: Frequency Diagnostic Failed!\n", i);
-        }
-
-        if (PGA460_GetSystemDiagnostics(i, 1, 1, &diagValue) == HAL_OK) {
-            DEBUG("Sensor %d: Decay Period Diagnostic = %.2f us\n", i, diagValue);
-        } else {
-            DEBUG("Sensor %d: Decay Period Diagnostic Failed!\n", i);
-        }
-
-        // **Step 6: Read Temperature & Noise Level**
-        float temperature = PGA460_ReadTemperatureOrNoise(i, PGA460_CMD_GET_TEMP);
-        if (temperature != PGA460_TEMP_ERR) {
-            DEBUG("Sensor %d: Die Temperature = %.2f C\n", i, temperature);
-        } else {
-            DEBUG("Sensor %d: Temperature Read Failed!\n", i);
-        }
-
-        float noiseLevel = PGA460_ReadTemperatureOrNoise(i, PGA460_CMD_GET_NOISE);
-        if (noiseLevel != PGA460_TEMP_ERR) {
-            DEBUG("Sensor %d: Noise Level = %.0f (8-bit raw)\n", i, noiseLevel);
-        } else {
-            DEBUG("Sensor %d: Noise Level Read Failed!\n", i);
-        }
-
-        // **Step 7: Bulk Write EEPROM (Transducer Settings)**
-				((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[38] = 0x8F;
+        HAL_Delay(100);
+        // **Step 2: Write EEPROM to shadow memory and calculate/check CRC**
         if (PGA460_EEPROMBulkWrite(i) != HAL_OK) {
             DEBUG("Sensor %d: EEPROM Bulk Write failed.\n", i);
             return HAL_ERROR;
         }
-				DEBUG("Byte[38] in EEPROM write buffer = 0x%02X\n", ((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[38]);
-				((uint8_t*)&myUltraSonicArray[i].PGA460_Data)[0x2B] = PGA460_CalculateChecksum((uint8_t*)&myUltraSonicArray[i].PGA460_Data, 0x2B);
-				// Burn EEPROM so settings persist across power cycles
-				if (PGA460_BurnEEPROM(i) != HAL_OK) {
-						DEBUG("Sensor %d: EEPROM Burn failed.\n", i);
-						return HAL_ERROR;
-				}
-
-        if (PGA460_VerifyEEPROM(i) != HAL_OK) {
-            DEBUG("Sensor %d: EEPROM Check failed.\n", i);
-            //return HAL_ERROR;
+        // **Step 3: Burn EEPROM to non-volatile memory**
+        if (PGA460_BurnEEPROM(i) != HAL_OK) {
+            DEBUG("Sensor %d: EEPROM Burn failed.\n", i);
+            return HAL_ERROR;
         }
-
-        // **Step 8: Configure Time-Varying Gain (TVG)**
+        // **Step 4: Verify EEPROM content and CRC**
+        if (PGA460_VerifyEEPROM(i) != HAL_OK) {
+            DEBUG("Sensor %d: EEPROM Verify failed.\n", i);
+            // Not returning HAL_ERROR to allow fallback
+        }
+        // **Step 5: Set thresholds to clear THR_CRC_ERR**
+        memcpy(&myUltraSonicArray[i].PGA460_Data.P1_THR_0, THRESHOLD_50, sizeof(THRESHOLD_50));
+        if (PGA460_SetThresholdLevel(i, PGA460_TRH_75) != HAL_OK) {
+            DEBUG("Sensor %d: Threshold Write Failed!\n", i);
+            return HAL_ERROR;
+        }
+        // **Step 6: Configure TVG (Time-Varying Gain)**
         if (PGA460_InitTimeVaryingGain(i, PGA460_GAIN_58_90dB, PGA460_TVG_75_PERCENT) != HAL_OK) {
             DEBUG("Sensor %d: TVG Bulk Write failed.\n", i);
-            //return HAL_ERROR;
+            return HAL_ERROR;
         }
+        // **Step 7: Optional diagnostics (freq, decay, temp, noise)**
+        if (PGA460_CheckStatus(i) != HAL_OK) {
+            DEBUG("Sensor %d: Status check failed.\n", i);
+            return HAL_ERROR;
+        }
+        float diagValue = 0.0;
+        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagValue) == HAL_OK)
+            DEBUG("Sensor %d: Frequency Diagnostic = %.2f kHz\n", i, diagValue);
+        else
+            DEBUG("Sensor %d: Frequency Diagnostic Failed!\n", i);
 
-				DEBUG("\n\n");
+        if (PGA460_GetSystemDiagnostics(i, 1, 1, &diagValue) == HAL_OK)
+            DEBUG("Sensor %d: Decay Period Diagnostic = %.2f us\n", i, diagValue);
+        else
+            DEBUG("Sensor %d: Decay Period Diagnostic Failed!\n", i);
+
+        float temperature = PGA460_ReadTemperatureOrNoise(i, PGA460_CMD_GET_TEMP);
+        if (temperature != PGA460_TEMP_ERR)
+            DEBUG("Sensor %d: Die Temperature = %.2f C\n", i, temperature);
+        else
+            DEBUG("Sensor %d: Temperature Read Failed!\n", i);
+
+        float noiseLevel = PGA460_ReadTemperatureOrNoise(i, PGA460_CMD_GET_NOISE);
+        if (noiseLevel != PGA460_TEMP_ERR)
+            DEBUG("Sensor %d: Noise Level = %.0f (8-bit raw)\n", i, noiseLevel);
+        else
+            DEBUG("Sensor %d: Noise Level Read Failed!\n", i);
+        DEBUG("\n\n");
     }
-
     DEBUG("PGA460 Initialization Complete.\n");
     return HAL_OK;
 }
@@ -313,18 +269,15 @@ HAL_StatusTypeDef PGA460_CheckStatus(const uint8_t sensorID) {
 HAL_StatusTypeDef PGA460_RegisterRead(const uint8_t sensorID, const uint8_t regAddr, uint8_t *regValue) {
     uint8_t frame[4] = {PGA460_SYNC, PGA460_CMD_REGISTER_READ, regAddr, 0x00};  
     frame[3] = PGA460_CalculateChecksum(&frame[1], 3);
-
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, 4, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Register Read Transmission Failed! Address 0x%02X\n", sensorID, regAddr);
         return HAL_ERROR;
     }
-
     uint8_t response[3];
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, response, 3, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Register Read Failed! Address 0x%02X\n", sensorID, regAddr);
         return HAL_ERROR;
     }
-
     *regValue = response[1];
     return HAL_OK;
 }
@@ -338,7 +291,6 @@ HAL_StatusTypeDef PGA460_RegisterWrite(const uint8_t sensorID, const uint8_t reg
         DEBUG("Sensor %d: Register Write Transmission Failed! Address 0x%02X\n", sensorID, regAddr);
         return HAL_ERROR;
     }
-
     return HAL_OK;
 }
 
@@ -346,21 +298,17 @@ HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, uint8_t *dataBuf
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_EEPROM_BULK_READ, 0x00}; 
     // Compute checksum
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
-
     // Step 1: Send EEPROM Bulk Read Command
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_EEPROM_BULK_READ].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Bulk Read Command Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     //HAL_Delay(10);  // Allow time for EEPROM data retrieval
-
     // Step 2: Receive 45 bytes into `dataBuffer`
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, dataBuffer, 45, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Bulk Read Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     DEBUG("Sensor %d: EEPROM Bulk Read Successful!\n", sensorID);
     return HAL_OK;
 }
@@ -368,28 +316,27 @@ HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, uint8_t *dataBuf
 // EEPROM bulk write
 HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID) {
     uint8_t frame[46];
-    // Step 1: Construct command frame
+    // Step 1: Compute EEPROM CRC and update byte 43
+    ((uint8_t*)&myUltraSonicArray[sensorID].PGA460_Data)[0x2B] = PGA460_CalculateChecksum((uint8_t*)&myUltraSonicArray[sensorID].PGA460_Data, 0x2B);
+    // Step 2: Construct command frame
     frame[0] = PGA460_SYNC;
     frame[1] = PGA460_CMD_EEPROM_BULK_WRITE;
-    // Copy predefined transducer struct into frame starting at frame[2]
-    memcpy(&frame[2], &myUltraSonicArray[sensorID].PGA460_Data, 43);
-    // Compute checksum (excluding sync byte)
-    frame[45] = PGA460_CalculateChecksum(&frame[1], 44);
-	
-    DEBUG("Sensor %d: EEPROM Bulk Write Data (45 bytes):\n", sensorID);
+    memcpy(&frame[2], &myUltraSonicArray[sensorID].PGA460_Data, 44); // 0x00–0x2B inclusive
+    // Step 3: Compute UART frame checksum (excluding sync byte)
+    frame[46 - 1] = PGA460_CalculateChecksum(&frame[1], 44); // CMD + 44 bytes = total 45 bytes
+    // Debug log
+    DEBUG("Sensor %d: EEPROM Bulk Write Data (46 bytes):\n", sensorID);
     for (uint8_t i = 0; i < 46; i++) {
         DEBUG(" 0x%02X", frame[i]);
-        if ((i + 1) % 16 == 0) {  // New line every 16 bytes for readability
-            DEBUG("\n");
-        }
+        if ((i + 1) % 16 == 0) DEBUG("\n");
     }
     DEBUG("\n-------------------------------------------------------------------\n");
-    // Step 2: Transmit Bulk Write Command
+    // Step 4: Transmit
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, 46, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Bulk Write to Volatile Memory Failed!\n", sensorID);
         return HAL_ERROR;
     }
-    HAL_Delay(50);  // Allow the write operation to complete
+    HAL_Delay(50);
     DEBUG("Sensor %d: Bulk Write to Volatile Memory Successful!\n", sensorID);
     return HAL_OK;
 }
@@ -400,13 +347,11 @@ HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID) {
     uint8_t eepromCRC;
     uint8_t calculatedCRC;
     uint8_t mismatch = 0;
-
     // Step 1: Read Full EEPROM Data (45 Bytes)
     if (PGA460_EEPROMBulkRead(sensorID, readBackBuffer) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Bulk Read Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 2: Debug Print Full EEPROM Read-Back Data
     DEBUG("Sensor %d: EEPROM Read-Back Data (45 bytes):\n", sensorID);
     for (uint8_t i = 0; i < 45; i++) {
@@ -416,11 +361,9 @@ HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID) {
         }
     }
     DEBUG("\n");
-
     // Step 3: Extract the 43 EEPROM Data Bytes (Skipping first diagnostic byte and last CRC byte)
     memcpy(writtenData, &myUltraSonicArray[sensorID].PGA460_Data, 43); // Data that was written
     eepromCRC = readBackBuffer[44]; // Last byte is EEPROM CRC
-
     // Step 4: Compare Written Data vs. Read-Back Data
     for (uint8_t i = 0; i < 43; i++) {
         if (writtenData[i] != readBackBuffer[i + 1]) {  // Compare against EEPROM data starting from index 1
@@ -429,14 +372,12 @@ HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID) {
             mismatch = 1;
         }
     }
-
     if (!mismatch) {
         DEBUG("Sensor %d: EEPROM Data Verified Successfully!\n", sensorID);
     } else {
         DEBUG("Sensor %d: EEPROM Verification Failed! Mismatches detected.\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 5: Validate EEPROM CRC
     calculatedCRC = PGA460_CalculateChecksum(writtenData, 43);
     if (eepromCRC != calculatedCRC) {
@@ -444,34 +385,29 @@ HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID) {
               sensorID, calculatedCRC, eepromCRC);
         return HAL_ERROR;
     }
-
     DEBUG("Sensor %d: EEPROM CRC Verification Passed!\n", sensorID);
     return HAL_OK;
 }
 
 HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID) {
     uint8_t burnStatus;
-
     // Step 1: Unlock EEPROM (Write 0x68 to REG_EE_CTRL)
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, PGA460_UNLOCK_EEPROM) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Unlock Failed at Step 1!\n", sensorID);
         return HAL_ERROR;
     }
     HAL_Delay(1); // Required minimal delay
-
     // Step 2: Program EEPROM (Write 0x69 to REG_EE_CTRL)
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, PGA460_LOCK_EEPROM) != HAL_OK) {
         DEBUG("Sensor %d: EEPROM Burn Command Failed at Step 2!\n", sensorID);
         return HAL_ERROR;
     }
     HAL_Delay(1000); // Wait for EEPROM programming to complete
-
     // Step 3: Verify EEPROM Burn Success (Read REG_EE_CTRL)
     if (PGA460_RegisterRead(sensorID, REG_EE_CTRL, &burnStatus) != HAL_OK) {
         DEBUG("Sensor %d: Failed to Read EE_CTRL after EEPROM Burn!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 4: Check EE_PGRM_OK (Bit 2)
     if (burnStatus & 0x04) {
         DEBUG("Sensor %d: EEPROM Burn Successful! EE_CTRL = 0x%02X\n", sensorID, burnStatus);
@@ -488,7 +424,6 @@ HAL_StatusTypeDef PGA460_InitTimeVaryingGain(const uint8_t sensorID, const PGA46
         DEBUG("Sensor %d: AFE Gain Range Write Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 2: Select TVG Level Array
     const uint8_t *tvg_values;
     switch (timeVaryingGain) {
@@ -505,20 +440,16 @@ HAL_StatusTypeDef PGA460_InitTimeVaryingGain(const uint8_t sensorID, const PGA46
             DEBUG("Sensor %d: Invalid TVG Level!\n", sensorID);
             return HAL_ERROR;
     }
-
     // Step 3: Construct TVG Bulk Write Frame
     uint8_t frame[10] = {PGA460_SYNC, PGA460_CMD_TVG_BULK_WRITE};
     memcpy(&frame[2], tvg_values, 7);
     frame[9] = PGA460_CalculateChecksum(&frame[1], 8);
-
     // Step 4: Transmit TVG Bulk Write Command
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, 9, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: TVG Bulk Write Transmission Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     HAL_Delay(50);  // Allow time for TVG update
-
     DEBUG("Sensor %d: TVG Bulk Write Successful!\n", sensorID);
     return HAL_OK;
 }
@@ -542,90 +473,73 @@ HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Comm
 HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID) {
     //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT, 0x00};
     //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
-		DEBUG("PGA_OBJ_DATA_SIZE %d!\n", PGA_OBJ_DATA_SIZE);
+	DEBUG("PGA_OBJ_DATA_SIZE %d!\n", PGA_OBJ_DATA_SIZE);
     // Send command via UART
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_ULTRASONIC_MEASUREMENT_RESULT].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Measurement Result Request Failed!\n", sensorID);
         return HAL_ERROR;
     }
     //HAL_Delay(10);
-
     // Receive expected data: 2 bytes (header) + PGA_OBJECTS_TRACKED * 4 (distance, width, amplitude)
     uint8_t localBuffer[PGA_OBJ_DATA_SIZE] = {0};
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, localBuffer, PGA_OBJ_DATA_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Measurement Result Retrieval Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Store Data in myUltraSonicArray[sensorID]
     for (uint8_t i = 0; i < PGA_OBJECTS_TRACKED; i++) {
         // Extract Distance (16-bit value)
         myUltraSonicArray[sensorID].ultrasonicData.objects[i].distance  = (localBuffer[2 + (i * 4)] << 8) | localBuffer[3 + (i * 4)];
-
         // Extract Width (8-bit)
         myUltraSonicArray[sensorID].ultrasonicData.objects[i].width     = localBuffer[4 + (i * 4)];
-
         // Extract Amplitude (8-bit)
         myUltraSonicArray[sensorID].ultrasonicData.objects[i].amplitude = localBuffer[5 + (i * 4)];
-
         // Convert distance to meters using the speed of sound (343 m/s)
         float distance_m = (myUltraSonicArray[sensorID].ultrasonicData.objects[i].distance / 2.0f) * 0.000001f * 343.0f;
-
         DEBUG("Sensor %d, Obj %d - Distance: %.2f m, Width: %u us, Amplitude: %u\n",
               sensorID, i + 1, distance_m,
               myUltraSonicArray[sensorID].ultrasonicData.objects[i].width * 16, // Convert width to microseconds
               myUltraSonicArray[sensorID].ultrasonicData.objects[i].amplitude);
     }
-
     return HAL_OK;
 }
 
 HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset) {
     uint8_t echoDataBuffer[128] = {0}; 
-
     // Step 1: Enable Echo Data Dump mode
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, 0x80) != HAL_OK) {
         DEBUG("Sensor %d: Failed to enable Echo Data Dump mode!\n", sensorID);
         return HAL_ERROR;
     }
-    
     HAL_Delay(10); // Allow time for mode activation
-
     // Step 2: Run the ultrasonic command (Burst/Listen)
     if (PGA460_UltrasonicCmd(sensorID, (PGA460_Command_t)preset, 1) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump Command Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     HAL_Delay(70); // Ensure enough time for measurement completion
-
     // Step 3: Request Echo Data Dump
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_TRANSDUCER_ECHO_DATA_DUMP].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump Request Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 4: Retrieve 128 bytes of Echo Data Dump
     uint8_t response[130] = {0}; 
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, response, 130, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump Retrieval Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 5: Disable Echo Data Dump mode
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, 0x00) != HAL_OK) {
         DEBUG("Sensor %d: Failed to disable Echo Data Dump mode!\n", sensorID);
         return HAL_ERROR;
     }
-
     // Step 6: Check for diagnostic errors in response
     if (response[0] != 0) {
         DEBUG("Sensor %d: Echo Data Dump Diagnostic Error! Code: %d\n", sensorID, response[0]);
     }
-
     // Copy Echo Data (Skip first diagnostic byte)
     //memcpy(echoDataBuffer, &response[1], 128);
-
     // Step 7: Debug the Echo Data Dump output
     DEBUG("Sensor %d: Echo Data Dump (130 bytes):", sensorID);
     for (int i = 0; i < 130; i++) {
@@ -634,7 +548,6 @@ HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset) {
             DEBUG("\n");
         }
     }
-
     return HAL_OK;
 }
 
@@ -642,44 +555,36 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
     uint8_t tempOrNoise = (mode == PGA460_CMD_GET_TEMP) ? 0 : 1;  // 0 for temperature, 1 for noise
     uint8_t buffer[4];  // Reused buffer for sending and receiving
     float result = PGA460_TEMP_ERR; // Default invalid value
-
     // **Step 1: Send Temperature/Noise Measurement Command**
     buffer[0] = PGA460_SYNC;
     buffer[1] = PGA460_CMD_TEMP_AND_NOISE_MEASUREMENT;
     buffer[2] = tempOrNoise;
     buffer[3] = PGA460_CalculateChecksum(&buffer[1], 2);
-
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, buffer, 4, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Temperature/Noise Measurement Command Failed!\n", sensorID);
         return result;
     }
-		//Flush Wait Flush
+	//Flush Wait Flush
     HAL_Delay(10);  // Wait for the PGA460 to process the measurement
-
     // **Step 2: Send Read Temperature/Noise Result Command**
     //buffer[1] = PGA460_CMD_TEMP_AND_NOISE_RESULT;
     //buffer[2] = PGA460_CalculateChecksum(&buffer[1], 1);
-
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_TEMP_AND_NOISE_RESULT].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Temperature/Noise Result Request Failed!\n", sensorID);
         return result;
     }
-
     // **Step 3: Read 4-byte Response**
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, buffer, 4, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Failed to Receive Temperature/Noise Data!\n", sensorID);
         return result;
     }
-
     // **Step 4: Process the Received Data**
     if (mode == PGA460_CMD_GET_TEMP) {
         result = (buffer[1] - 64) / 1.5f;  // Convert to temperature in °C
     } else {
         result = (float)buffer[2];  // Noise level (8-bit raw value)
     }
-
     DEBUG("Sensor %d: %s Data: %.2f\n", sensorID, (mode == PGA460_CMD_GET_TEMP) ? "Temperature (C)" : "Noise Level", result);
-
     return result;
 }
 
@@ -687,50 +592,38 @@ HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTe
     float pgaTempC = 0.0f;
     int8_t offset = 0;
     uint8_t tempTrim = 0;
-
     // Step 1: Read PGA460's internal temperature
     pgaTempC = PGA460_ReadTemperatureOrNoise(sensorID, PGA460_CMD_GET_TEMP);
-    
     // Check for invalid readings
     if (pgaTempC == PGA460_TEMP_ERR) {
         DEBUG("Sensor %d: Failed to read internal temperature!\n", sensorID);
         return HAL_ERROR;
     }
-
     DEBUG("Sensor %d: PGA460 Reported Temperature = %.2fC\n", sensorID, pgaTempC);
-
     // Step 2: Calculate the required temperature offset (round to nearest integer)
     offset = (int8_t)(externalTempC - pgaTempC);
-
     // Clamp offset to valid range (-64 to +63)
     if (offset > 63) offset = 63;
     if (offset < -64) offset = -64;
-
     // Step 3: Read the current TEMP_TRIM register value
     if (PGA460_RegisterRead(sensorID, REG_TEMP_TRIM, &tempTrim) != HAL_OK) {
         DEBUG("Sensor %d: Failed to read TEMP_TRIM register!\n", sensorID);
         return HAL_ERROR;
     }
-
     DEBUG("Sensor %d: Current TEMP_TRIM = 0x%02X\n", sensorID, tempTrim);
-
     // Step 4: Apply Temperature Offset (Bits 6-0 should be modified)
     tempTrim = (tempTrim & 0x80) | (offset & 0x7F);
-
     // Step 5: Write the new TEMP_TRIM value back
     if (PGA460_RegisterWrite(sensorID, REG_TEMP_TRIM, tempTrim) != HAL_OK) {
         DEBUG("Sensor %d: Failed to write TEMP_TRIM register!\n", sensorID);
         return HAL_ERROR;
     }
-
     DEBUG("Sensor %d: New TEMP_TRIM set to 0x%02X (Offset: %dC)\n", sensorID, tempTrim, offset);
-
     return HAL_OK;
 }
 
 HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult) {
     uint8_t response[4] = {0x00, 0x00, 0x00, 0x00};
-
     // **Step 1: Issue a Burst-and-Listen Command if Requested**
     if (run) {
         if (PGA460_UltrasonicCmd(sensorID, PGA460_CMD_BURST_AND_LISTEN_PRESET1, 1) != HAL_OK) {
@@ -738,23 +631,19 @@ HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint
             return HAL_ERROR;
         }
         HAL_Delay(100); // Allow time for measurement
-
         // **Step 2: Send System Diagnostics Command**
         //uint8_t frame[3] = {PGA460_SYNC, PGA460_CMD_SYSTEM_DIAGNOSTICS, 0x00};
         //frame[2] = PGA460_CalculateChecksum(&frame[1], 1);
-
         if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, commands[PGA460_CMD_SYSTEM_DIAGNOSTICS].cmdData, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
             DEBUG("Sensor %d: System Diagnostics Request Failed!\n", sensorID);
             return HAL_ERROR;
         }
     }
-
     // **Step 3: Receive Diagnostic Data**
     if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, response, 4, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: System Diagnostics Retrieval Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     // **Step 4: Handle Temperature or Noise Separately**
     if (diag == 2) {  // Temperature
         *diagResult = PGA460_ReadTemperatureOrNoise(sensorID, PGA460_CMD_GET_TEMP);
@@ -772,7 +661,6 @@ HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint
         }
         return HAL_OK;
     }
-
     // **Step 5: Process and Convert Remaining Diagnostic Results**
     switch (diag) {
         case 0: // Frequency diagnostic in kHz
@@ -785,8 +673,7 @@ HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint
             DEBUG("Sensor %d: Invalid Diagnostic Request!\n", sensorID);
             return HAL_ERROR;
     }
-
-    //DEBUG("Sensor %d: Diagnostic Result for Type %d = %f\n", sensorID, diag, *diagResult);
+    DEBUG("Sensor %d: Diagnostic Result for Type %d = %f\n", sensorID, diag, *diagResult);
     return HAL_OK;
 }
 
@@ -830,7 +717,6 @@ HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *threshol
 
 HAL_StatusTypeDef PGA460_SetThresholdLevel(const uint8_t sensorID, PGA460_TRH_Level_t thresholdLevel) {
     const uint8_t *selectedThreshold;
-
     // Step 1: Select Threshold Based on User Input
     switch (thresholdLevel) {
         case PGA460_TRH_25:
@@ -849,23 +735,18 @@ HAL_StatusTypeDef PGA460_SetThresholdLevel(const uint8_t sensorID, PGA460_TRH_Le
             DEBUG("Sensor %d: Invalid Threshold Level Selected!\n", sensorID);
             return HAL_ERROR;
     }
-
     // Step 2: Construct UART Command Frame for Threshold Bulk Write
     uint8_t frame[35];
     frame[0] = PGA460_SYNC;                           // Sync byte
     frame[1] = PGA460_CMD_THRESHOLD_BULK_WRITE;       // Command 0x10 (Threshold Bulk Write)
-    
     memcpy(&frame[2], selectedThreshold, 32);         // Copy 32 threshold bytes
     frame[34] = PGA460_CalculateChecksum(&frame[1], 33);  // Compute checksum
-
     // Step 3: Send Threshold Bulk Write Command via UART
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, 35, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Threshold Bulk Write Failed!\n", sensorID);
         return HAL_ERROR;
     }
-
     HAL_Delay(10);  // Allow processing time
-
     DEBUG("Sensor %d: Threshold Level Set to %d.\n", sensorID, thresholdLevel);
     return HAL_OK;
 }
