@@ -5,18 +5,19 @@
 	#include "usart.h"
 
 	#define PGA_CMD_SIZE 3
+	#define PGA_READ_SIZE 4
+	#define PGA_WRITE_SIZE 5
 	#define PGA_CMD_COUNT 26
 	// PGA460 supports up to 8 objects per measurement
 	#define PGA_MAX_OBJECTS					8
 	// Number of objects we want to track (Must be ≤ PGA_MAX_OBJECTS)
-	#define PGA_OBJECTS_TRACKED    1  
+	#define PGA_OBJECTS_TRACKED    8  
 
 	#if PGA_OBJECTS_TRACKED > PGA_MAX_OBJECTS
 			#error "PGA_OBJECTS_TRACKED cannot be greater than PGA_MAX_OBJECTS!"
 	#endif
 	#define PGA_OBJ_DATA_SIZE (2 + (PGA_OBJECTS_TRACKED * 4))
-	// Synchronization byte for PGA460 communication
-	#define PGA460_SYNC 0x55
+
 	// Number of ultrasonic sensors in the array
 	#define ULTRASONIC_SENSOR_COUNT 3	// Number os sensors
 	// Error value for temperature or noise
@@ -37,6 +38,10 @@
 	#define PGA460_SYNC						0x55  
 	#define PGA460_UNLOCK_EEPROM	0x68
 	#define PGA460_LOCK_EEPROM		0x69
+	#define ECHO_DATA_DUMP_ENABLE  0x80
+	#define ECHO_DATA_DUMP_DISABLE 0x00
+	#define ECHO_DATA_TOTAL_BYTES  130  // 2 bytes header + 128 data
+	
 	// EEPROM Register Macros (addresses 0x00 to 0x2B)
 	#define REG_USER_DATA1      0x00  // R/W - Reset: 0x00
 	#define REG_USER_DATA2      0x01  // R/W - Reset: 0x00
@@ -501,7 +506,7 @@
 							uint8_t EE_PRGM_OK   : 1; // EEPROM Programming Status (bit 2)
 																				// 0b = EEPROM was not programmed successfully
 																				// 1b = EEPROM was programmed successfully
-							uint8_t EE_UNLCK     : 3; // EEPROM Program Enable Unlock Passcode (bits 3:6)
+							uint8_t EE_UNLCK     : 4; // EEPROM Program Enable Unlock Passcode (bits 3:6)
 																				// EEPROM program enable unlock passcode register: The valid passcode for enabling EEPROM programming is 0xD.
 							uint8_t DATADUMP_EN  : 1; // Data Dump Enable (bit 7)
 																				// 0b = Disabled
@@ -888,7 +893,7 @@
     } Val;
 } PGA460_Diagnostic_t;
 
-	typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed)) {
 		uint8_t USER_DATA1;						// Address 0x00
 		uint8_t USER_DATA2;						// Address 0x01
 		uint8_t USER_DATA3;						// Address 0x02
@@ -909,6 +914,9 @@
 		uint8_t USER_DATA18;					// Address 0x11
 		uint8_t USER_DATA19;					// Address 0x12
 		uint8_t USER_DATA20;					// Address 0x13
+} PGA460_UserData_t;
+
+typedef struct __attribute__((packed)) {
 		TVGAIN0_t TVGAIN0;						// Address 0x14
 		TVGAIN1_t TVGAIN1;						// Address 0x15
 		TVGAIN2_t TVGAIN2;						// Address 0x16
@@ -916,6 +924,11 @@
 		TVGAIN4_t TVGAIN4;						// Address 0x18
 		TVGAIN5_t TVGAIN5;						// Address 0x19
 		TVGAIN6_t TVGAIN6;						// Address 0x1A
+} PGA460_TGV_t;
+
+typedef struct __attribute__((packed)) {
+		PGA460_UserData_t USER;				// Address 0x00 0x13
+		PGA460_TGV_t TGV;							// Address 0x14 0x1A 
 		INIT_GAIN_t INIT_GAIN;				// Address 0x1B
 		uint8_t FREQ;									// Burst frequency equation parameter (Address 0x1C) Frequency = 0.2 × FREQ + 30 [kHz]
 		DEADTIME_t DEADTIME;					// Address 0x1D
@@ -933,23 +946,25 @@
 		P1_GAIN_CTRL_t P1_GAIN_CTRL;	// Address 0x29
 		P2_GAIN_CTRL_t P2_GAIN_CTRL;	// Address 0x2A
 		uint8_t EE_CRC; 							// User EEPROM space CRC value (bits 7:0) EE_CRC register (Address 0x2B)
-		
-		EE_CNTRL_t EE_CNTRL; 					// EE_CNTRL register (Address 0x40) User EEPROM control register
-		
+} PGA460_EEPROMConfig_t;
+
+typedef struct __attribute__((packed)) {
 		uint8_t BPF_A2_MSB;						// Bandpass filter A2 coefficient most-significant byte value (Address 0x41)
 		uint8_t BPF_A2_LSB;						// Bandpass filter A2 coefficient least-significant byte value (Address 0x42)
 		uint8_t BPF_A3_MSB;						// Bandpass filter A3 coefficient most-significant byte value (Address 0x43)
 		uint8_t BPF_A3_LSB;						// Bandpass filter A3 coefficient least-significant byte value (Address 0x44)
 		uint8_t BPF_B1_MSB;						// Bandpass filter B1 coefficient most-significant byte value (Address 0x45)
 		uint8_t BPF_B1_LSB;						// Bandpass filter B1 coefficient least-significant byte value (Address 0x46)
+} PGA460_BPF_t;
+
+typedef struct __attribute__((packed)) {
 		uint8_t LPF_A2_MSB;						// Lowpass filter A2 coefficient most-significant byte value (Address 0x47) only 7 bits
 		uint8_t LPF_A2_LSB;						// Lowpass filter A2 coefficient least-significant byte value (Address 0x48)
 		uint8_t LPF_B1_MSB;						// Lowpass filter A2 coefficient most-significant byte value (Address 0x49) only 7 bits
 		uint8_t LPF_B1_LSB;						// Lowpass filter A2 coefficient least-significant byte value (Address 0x4A)
-		TEST_MUX_t TEST_MUX;					// TEST_MUX Register (Address = 4Bh)
-		DEV_STAT0_t DEV_STAT0;				// DEV_STAT0 Register (Address = 4Ch) 
-		DEV_STAT1_t DEV_STAT1;				// DEV_STAT1 Register (Address = 4Dh)
-		
+} PGA460_LPF_t;
+
+typedef struct __attribute__((packed)) {
 		P1_THR_0_t P1_THR_0;					// P1_THR_0 Register (Address = 5Fh)
 		P1_THR_1_t P1_THR_1;					// P1_THR_1 Register (Address = 60h)
 		P1_THR_2_t P1_THR_2;					// P1_THR_2 Register (Address = 61h)
@@ -964,7 +979,7 @@
 		uint8_t P1_THR_11;						// P1_THR_11 Register (Address = 6Ah) TH_P1_L9
 		uint8_t P1_THR_12;						// P1_THR_12 Register (Address = 6Bh) TH_P1_L10
 		uint8_t P1_THR_13;						// P1_THR_13 Register (Address = 6Ch) TH_P1_L11
-		uint8_t P1_THR_14;						// P1_THR_14 Register (Address = 6Dh) TH_P1_L12
+		uint8_t P1_THR_14;						// P1_THR_13 Register (Address = 6Dh) TH_P1_L12
 		P1_THR_15_t P1_THR_15;				// P1_THR_15 Register (Address = 6Eh) TH_P1_OFF
 		P2_THR_0_t P2_THR_0;					// P2_THR_0 Register (Address = 6Fh)
 		P2_THR_1_t P2_THR_1;					// P2_THR_1 Register (Address = 70h)
@@ -983,7 +998,38 @@
 		uint8_t P2_THR_14;						// P1_THR_13 Register (Address = 7Dh) TH_P2_L12	
 		P2_THR_15_t P2_THR_15;				// P2_THR_15 Register (Address = 7Eh) TH_P2_OFF
 		uint8_t THR_CRC;							// P1_THR_13 Register (Address = 7Fh) Threshold map configuration registers data CRC value
+} PGA460_THR_t;
+
+
+	typedef struct __attribute__((packed)) {
+		PGA460_UserData_t USER_DATA;
+		PGA460_EEPROMConfig_t EEPROM;
+		EE_CNTRL_t EE_CNTRL; 					// EE_CNTRL register (Address 0x40) User EEPROM control register
+		PGA460_BPF_t BPF;
+		PGA460_LPF_t LPF;
+		TEST_MUX_t TEST_MUX;					// TEST_MUX Register (Address = 4Bh)
+		DEV_STAT0_t DEV_STAT0;				// DEV_STAT0 Register (Address = 4Ch) 
+		DEV_STAT1_t DEV_STAT1;				// DEV_STAT1 Register (Address = 4Dh)
+		PGA460_THR_t THR;
 	} PGA460_t;
+
+typedef struct __attribute__((packed)) {
+    union {
+        uint8_t Value;
+        struct __attribute__((packed)) {
+            uint8_t DeviceBusy             : 1; // Bit 0
+            uint8_t SyncRateError          : 1; // Bit 1
+            uint8_t SyncWidthMismatch      : 1; // Bit 2
+            uint8_t ChecksumMismatch       : 1; // Bit 3
+            uint8_t InvalidCommand         : 1; // Bit 4
+            uint8_t UARTFrameError         : 1; // Bit 5
+            uint8_t DiagnosticBitMarker_L  : 1; // Bit 6 - always 1
+            uint8_t DiagnosticBitMarker_H  : 1; // Bit 7 - always 0 (in UART_DIAG=0)
+        } BitField;
+    };
+} PGA460_Diag_t;
+
+
 
 // Enum for PGA460 commands
 typedef enum {
@@ -1043,7 +1089,8 @@ typedef enum {
 typedef enum {
     PGA460_TVG_25_PERCENT = 0,  // 25% of range
     PGA460_TVG_50_PERCENT = 1,  // 50% of range
-    PGA460_TVG_75_PERCENT = 2   // 75% of range
+    PGA460_TVG_75_PERCENT = 2,  // 75% of range
+		PGA460_TVG_CUSTOM
 } PGA460_TVG_Level_t;
 
 typedef enum {
@@ -1054,18 +1101,16 @@ typedef enum {
 } PGA460_TRH_Level_t;
 
 typedef struct __attribute__((packed)) {
-    uint16_t distance;  // Time-of-flight distance (2 bytes)
-    uint8_t width;      // Echo width (1 byte)
-    uint8_t amplitude;  // Echo amplitude (1 byte)
+    float distance;		// Time-of-flight distance (2 bytes)
+    uint8_t width;		// Echo width (1 byte)
+    uint8_t amplitude;	// Echo amplitude (1 byte)
 } PGA460_MeasData_t;
 
-	typedef struct __attribute__((packed)) {
-    PGA460_MeasData_t objects[PGA_MAX_OBJECTS];  // Array for detected objects
-} PGA460_UltrasonicData_t;
-	
 typedef struct __attribute__((packed)) {
     UART_HandleTypeDef *uartPort;  // Matches the type of huart1, huart4, huart5
     PGA460_t PGA460_Data;
-		PGA460_UltrasonicData_t ultrasonicData;  // Store measurement results in structured format
+		PGA460_MeasData_t objects[PGA_MAX_OBJECTS];  // Array for detected objects
 } PGA460_Sensor_t;
+
+
 #endif // PGA460_REG_H

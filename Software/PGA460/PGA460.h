@@ -4,52 +4,70 @@
 #include "stm32f3xx_hal.h"
 #include "PGA460_REG.h"
 
-typedef struct __attribute__((packed)) {
-    float Temperature;  // Temperature from BMP581 and HDC3020
-    float SoundSpeed;
-} PGA460_EnvData_t;
-// Public Function Prototypes
+typedef enum {
+    // --- PGA460 UART Diagnostic Flags ---
+		PGA460_ERR_NONE = 0,
+		PGA460_ERR_GEN ,	
+		PGA460_ERR_UART_TX ,
+		PGA460_ERR_UART_RX ,
+		PGA460_ERR_UART_UN ,
+    PGA460_ERR_DEVICE_BUSY ,	// Bit 0
+    PGA460_ERR_SYNC_RATE ,		// Bit 1
+    PGA460_ERR_SYNC_WIDTH ,		// Bit 2
+    PGA460_ERR_CHECKSUM ,			// Bit 3
+    PGA460_ERR_INVALID_CMD ,	// Bit 4
+    PGA460_ERR_UART_FRAME ,		// Bit 5
+    // --- Application-Level Error Codes ---
+    PGA460_ERR_EEPROM_BURN ,
+    PGA460_ERR_CRC_FAIL ,
+    PGA460_ERR_SENSOR_INIT_FAIL ,
+		PGA460_ERR_GET_THR_FAIL ,
+		PGA460_ERR_TIMEOUT
+} PGA460_Error_t;
 
-void PGA460_DebugEEPROM(uint8_t sensorID);
-void calculateSpeedOfSound(float Height, float Temperature, float RH, float Pressure);
-void PGA460_ReadAllSensors(void);
+// Public Function Prototypes
+extern PGA460_Sensor_t myUltraSonicArray[ULTRASONIC_SENSOR_COUNT];
+void calculateSpeedOfSound(void);
+void calculateWind(uint32_t ToF_up[3], uint32_t ToF_down[3], float speed_of_sound, float *wind_speed, float *wind_direction);
+
+
 /* -------------------------------------------------
  * Initialization Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_Init(void);
-HAL_StatusTypeDef PGA460_CheckStatus(const uint8_t sensorID);
+PGA460_Error_t PGA460_Init(void);
+PGA460_Error_t PGA460_CheckStatus(const uint8_t sensorID);
 
 /* -------------------------------------------------
  * Register Read/Write Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_RegisterRead(const uint8_t sensorID, const uint8_t regAddr, uint8_t *regValue);
-HAL_StatusTypeDef PGA460_RegisterWrite(const uint8_t sensorID, const uint8_t regAddr, const uint8_t regValue);
+PGA460_Error_t PGA460_RegisterRead(const uint8_t sensorID, const uint8_t regAddr, uint8_t *regValue);
+PGA460_Error_t PGA460_RegisterWrite(const uint8_t sensorID, const uint8_t regAddr, const uint8_t regValue);
 
 /* -------------------------------------------------
  * EEPROM Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID, uint8_t *dataBuffer);
-HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID);
-HAL_StatusTypeDef PGA460_VerifyEEPROM(uint8_t sensorID);
-HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID);
+PGA460_Error_t PGA460_EEPROMBulkRead(const uint8_t sensorID);
+PGA460_Error_t PGA460_EEPROMBulkWrite(uint8_t sensorID);
+PGA460_Error_t PGA460_BurnEEPROM(uint8_t sensorID);
 
 /* -------------------------------------------------
  * Configuration Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_InitTimeVaryingGain(const uint8_t sensorID, const PGA460_GainRange_t gain_range, const PGA460_TVG_Level_t timeVaryingGain);
-
+PGA460_Error_t PGA460_GetTVG(uint8_t sensorID);
+PGA460_Error_t PGA460_SetTVG(const uint8_t sensorID, const PGA460_GainRange_t gain_range, const PGA460_TVG_Level_t timeVaryingGain);
+PGA460_Error_t PGA460_GetThresholds(const uint8_t sensorID);
+PGA460_Error_t PGA460_SetThresholds(const uint8_t sensorID, PGA460_TRH_Level_t thresholdLevel);
+PGA460_Error_t PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops);
+PGA460_Error_t PGA460_AutoThreshold_Internal(uint8_t sensorID, PGA460_Command_t cmd, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, PGA460_THR_t *thr);
 /* -------------------------------------------------
  * Measurement Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd, const uint8_t numObjUpdate);
-HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID);
+PGA460_Error_t PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd);
+PGA460_Error_t PGA460_GetUltrasonicMeasurement(const uint8_t sensorID);
+PGA460_Error_t PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset, uint8_t *echoOut);
 float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType_t mode);
-HAL_StatusTypeDef PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTempC);
-HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult);
-HAL_StatusTypeDef PGA460_GetTimeVaryingGain(const uint8_t sensorID, uint8_t *gainData);
-HAL_StatusTypeDef PGA460_GetThresholds(const uint8_t sensorID, uint8_t *thresholdData);
-HAL_StatusTypeDef PGA460_SetThresholdLevel(const uint8_t sensorID, PGA460_TRH_Level_t thresholdLevel);
-HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset);
+PGA460_Error_t PGA460_SetTemperatureOffset(uint8_t sensorID, float externalTempC);
+PGA460_Error_t PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t run, const uint8_t diag, float *diagResult);
 
 /* -------------------------------------------------
  * Bandpass & Gain Configuration Functions
