@@ -26,7 +26,7 @@
 	//#define USE_MA4S4S_R				// Murata MA4S4S/R Configuration
 	//#define USE_MA40H1SR				// Murata MA40H1SR Configuration
 	//#define USE_MA58MF14_7N			// Murata MA58MF14-7N Configuration
-	#define USE_UTR_1440K_TT_R	// PUI Audio UTR-1440K-TT-R configuration
+	//#define USE_UTR_1440K_TT_R	// PUI Audio UTR-1440K-TT-R configuration
 	
 	// Address 0h-2Bh: EEPROM nonvolatile memory.
 	// Content in these registers is preserved during power cycle and low-power mode.
@@ -1097,7 +1097,8 @@ typedef enum {
     PGA460_TRH_25 = 0,  // 25% of range
     PGA460_TRH_50 = 1,  // 50% of range
     PGA460_TRH_75 = 2,  // 75% of range
-		PGA460_TRH_CC = 3   // Custom
+		PGA460_TRH_CC = 3,  // Custom
+		PGA460_TRH_DE = 4   // Default
 } PGA460_TRH_Level_t;
 
 typedef struct __attribute__((packed)) {

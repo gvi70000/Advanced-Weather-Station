@@ -4,370 +4,202 @@
 #include "PGA460_REG.h"
 
 #ifdef USE_MA4S4S_R // Murata MA4S4S/R Configuration
-const PGA460_t transducer = {
-    // User data registers (optional user-defined settings)
-    .USER_DATA.USER_DATA1 = 0x00,
-    .USER_DATA.USER_DATA2 = 0x00,
-    .USER_DATA.USER_DATA3 = 0x00,
-    .USER_DATA.USER_DATA4 = 0x00,
-    .USER_DATA.USER_DATA5 = 0x00,
-    .USER_DATA.USER_DATA6 = 0x00,
-    .USER_DATA.USER_DATA7 = 0x00,
-    .USER_DATA.USER_DATA8 = 0x00,
-    .USER_DATA.USER_DATA9 = 0x00,
-    .USER_DATA.USER_DATA10 = 0x00,
-    .USER_DATA.USER_DATA11 = 0x00,
-    .USER_DATA.USER_DATA12 = 0x00,
-    .USER_DATA.USER_DATA13 = 0x00,
-    .USER_DATA.USER_DATA14 = 0x00,
-    .USER_DATA.USER_DATA15 = 0x00,
-    .USER_DATA.USER_DATA16 = 0x00,
-    .USER_DATA.USER_DATA17 = 0x00,
-    .USER_DATA.USER_DATA18 = 0x00,
-    .USER_DATA.USER_DATA19 = 0x00,
-    .USER_DATA.USER_DATA20 = 0x00,
-
-    // Time-varying gain settings
-    .EEPROM.TGV.TVGAIN0.Val.Value = 0xAA, // Start gain timing for TVG
-    .EEPROM.TGV.TVGAIN1.Val.Value = 0xAA, // Timing point 1
-    .EEPROM.TGV.TVGAIN2.Val.Value = 0xAA, // Timing point 2
-    .EEPROM.TGV.TVGAIN3.Val.Value = 0x51, // Timing point 3
-    .EEPROM.TGV.TVGAIN4.Val.Value = 0x45, // Timing point 4
-    .EEPROM.TGV.TVGAIN5.Val.Value = 0x14, // Timing point 5
-    .EEPROM.TGV.TVGAIN6.Val.Value = 0x50, // Timing point 6 and frequency shift control
-
-    // Gain control
-    .EEPROM.INIT_GAIN.Val = 0x54, // GAIN = 0.5 × (GAIN_INIT + 1) + value(AFE_GAIN_RNG) [dB]
-
-    // Frequency settings
-    .EEPROM.FREQ = 0x32, // Frequency = 0.2 × FREQ + 30 [kHz]
-
-    // Dead time and comparator deglitch period
-    .EEPROM.DEADTIME.Val = 0xA0, // Dead time and deglitch settings
-
-    .EEPROM.PULSE_P1.Val = 0x02, // 2 pulses for OUTA burst (Preset 1)
-    .EEPROM.PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
-
-    // Current limit settings
-    .EEPROM.CURR_LIM_P1.Val = 0x40, // 330mA (Preset 1) [Current limit = 7×CURR_LIM + 50 mA]
-    .EEPROM.CURR_LIM_P2.Val = 0x40, // 330mA (Preset 2)
-
-    // Recording length
-    .EEPROM.REC_LENGTH.Val = 0x19, // Recording time length = 4096 × (P_REC + 1) [µs]
-
-    // Diagnostic frequency
-    .EEPROM.FREQ_DIAG.Val = 0x33, // Frequency diagnostic settings
-
-    // Saturation diagnostic threshold
-    .EEPROM.SAT_FDIAG_TH.Val = 0xFE, // Threshold level
-
-    // Voltage diagnostic and scaling
-    .EEPROM.FVOLT_DEC.Val = 0x7C, // VPWR_OV_TH = 12.3V, other diagnostic scaling settings
-
-    // Decoupling time and AFE gain range
-    .EEPROM.DECPL_TEMP.Val = 0x4F, // Decoupling time, temperature, and AFE gain range
-
-    // DSP scaling
-    .EEPROM.DSP_SCALE.Val = 0x00, // Non-linear scaling noise level
-
-    // Temperature trim
-    .EEPROM.TEMP_TRIM.Val = 0x00, // Temperature scale offset and gain
-
-    // Gain control for Preset 1 and 2
-    .EEPROM.P1_GAIN_CTRL.Val = 0x00, // Gain control settings for Preset 1
-    .EEPROM.P2_GAIN_CTRL.Val = 0x00  // Gain control settings for Preset 2
-};
+const PGA460_t transducer = (PGA460_t){
+		.USER_DATA = {
+			.USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
+			.USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
+			.USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
+			.USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
+			.USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
+		},
+		.EEPROM = {
+			.TGV = {
+				.TVGAIN0.Val.Value = 0xAA,
+				.TVGAIN1.Val.Value = 0xAA,
+				.TVGAIN2.Val.Value = 0xAA,
+				.TVGAIN3.Val.Value = 0x51,
+				.TVGAIN4.Val.Value = 0x45,
+				.TVGAIN5.Val.Value = 0x14,
+				.TVGAIN6.Val.Value = 0x50,
+			},
+			.INIT_GAIN.Val       = 0x54,
+			.FREQ                = 0x32,
+			.DEADTIME.Val        = 0xA0,
+			.PULSE_P1.Val        = 0x82,
+			.PULSE_P2.Val        = 0x10,
+			.CURR_LIM_P1.Val     = 0x40,
+			.CURR_LIM_P2.Val     = 0x40,
+			.REC_LENGTH.Val      = 0x19,
+			.FREQ_DIAG.Val       = 0x33,
+			.SAT_FDIAG_TH.Val    = 0xFE,
+			.FVOLT_DEC.Val       = 0x7C,
+			.DECPL_TEMP.Val      = 0x4F,
+			.DSP_SCALE.Val       = 0x00,
+			.TEMP_TRIM.Val       = 0x00,
+			.P1_GAIN_CTRL.Val    = 0x00,
+			.P2_GAIN_CTRL.Val    = 0x00,
+		}
+	};
 #elif defined(USE_MA40H1SR) // Murata MA40H1SR Configuration
-const PGA460_t transducer = {
-    .USER_DATA.USER_DATA1 = 0x00,
-    .USER_DATA.USER_DATA2 = 0x00,
-    .USER_DATA.USER_DATA3 = 0x00,
-    .USER_DATA.USER_DATA4 = 0x00,
-    .USER_DATA.USER_DATA5 = 0x00,
-    .USER_DATA.USER_DATA6 = 0x00,
-    .USER_DATA.USER_DATA7 = 0x00,
-    .USER_DATA.USER_DATA8 = 0x00,
-    .USER_DATA.USER_DATA9 = 0x00,
-    .USER_DATA.USER_DATA10 = 0x00,
-    .USER_DATA.USER_DATA11 = 0x00,
-    .USER_DATA.USER_DATA12 = 0x00,
-    .USER_DATA.USER_DATA13 = 0x00,
-    .USER_DATA.USER_DATA14 = 0x00,
-    .USER_DATA.USER_DATA15 = 0x00,
-    .USER_DATA.USER_DATA16 = 0x00,
-    .USER_DATA.USER_DATA17 = 0x00,
-    .USER_DATA.USER_DATA18 = 0x00,
-    .USER_DATA.USER_DATA19 = 0x00,
-    .USER_DATA.USER_DATA20 = 0x00,
-
-    // Time-varying gain settings
-    .EEPROM.TGV.TVGAIN0.Val.Value = 0xAA, // Start gain timing for TVG
-    .EEPROM.TGV.TVGAIN1.Val.Value = 0xAA, // Timing point 1
-    .EEPROM.TGV.TVGAIN2.Val.Value = 0xAA, // Timing point 2
-    .EEPROM.TGV.TVGAIN3.Val.Value = 0x51, // Timing point 3
-    .EEPROM.TGV.TVGAIN4.Val.Value = 0x45, // Timing point 4
-    .EEPROM.TGV.TVGAIN5.Val.Value = 0x14, // Timing point 5
-    .EEPROM.TGV.TVGAIN6.Val.Value = 0x50, // Timing point 6 and frequency shift control
-
-    // Gain control
-    .EEPROM.INIT_GAIN.Val = 0x54, // GAIN = 0.5 × (GAIN_INIT + 1) + value(AFE_GAIN_RNG) [dB]
-
-    // Frequency settings
-    .EEPROM.FREQ = 0x32, // Frequency = 0.2 × FREQ + 30 [kHz]
-
-    // Dead time and comparator deglitch period
-    .EEPROM.DEADTIME.Val = 0xA0, // Dead time and deglitch settings
-
-    .EEPROM.PULSE_P1.Val = 0x08, // 8 pulses for OUTA burst (Preset 1)
-    .EEPROM.PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
-
-    // Current limit settings
-    .EEPROM.CURR_LIM_P1.Val = 0x40, // 330mA (Preset 1) [Current limit = 7×CURR_LIM + 50 mA]
-    .EEPROM.CURR_LIM_P2.Val = 0x40, // 330mA (Preset 2)
-
-    // Recording length
-    .EEPROM.REC_LENGTH.Val = 0x19, // Recording time length = 4096 × (P_REC + 1) [µs]
-
-    // Diagnostic frequency
-    .EEPROM.FREQ_DIAG.Val = 0x33, // Frequency diagnostic settings
-
-    // Saturation diagnostic threshold
-    .EEPROM.SAT_FDIAG_TH.Val = 0xFE, // Threshold level
-
-    // Voltage diagnostic and scaling
-    .EEPROM.FVOLT_DEC.Val = 0x7C, // VPWR_OV_TH = 12.3V, other diagnostic scaling settings
-
-    // Decoupling time and AFE gain range
-    .EEPROM.DECPL_TEMP.Val = 0x4F, // Decoupling time, temperature, and AFE gain range
-
-    // DSP scaling
-    .EEPROM.DSP_SCALE.Val = 0x00, // Non-linear scaling noise level
-
-    // Temperature trim
-    .EEPROM.TEMP_TRIM.Val = 0x00, // Temperature scale offset and gain
-
-    // Gain control for Preset 1 and 2
-    .EEPROM.P1_GAIN_CTRL.Val = 0x09, // Gain control settings for Preset 1
-    .EEPROM.P2_GAIN_CTRL.Val = 0x09  // Gain control settings for Preset 2
-};
+const PGA460_t 	transducer = (PGA460_t){
+		.USER_DATA = {
+			.USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
+			.USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
+			.USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
+			.USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
+			.USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
+		},
+		.EEPROM = {
+			.TGV = {
+				.TVGAIN0.Val.Value = 0xAA,
+				.TVGAIN1.Val.Value = 0xAA,
+				.TVGAIN2.Val.Value = 0xAA,
+				.TVGAIN3.Val.Value = 0x51,
+				.TVGAIN4.Val.Value = 0x45,
+				.TVGAIN5.Val.Value = 0x14,
+				.TVGAIN6.Val.Value = 0x50,
+			},
+			.INIT_GAIN.Val       = 0x54,
+			.FREQ                = 0x32,
+			.DEADTIME.Val        = 0xA0,
+			.PULSE_P1.Val        = 0x88,
+			.PULSE_P2.Val        = 0x10,
+			.CURR_LIM_P1.Val     = 0x40,
+			.CURR_LIM_P2.Val     = 0x40,
+			.REC_LENGTH.Val      = 0x19,
+			.FREQ_DIAG.Val       = 0x33,
+			.SAT_FDIAG_TH.Val    = 0xFE,
+			.FVOLT_DEC.Val       = 0x7C,
+			.DECPL_TEMP.Val      = 0x4F,
+			.DSP_SCALE.Val       = 0x00,
+			.TEMP_TRIM.Val       = 0x00,
+			.P1_GAIN_CTRL.Val    = 0x09,
+			.P2_GAIN_CTRL.Val    = 0x09,
+		}
+	};
 #elif defined(USE_MA58MF14_7N) // Murata MA58MF14-7N Configuration
-const PGA460_t transducer = {
-    .USER_DATA.USER_DATA1 = 0x00,
-    .USER_DATA.USER_DATA2 = 0x00,
-    .USER_DATA.USER_DATA3 = 0x00,
-    .USER_DATA.USER_DATA4 = 0x00,
-    .USER_DATA.USER_DATA5 = 0x00,
-    .USER_DATA.USER_DATA6 = 0x00,
-    .USER_DATA.USER_DATA7 = 0x00,
-    .USER_DATA.USER_DATA8 = 0x00,
-    .USER_DATA.USER_DATA9 = 0x00,
-    .USER_DATA.USER_DATA10 = 0x00,
-    .USER_DATA.USER_DATA11 = 0x00,
-    .USER_DATA.USER_DATA12 = 0x00,
-    .USER_DATA.USER_DATA13 = 0x00,
-    .USER_DATA.USER_DATA14 = 0x00,
-    .USER_DATA.USER_DATA15 = 0x00,
-    .USER_DATA.USER_DATA16 = 0x00,
-    .USER_DATA.USER_DATA17 = 0x00,
-    .USER_DATA.USER_DATA18 = 0x00,
-    .USER_DATA.USER_DATA19 = 0x00,
-    .USER_DATA.USER_DATA20 = 0x00,
-
-    // Time-varying gain settings
-    .EEPROM.TGV.TVGAIN0.Val.Value = 0xAA, // Start gain timing for TVG
-    .EEPROM.TGV.TVGAIN1.Val.Value = 0xAA, // Timing point 1
-    .EEPROM.TGV.TVGAIN2.Val.Value = 0xAA, // Timing point 2
-    .EEPROM.TGV.TVGAIN3.Val.Value = 0x82, // Timing point 3
-    .EEPROM.TGV.TVGAIN4.Val.Value = 0x08, // Timing point 4
-    .EEPROM.TGV.TVGAIN5.Val.Value = 0x20, // Timing point 5
-    .EEPROM.TGV.TVGAIN6.Val.Value = 0x80, // Timing point 6 and frequency shift control
-
-    // Gain control
-    .EEPROM.INIT_GAIN.Val = 0x60, // GAIN = 0.5 × (GAIN_INIT + 1) + value(AFE_GAIN_RNG) [dB]
-
-    // Frequency settings
-    .EEPROM.FREQ = 0x8F, // Frequency = 0.2 × FREQ + 30 [kHz]
-
-    // Dead time and comparator deglitch period
-    .EEPROM.DEADTIME.Val = 0xA0, // Dead time and deglitch settings
-
-    .EEPROM.PULSE_P1.Val = 0x04, // 4 pulses for OUTA burst (Preset 1)
-    .EEPROM.PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
-
-    // Current limit settings
-    .EEPROM.CURR_LIM_P1.Val = 0x55, // 435mA (Preset 1) [Current limit = 7×CURR_LIM + 50 mA]
-    .EEPROM.CURR_LIM_P2.Val = 0x55, // 435mA (Preset 2)
-
-    // Recording length
-    .EEPROM.REC_LENGTH.Val = 0x19, // Recording time length = 4096 × (P_REC + 1) [µs]
-
-    // Diagnostic frequency
-    .EEPROM.FREQ_DIAG.Val = 0x33, // Frequency diagnostic settings
-
-    // Saturation diagnostic threshold
-    .EEPROM.SAT_FDIAG_TH.Val = 0xEE, // Threshold level
-
-    // Voltage diagnostic and scaling
-    .EEPROM.FVOLT_DEC.Val = 0x7C, // VPWR_OV_TH = 12.3V, other diagnostic scaling settings
-
-    // Decoupling time and AFE gain range
-    .EEPROM.DECPL_TEMP.Val = 0x4F, // Decoupling time, temperature, and AFE gain range
-
-    // DSP scaling
-    .EEPROM.DSP_SCALE.Val = 0x00, // Non-linear scaling noise level
-
-    // Temperature trim
-    .EEPROM.TEMP_TRIM.Val = 0x00, // Temperature scale offset and gain
-
-    // Gain control for Preset 1 and 2
-    .EEPROM.P1_GAIN_CTRL.Val = 0x09, // Gain control settings for Preset 1
-    .EEPROM.P2_GAIN_CTRL.Val = 0x09  // Gain control settings for Preset 2
-};
+const PGA460_t transducer = (PGA460_t){
+		.USER_DATA = {
+			.USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
+			.USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
+			.USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
+			.USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
+			.USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
+		},
+		.EEPROM = {
+			.TGV = {
+				.TVGAIN0.Val.Value = 0xAA,
+				.TVGAIN1.Val.Value = 0xAA,
+				.TVGAIN2.Val.Value = 0xAA,
+				.TVGAIN3.Val.Value = 0x82,
+				.TVGAIN4.Val.Value = 0x08,
+				.TVGAIN5.Val.Value = 0x20,
+				.TVGAIN6.Val.Value = 0x80,
+			},
+			.INIT_GAIN.Val       = 0x60,
+			.FREQ                = 0x8F,
+			.DEADTIME.Val        = 0xA0,
+			.PULSE_P1.Val        = 0x84,
+			.PULSE_P2.Val        = 0x10,
+			.CURR_LIM_P1.Val     = 0x55,
+			.CURR_LIM_P2.Val     = 0x55,
+			.REC_LENGTH.Val      = 0x19,
+			.FREQ_DIAG.Val       = 0x33,
+			.SAT_FDIAG_TH.Val    = 0xEE,
+			.FVOLT_DEC.Val       = 0x7C,
+			.DECPL_TEMP.Val      = 0x4F,
+			.DSP_SCALE.Val       = 0x00,
+			.TEMP_TRIM.Val       = 0x00,
+			.P1_GAIN_CTRL.Val    = 0x09,
+			.P2_GAIN_CTRL.Val    = 0x09,
+		}
+	};
 #elif defined(USE_UTR_1440K_TT_R) // PUI Audio UTR-1440K-TT-R configuration
-const PGA460_t transducer = {
-    .USER_DATA.USER_DATA1 = 0x00, // User data 1
-    .USER_DATA.USER_DATA2 = 0x00, // User data 2
-    .USER_DATA.USER_DATA3 = 0x00, // User data 3
-    .USER_DATA.USER_DATA4 = 0x00, // User data 4
-    .USER_DATA.USER_DATA5 = 0x00, // User data 5
-    .USER_DATA.USER_DATA6 = 0x00, // User data 6
-    .USER_DATA.USER_DATA7 = 0x00, // User data 7
-    .USER_DATA.USER_DATA8 = 0x00, // User data 8
-    .USER_DATA.USER_DATA9 = 0x00, // User data 9
-    .USER_DATA.USER_DATA10 = 0x00, // User data 10
-    .USER_DATA.USER_DATA11 = 0x00, // User data 11
-    .USER_DATA.USER_DATA12 = 0x00, // User data 12
-    .USER_DATA.USER_DATA13 = 0x00, // User data 13
-    .USER_DATA.USER_DATA14 = 0x00, // User data 14
-    .USER_DATA.USER_DATA15 = 0x00, // User data 15
-    .USER_DATA.USER_DATA16 = 0x00, // User data 16
-    .USER_DATA.USER_DATA17 = 0x00, // User data 17
-    .USER_DATA.USER_DATA18 = 0x00, // User data 18
-    .USER_DATA.USER_DATA19 = 0x00, // User data 19
-    .USER_DATA.USER_DATA20 = 0x00, // User data 20
-
-    // Time-varying gain settings
-    .EEPROM.TGV.TVGAIN0.Val.Value = 0x9D, // Start gain timing for TVG
-    .EEPROM.TGV.TVGAIN1.Val.Value = 0xEE, // Timing point 1
-    .EEPROM.TGV.TVGAIN2.Val.Value = 0xEF, // Timing point 2
-    .EEPROM.TGV.TVGAIN3.Val.Value = 0x2D, // Timing point 3
-    .EEPROM.TGV.TVGAIN4.Val.Value = 0xB9, // Timing point 4
-    .EEPROM.TGV.TVGAIN5.Val.Value = 0xEF, // Timing point 5
-    .EEPROM.TGV.TVGAIN6.Val.Value = 0xDC, // Timing point 6 and frequency shift control
-
-    // Gain control
-    .EEPROM.INIT_GAIN.Val = 0x18, //0x03, // GAIN = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
-
-    // Frequency settings
-    .EEPROM.FREQ = 0x32, // Frequency = 0.2 × FREQ + 30 [kHz]
-
-    // Dead time and comparator deglitch period
-    .EEPROM.DEADTIME.Val = 0x80, // Dead time and deglitch settings
-
-		.EEPROM.PULSE_P1.Val = 0x0C, // 8 pulses for OUTA burst (Preset 1)
-    .EEPROM.PULSE_P2.Val = 0x10, // 10 pulses for OUTA burst (Preset 2)
-
-    // Current limit settings
-    .EEPROM.CURR_LIM_P1.Val = 0x32, // 400mA (Preset 1) [Current limit = 7×CURR_LIM+50 mA]
-    .EEPROM.CURR_LIM_P2.Val = 0x32, // 400mA (Preset 2)
-
-    // Recording length
-    .EEPROM.REC_LENGTH.Val = 0x00, // Recording time length = 4096 × (P_REC+1) [µs]
-
-    // Diagnostic frequency
-    .EEPROM.FREQ_DIAG.Val = 0x33, // Frequency diagnostic settings
-
-    // Saturation diagnostic threshold
-    .EEPROM.SAT_FDIAG_TH.Val = 0xEE, // Threshold level
-
-    // Voltage diagnostic and scaling
-    .EEPROM.FVOLT_DEC.Val = 0x02, //0x3C, // VPWR_OV_TH = 17.7V, other diagnostic scaling settings
-
-    // Decoupling time and AFE gain range
-    .EEPROM.DECPL_TEMP.Val = 0x8F, // Decoupling time, temperature, and AFE gain range
-
-    // DSP scaling
-    .EEPROM.DSP_SCALE.Val = 0x00, // Non-linear scaling noise level
-
-    // Temperature trim
-    .EEPROM.TEMP_TRIM.Val = 0x00, // Temperature scale offset and gain
-
-    // Gain control for Preset 1 and 2
-    .EEPROM.P1_GAIN_CTRL.Val = 0x05, // Gain control settings for Preset 1
-    .EEPROM.P2_GAIN_CTRL.Val = 0x05, // Gain control settings for Preset 2
+const PGA460_t transducer = (PGA460_t){
+    .USER_DATA = {
+        .USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
+        .USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
+        .USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
+        .USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
+        .USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
+    },
+    .EEPROM = {
+        .TGV = {
+            .TVGAIN0.Val.Value = 0x9D,
+            .TVGAIN1.Val.Value = 0xEE,
+            .TVGAIN2.Val.Value = 0xEF,
+            .TVGAIN3.Val.Value = 0x2D,
+            .TVGAIN4.Val.Value = 0xB9,
+            .TVGAIN5.Val.Value = 0xEF,
+            .TVGAIN6.Val.Value = 0xDC,
+        },
+        .INIT_GAIN.Val       = 0x03,
+        .FREQ                = 0x32,
+        .DEADTIME.Val        = 0x80,
+        .PULSE_P1.Val        = (comm == 2) ? (0x80 | 0x08) : 0x08,
+        .PULSE_P2.Val        = 0x12,
+        .CURR_LIM_P1.Val     = 0x72,
+        .CURR_LIM_P2.Val     = 0x32,
+        .REC_LENGTH.Val      = 0x09,
+        .FREQ_DIAG.Val       = 0x33,
+        .SAT_FDIAG_TH.Val    = 0xEE,
+        .FVOLT_DEC.Val       = 0x7C,
+        .DECPL_TEMP.Val      = 0x8F,
+        .DSP_SCALE.Val       = 0x00,
+        .TEMP_TRIM.Val       = 0x00,
+        .P1_GAIN_CTRL.Val    = 0x09,
+        .P2_GAIN_CTRL.Val    = 0x29,
+    }
 };
 #else // User Custom XDCR Configuration
 const PGA460_t transducer = {
-    .USER_DATA.USER_DATA1 = 0x00,
-    .USER_DATA.USER_DATA2 = 0x00,
-    .USER_DATA.USER_DATA3 = 0x00,
-    .USER_DATA.USER_DATA4 = 0x00,
-    .USER_DATA.USER_DATA5 = 0x00,
-    .USER_DATA.USER_DATA6 = 0x00,
-    .USER_DATA.USER_DATA7 = 0x00,
-    .USER_DATA.USER_DATA8 = 0x00,
-    .USER_DATA.USER_DATA9 = 0x00,
-    .USER_DATA.USER_DATA10 = 0x00,
-    .USER_DATA.USER_DATA11 = 0x00,
-    .USER_DATA.USER_DATA12 = 0x00,
-    .USER_DATA.USER_DATA13 = 0x00,
-    .USER_DATA.USER_DATA14 = 0x00,
-    .USER_DATA.USER_DATA15 = 0x00,
-    .USER_DATA.USER_DATA16 = 0x00,
-    .USER_DATA.USER_DATA17 = 0x00,
-    .USER_DATA.USER_DATA18 = 0x00,
-    .USER_DATA.USER_DATA19 = 0x00,
-    .USER_DATA.USER_DATA20 = 0x00,
-
-    // Time-varying gain settings
-    .EEPROM.TGV.TVGAIN0.Val.Value = 0xAA, // Start gain timing for TVG
-    .EEPROM.TGV.TVGAIN1.Val.Value = 0xAA, // Timing point 1
-    .EEPROM.TGV.TVGAIN2.Val.Value = 0xAA, // Timing point 2
-    .EEPROM.TGV.TVGAIN3.Val.Value = 0x82, // Timing point 3
-    .EEPROM.TGV.TVGAIN4.Val.Value = 0x08, // Timing point 4
-    .EEPROM.TGV.TVGAIN5.Val.Value = 0x20, // Timing point 5
-    .EEPROM.TGV.TVGAIN6.Val.Value = 0x80, // Timing point 6 and frequency shift control
-
-    // Gain control
-    .EEPROM.INIT_GAIN.Val = 0x60, // GAIN = 0.5 × (GAIN_INIT + 1) + value(AFE_GAIN_RNG) [dB]
-
-    // Frequency settings
-    .EEPROM.FREQ = 0x8F, // Frequency = 0.2 × FREQ + 30 [kHz]
-
-    // Dead time and comparator deglitch period
-    .EEPROM.DEADTIME.Val = 0xA0, // Dead time and deglitch settings
-
-    .EEPROM.PULSE_P1.Val = 0x04, // 4 pulses for OUTA burst (Preset 1)
-    .EEPROM.PULSE_P2.Val = 0x10, // 16 pulses for OUTA burst (Preset 2)
-
-    // Current limit settings
-    .EEPROM.CURR_LIM_P1.Val = 0x55, // 440mA (Preset 1) [Current limit = 7×CURR_LIM + 50 mA]
-    .EEPROM.CURR_LIM_P2.Val = 0x55, // 440mA (Preset 2)
-
-    // Recording length
-    .EEPROM.REC_LENGTH.Val = 0x19, // Recording time length = 4096 × (P_REC + 1) [µs]
-
-    // Diagnostic frequency
-    .EEPROM.FREQ_DIAG.Val = 0x33, // Frequency diagnostic settings
-
-    // Saturation diagnostic threshold
-    .EEPROM.SAT_FDIAG_TH.Val = 0xFE, // Threshold level
-
-    // Voltage diagnostic and scaling
-    .EEPROM.FVOLT_DEC.Val = 0x7C, // VPWR_OV_TH = 12.3V, other diagnostic scaling settings
-
-    // Decoupling time and AFE gain range
-    .EEPROM.DECPL_TEMP.Val = 0x4F, // Decoupling time, temperature, and AFE gain range
-
-    // DSP scaling
-    .EEPROM.DSP_SCALE.Val = 0x00, // Non-linear scaling noise level
-
-    // Temperature trim
-    .EEPROM.TEMP_TRIM.Val = 0x00, // Temperature scale offset and gain
-
-    // Gain control for Preset 1 and 2
-    .EEPROM.P1_GAIN_CTRL.Val = 0x09, // Gain control settings for Preset 1
-    .EEPROM.P2_GAIN_CTRL.Val = 0x09  // Gain control settings for Preset 2
+    // User data section
+    .USER_DATA = {
+        .USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
+        .USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
+        .USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
+        .USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
+        .USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
+    },
+    .EEPROM = {
+        // Time-Varying Gain (TVG) based on tested setup
+        .TGV = {
+            .TVGAIN0.Val.Value = 0x9D,
+            .TVGAIN1.Val.Value = 0xEE,
+            .TVGAIN2.Val.Value = 0xEF,
+            .TVGAIN3.Val.Value = 0x2D,
+            .TVGAIN4.Val.Value = 0xB9,
+            .TVGAIN5.Val.Value = 0xEF,
+            .TVGAIN6.Val.Value = 0xDC, // TVG6 includes TVG and FreqShift control
+        },
+        // Initial Gain — reduced for short distances
+        .INIT_GAIN.Val = 0x18,  // ~17 dB
+        // Transmit Frequency (0.2 × 50 + 30 = 40 kHz)
+        .FREQ = 0x32,
+        // Deadtime + Comparator Deglitch
+        // THR_CMP_DEGLITCH = 0x01 (8 µs), PULSE_DT = 0x00 (0 µs)
+        .DEADTIME.Val = 0x10,
+        // Burst Pulses — minimal for quick decay
+        .PULSE_P1.Val = 0x02,  // 2 pulses
+        .PULSE_P2.Val = 0x04,  // 4 pulses
+        // Current Limits (moderate drive strength)
+        // 7×0x28 + 50 = 246 mA
+        .CURR_LIM_P1.Val = 0x28,
+        .CURR_LIM_P2.Val = 0x32,  // ~400 mA if needed for farther range
+        // Record Length — maximize resolution
+        // 4096 µs total ? 32 µs per bin
+        .REC_LENGTH.Val = 0x00,
+        // Diagnostics and scaling
+        .FREQ_DIAG.Val     = 0x33,
+        .SAT_FDIAG_TH.Val  = 0xEE,
+        .FVOLT_DEC.Val     = 0x02,
+        .DECPL_TEMP.Val    = 0x8F,
+        .DSP_SCALE.Val     = 0x00,
+        .TEMP_TRIM.Val     = 0x00,
+        // Gain control for P1 and P2
+        .P1_GAIN_CTRL.Val = 0x05,
+        .P2_GAIN_CTRL.Val = 0x05,
+    }
 };
 #endif
 
@@ -412,18 +244,18 @@ const PGA460_THR_t THRESHOLD_75_STRUCT = {
 
 PGA460_THR_t THRESHOLD_CC_STRUCT = {
     // P1
-    .P1_THR_0.Val.Value  = 0xFF, .P1_THR_1.Val.Value  = 0xFF, .P1_THR_2.Val.Value  = 0xFF, .P1_THR_3.Val.Value  = 0xFF,
-    .P1_THR_4.Val.Value  = 0xA0, .P1_THR_5.Val.Value  = 0x80, .P1_THR_6.Val.Value  = 0x60, .P1_THR_7.Val.Value  = 0x40,
-    .P1_THR_8.Val.Value  = 0x30, .P1_THR_9.Val.Value  = 0x20, .P1_THR_10.Val.Value = 0x10, .P1_THR_11           = 0x0A,
-    .P1_THR_12           = 0x08, .P1_THR_13           = 0x08, .P1_THR_14           = 0x06, .P1_THR_15.Val.Value = 0x06,
+    .P1_THR_0.Val.Value  = 0x00, .P1_THR_1.Val.Value  = 0x00, .P1_THR_2.Val.Value  = 0x00, .P1_THR_3.Val.Value  = 0x00,
+    .P1_THR_4.Val.Value  = 0x00, .P1_THR_5.Val.Value  = 0x00, .P1_THR_6.Val.Value  = 0x21, .P1_THR_7.Val.Value  = 0x04,
+    .P1_THR_8.Val.Value  = 0x22, .P1_THR_9.Val.Value  = 0x10, .P1_THR_10.Val.Value = 0x42, .P1_THR_11           = 0x04,
+    .P1_THR_12           = 0x04, .P1_THR_13           = 0x02, .P1_THR_14           = 0x02, .P1_THR_15.Val.Value = 0x07,
 
     // P2
-    .P2_THR_0.Val.Value  = 0xFF, .P2_THR_1.Val.Value  = 0xFF, .P2_THR_2.Val.Value  = 0xFF, .P2_THR_3.Val.Value  = 0xFF,
-    .P2_THR_4.Val.Value  = 0xA0, .P2_THR_5.Val.Value  = 0x80, .P2_THR_6.Val.Value  = 0x60, .P2_THR_7.Val.Value  = 0x40,
-    .P2_THR_8.Val.Value  = 0x30, .P2_THR_9.Val.Value  = 0x20, .P2_THR_10.Val.Value = 0x10, .P2_THR_11           = 0x0A,
-    .P2_THR_12           = 0x08, .P2_THR_13           = 0x08, .P2_THR_14           = 0x06, .P2_THR_15.Val.Value = 0x06,
+    .P2_THR_0.Val.Value  = 0x00, .P2_THR_1.Val.Value  = 0x00, .P2_THR_2.Val.Value  = 0x00, .P2_THR_3.Val.Value  = 0x00,
+    .P2_THR_4.Val.Value  = 0x00, .P2_THR_5.Val.Value  = 0x00, .P2_THR_6.Val.Value  = 0x20, .P2_THR_7.Val.Value  = 0x84,
+    .P2_THR_8.Val.Value  = 0x22, .P2_THR_9.Val.Value  = 0x08, .P2_THR_10.Val.Value = 0x42, .P2_THR_11           = 0x04,
+    .P2_THR_12           = 0x02, .P2_THR_13           = 0x02, .P2_THR_14           = 0x02, .P2_THR_15.Val.Value = 0x07,
 
-    .THR_CRC = 0x00 // You'll calculate this before EEPROM burn
+    .THR_CRC = 0xBE // for Sensor 1; recalc with your CRC function if needed
 };
 
 const PGA460_TGV_t TGV_25_STRUCT = {
@@ -457,12 +289,12 @@ const PGA460_TGV_t TGV_75_STRUCT = {
 };
 
 PGA460_TGV_t TGV_CUSTOM_STRUCT = {
-    .TVGAIN0.Val.Value = 0x0A,  // 10%
-    .TVGAIN1.Val.Value = 0x14,  // 20%
-    .TVGAIN2.Val.Value = 0x1E,  // 30%
-    .TVGAIN3.Val.Value = 0x28,  // 45%
-    .TVGAIN4.Val.Value = 0x32,  // 60%
-    .TVGAIN5.Val.Value = 0x3C,  // 75%
-    .TVGAIN6.Val.Value = 0x3F   // 90%
+    .TVGAIN0.Val.Value = 0x78,  // Early: avoid saturation
+    .TVGAIN1.Val.Value = 0x88,  // Slight ramp up
+    .TVGAIN2.Val.Value = 0xA0,
+    .TVGAIN3.Val.Value = 0xC8,  // Mid-echo strong gain
+    .TVGAIN4.Val.Value = 0xE0,
+    .TVGAIN5.Val.Value = 0xF4,  // Tail amplification
+    .TVGAIN6.Val.Value = 0xF8   // Max gain for final echoes
 };
 #endif /* __Transducers_H */

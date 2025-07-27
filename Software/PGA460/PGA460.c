@@ -22,6 +22,7 @@ extern const PGA460_TGV_t TGV_25_STRUCT;
 extern const PGA460_TGV_t TGV_50_STRUCT;
 extern const PGA460_TGV_t TGV_75_STRUCT;
 
+float frequency[3] = {0.0f, 0.0f, 0.0f};
 const CommandArray commands[PGA_CMD_COUNT] = {
     {{PGA460_SYNC, PGA460_CMD_BURST_AND_LISTEN_PRESET1, 255 - PGA460_CMD_BURST_AND_LISTEN_PRESET1}},			// PGA460_CMD_BURST_AND_LISTEN_PRESET1
     {{PGA460_SYNC, PGA460_CMD_BURST_AND_LISTEN_PRESET2, 255 - PGA460_CMD_BURST_AND_LISTEN_PRESET2}},			// PGA460_CMD_BURST_AND_LISTEN_PRESET2
@@ -203,12 +204,12 @@ PGA460_Error_t PGA460_Init(void) {
         myUltraSonicArray[i].PGA460_Data = transducer;
         HAL_UART_Init(myUltraSonicArray[i].uartPort);
         HAL_Delay(100);
-        // Step 2: Bulk Threshold Write (clear THR_CRC_ERR)
+        // Step 2: Bulk Threshold Write 
         if (PGA460_SetThresholds(i, PGA460_TRH_CC) != HAL_OK) {
             DEBUG("Sensor %d: Threshold Write Failed!\n", i);
             return PGA460_ERR_GEN;
         }
-//				if (PGA460_AutoThreshold(i, 15, 0, 255, 3) != HAL_OK) {
+//				if (PGA460_AutoThreshold(i, 10, 0, 255, 16) != HAL_OK) {
 //            DEBUG("Sensor %d: Auto THR Failed!\n", i);
 //            return PGA460_ERR_GEN;
 //				}
@@ -228,8 +229,10 @@ PGA460_Error_t PGA460_Init(void) {
             return PGA460_ERR_GEN;
         }
         float diagValue = 0.0;
-        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagValue) == HAL_OK)
+        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagValue) == HAL_OK){
+						frequency[i] = diagValue;
             DEBUG("Sensor %d: Frequency Diagnostic = %.2f kHz\n", i, diagValue);
+				}
         if (PGA460_GetSystemDiagnostics(i, 0, 1, &diagValue) == HAL_OK)
             DEBUG("Sensor %d: Decay Period Diagnostic = %.2f us\n", i, diagValue);
         if (PGA460_GetSystemDiagnostics(i, 0, 2, &diagValue) == HAL_OK)
@@ -515,38 +518,38 @@ PGA460_Error_t PGA460_SetThresholds(const uint8_t sensorID, PGA460_TRH_Level_t t
     uint8_t frame[35] = {0};
     frame[0] = PGA460_SYNC;
     frame[1] = PGA460_CMD_THRESHOLD_BULK_WRITE;
-    // Step 1: Select and copy threshold data (only 32 bytes) into UART frame directly
+    // Step 1: Select threshold struct
     switch (thresholdLevel) {
         case PGA460_TRH_25:
-            memcpy(&frame[2], &THRESHOLD_25_STRUCT, 33);
             memcpy(&myUltraSonicArray[sensorID].PGA460_Data.THR, &THRESHOLD_25_STRUCT, sizeof(PGA460_THR_t));
             break;
         case PGA460_TRH_50:
-            memcpy(&frame[2], &THRESHOLD_50_STRUCT, 33);
             memcpy(&myUltraSonicArray[sensorID].PGA460_Data.THR, &THRESHOLD_50_STRUCT, sizeof(PGA460_THR_t));
             break;
         case PGA460_TRH_75:
-            memcpy(&frame[2], &THRESHOLD_75_STRUCT, 33);
             memcpy(&myUltraSonicArray[sensorID].PGA460_Data.THR, &THRESHOLD_75_STRUCT, sizeof(PGA460_THR_t));
             break;
         case PGA460_TRH_CC:
-            memcpy(&frame[2], &THRESHOLD_CC_STRUCT, 33);
             memcpy(&myUltraSonicArray[sensorID].PGA460_Data.THR, &THRESHOLD_CC_STRUCT, sizeof(PGA460_THR_t));
+            break;
+        case PGA460_TRH_DE:
+            // Use current .THR content as-is (no overwrite)
             break;
         default:
             DEBUG("Sensor %d: Invalid threshold level!\n", sensorID);
             return PGA460_ERR_INVALID_CMD;
     }
-    // Step 2: Append UART checksum
-    frame[34] = PGA460_CalculateChecksum(&frame[1], 33);  // CMD + 32 bytes
-    // Step 3: Transmit frame
+    // Step 2: Copy threshold struct (33 bytes) into frame
+    memcpy(&frame[2], &myUltraSonicArray[sensorID].PGA460_Data.THR, 33);
+    // Step 3: Append checksum (over CMD + 32 bytes of data)
+    frame[34] = PGA460_CalculateChecksum(&frame[1], 33);
+    // Step 4: Send frame
     if (HAL_UART_Transmit(myUltraSonicArray[sensorID].uartPort, frame, sizeof(frame), UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Threshold Bulk Write Failed!\n", sensorID);
         return PGA460_ERR_UART_TX;
     }
-    HAL_Delay(70);  // Let device apply thresholds
-    // Step 4: Verify THR_CRC_ERR is cleared
-    PGA460_CheckStatus(sensorID);
+    HAL_Delay(70);  // Wait for EEPROM to update
+    PGA460_CheckStatus(sensorID);  // Optionally check THR_CRC_ERR
     return PGA460_ERR_NONE;
 }
 
@@ -719,7 +722,8 @@ PGA460_Error_t PGA460_GetUltrasonicMeasurement(const uint8_t sensorID) {
         DEBUG("Sensor %d: Raw TOF = %04X\n", sensorID, rawTOF);  // Add this line
         PGA460_MeasData_t *obj = &myUltraSonicArray[sensorID].objects[i];
         if (rawTOF > 0 && rawTOF != 0xFFFF) {
-            obj->distance = ((float)rawTOF / 2.0f) * 1e-6f * soundSpeed;  // in meters
+						float burstOffset_m = (soundSpeed * ((float)myUltraSonicArray[sensorID].PGA460_Data.EEPROM.PULSE_P1.Val.Value / frequency[sensorID])) / 2.0f;
+            obj->distance = ((float)rawTOF / 2.0f) * 1e-6f * soundSpeed + burstOffset_m;  // in meters
             obj->width = width * 16;   // width in microseconds
             obj->amplitude = amplitude;
             DEBUG("Sensor %d: Obj %d -> %.3f m, Width = %u us, Amplitude = %u\n", sensorID, i + 1, obj->distance, obj->width, obj->amplitude);
@@ -879,7 +883,7 @@ PGA460_Error_t PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t
                 DEBUG("Sensor %d: Invalid Frequency Value!\n", sensorID);
                 return PGA460_ERR_GEN;
             }
-            *diagResult = (1.0 / (response[1] * 0.5e-6)) / 1000.0f; // Convert to kHz
+            *diagResult = (1.0 / (response[1] * 0.5e-6)); // In Hz
             break;
         case 1: // Decay period (µs)
             *diagResult = response[2] * 16.0f;
