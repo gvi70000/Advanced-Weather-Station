@@ -18,9 +18,9 @@ extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart5;
 extern UART_HandleTypeDef huart1;
 
-extern const PGA460_TGV_t TGV_25_STRUCT;
-extern const PGA460_TGV_t TGV_50_STRUCT;
-extern const PGA460_TGV_t TGV_75_STRUCT;
+extern const PGA460_TVG_t TGV_25_STRUCT;
+extern const PGA460_TVG_t TGV_50_STRUCT;
+extern const PGA460_TVG_t TGV_75_STRUCT;
 
 float frequency[3] = {0.0f, 0.0f, 0.0f};
 const CommandArray commands[PGA_CMD_COUNT] = {
@@ -433,7 +433,7 @@ PGA460_Error_t PGA460_GetTVG(uint8_t sensorID) {
         return PGA460_ERR_UART_TX;
     }
     // Step 2: Receive 7 bytes directly into EEPROM.TGV
-    if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, (uint8_t *)&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, sizeof(PGA460_TGV_t), UART_TIMEOUT) != HAL_OK)
+    if (HAL_UART_Receive(myUltraSonicArray[sensorID].uartPort, (uint8_t *)&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, sizeof(PGA460_TVG_t), UART_TIMEOUT) != HAL_OK)
     {
         DEBUG("Sensor %d: Failed to receive TVG Bulk Read response!\n", sensorID);
         return PGA460_ERR_UART_RX;
@@ -458,22 +458,22 @@ PGA460_Error_t PGA460_SetTVG(const uint8_t sensorID, const PGA460_GainRange_t ga
     // Step 3: Copy selected TVG config directly
     switch (timeVaryingGain) {
         case PGA460_TVG_25_PERCENT:
-            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_25_STRUCT, sizeof(PGA460_TGV_t));
+            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_25_STRUCT, sizeof(PGA460_TVG_t));
             break;
 
         case PGA460_TVG_50_PERCENT:
-            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_50_STRUCT, sizeof(PGA460_TGV_t));
+            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_50_STRUCT, sizeof(PGA460_TVG_t));
              break;
 
         case PGA460_TVG_75_PERCENT:
-            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_75_STRUCT, sizeof(PGA460_TGV_t));
+            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_75_STRUCT, sizeof(PGA460_TVG_t));
             break;
 
         case PGA460_TVG_CUSTOM:
-            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_CUSTOM_STRUCT, sizeof(PGA460_TGV_t));
+            memcpy(&myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, &TGV_CUSTOM_STRUCT, sizeof(PGA460_TVG_t));
             break;
     }
-		memcpy(&frame[2], &myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, sizeof(PGA460_TGV_t));
+		memcpy(&frame[2], &myUltraSonicArray[sensorID].PGA460_Data.EEPROM.TGV, sizeof(PGA460_TVG_t));
     // Step 4: Apply checksum over CMD + 7 bytes of TVG
     frame[9] = PGA460_CalculateChecksum(&frame[1], 8);
     // Step 5: Transmit TVG configuration

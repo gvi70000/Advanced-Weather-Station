@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time-Varying Gain (TVG) Plot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Using Inter font */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            background-color: #f0f2f5; /* Light gray background */
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50; /* Darker blue-gray for heading */
+            margin-bottom: 10px;
+        }
+        .instruction {
+            margin-bottom: 25px;
+            color: #555;
+            text-align: center;
+            max-width: 600px;
+        }
+        .controls-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            width: 90%;
+            max-width: 900px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 250px;
+        }
+        .control-group label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-size: 1.1em;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .control-value {
+            margin-top: 10px;
+            font-size: 1em;
+            color: #555;
+            background-color: #f0f4f7;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #e0e7ed;
+        }
+
+        .preset-radios {
+            display: flex; /* Changed to flex for horizontal layout */
+            flex-direction: row; /* Horizontal layout */
+            align-items: center; /* Align items vertically in the row */
+            gap: 15px; /* Increased gap for spacing */
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+        .preset-radios strong {
+            margin-right: 10px; /* Space between label and first radio */
+        }
+        .preset-radios label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .preset-radios input[type="radio"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+        }
+        .preset-radios input[type="radio"]:checked {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        .preset-radios input[type="radio"]:checked::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .echo-parameters-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            width: 90%;
+            max-width: 900px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .echo-parameters-container .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .echo-parameters-container .input-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #34495e;
+            font-size: 0.95em;
+        }
+        .echo-parameters-container .input-group input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+        .echo-results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f0f7;
+            border-radius: 8px;
+            border: 1px solid #cce0f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            font-size: 1em;
+        }
+        .echo-results div {
+            margin-bottom: 5px;
+        }
+        .echo-results span {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f0f4f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #e0e7ed;
+        }
+        .echo-results .note {
+            font-size: 0.85em;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        /* New styles for threshold inputs row */
+        .threshold-inputs-row {
+            display: flex;
+            flex-wrap: wrap; /* Allows items to wrap to the next line */
+            justify-content: space-around; /* Distributes items evenly with space between them */
+            gap: 15px; /* Gap between items */
+            grid-column: 1 / -1; /* Make this row span all columns of the parent grid */
+        }
+
+        .threshold-inputs-row .input-group {
+            flex: 1 1 calc(25% - 15px); /* Each item takes roughly 25% width, accounting for gap */
+            min-width: 150px; /* Minimum width to prevent too much squeezing */
+            /* Override default column behavior from parent grid if necessary */
+            margin-bottom: 0; /* Remove extra margin if it was there */
+        }
+
+        /* Adjust input width within this group if needed */
+        .threshold-inputs-row .input-group input {
+            width: 100%; /* Make input fill its container */
+        }
+
+        /* Responsive adjustments for threshold inputs */
+        @media (max-width: 768px) {
+            .threshold-inputs-row .input-group {
+                flex: 1 1 calc(50% - 15px); /* Two per row on smaller screens */
+            }
+        }
+        @media (max-width: 480px) {
+            .threshold-inputs-row .input-group {
+                flex: 1 1 100%; /* One per row on very small screens */
+            }
+        }
+
+
+        #tvgChartContainer {
+            position: relative;
+            width: 90%; /* Responsive width */
+            max-width: 900px; /* Max width for larger screens */
+            height: 500px;
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Softer shadow */
+            padding: 25px;
+            border-radius: 12px; /* More rounded corners */
+            margin-bottom: 30px;
+        }
+        #tvgChart {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .point-info-grid {
+            margin-top: 20px;
+            width: 90%; /* Responsive width */
+            max-width: 900px; /* Max width for larger screens */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
+            gap: 15px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .point-info-item {
+            padding: 15px;
+            border: 1px solid #dcdcdc;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+            font-size: 0.95em;
+        }
+        .point-info-item strong {
+            color: #34495e; /* Slightly darker text for labels */
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .register-display {
+            margin-top: 30px;
+            width: 90%;
+            max-width: 900px;
+            background-color: #e8f0f7; /* Light blue background for registers */
+            border: 1px solid #cce0f0;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .register-display h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.4em;
+        }
+        .register-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        .register-table th, .register-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .register-table th {
+            background-color: #dbe9f5; /* Slightly darker blue for headers */
+            font-weight: bold;
+            color: #34495e;
+        }
+        .register-table tr:last-child td {
+            border-bottom: none;
+        }
+        .register-table td:first-child {
+            font-weight: bold;
+        }
+        .register-table td span {
+            font-family: 'Courier New', Courier, monospace; /* Monospace for hex/bin */
+            background-color: #f0f4f7;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #e0e7ed;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .controls-container, .echo-parameters-container, #tvgChartContainer, .point-info-grid, .register-display {
+                width: 95%;
+                padding: 15px;
+            }
+            .point-info-grid {
+                grid-template-columns: 1fr; /* Stack columns on small screens */
+            }
+            .register-table th, .register-table td {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .instruction {
+                font-size: 0.9em;
+            }
+            .control-group {
+                min-width: unset;
+                width: 100%;
+            }
+            .echo-parameters-container {
+                grid-template-columns: 1fr;
+            }
+            .preset-radios {
+                flex-direction: column; /* Stack radios vertically on very small screens */
+                align-items: flex-start;
+            }
+            .preset-radios strong {
+                margin-bottom: 8px; /* Add space below label when stacked */
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Time-Varying Gain (TVG) Assignment</h1>
+    <p class="instruction">Adjust the initial gain and bandwidth using the sliders. Drag the red circular points on the graph to adjust the TVG. The time values (except TVG_T0) are delta times, and gain values snap to 0.5 dB. Register values will update below.</p>
+
+    <div class="controls-container">
+        <div class="preset-radios">
+            <strong>Choose Preset:</strong>
+            <label>
+                <input type="radio" name="tvgPreset" value="25" checked> 25% Levels
+            </label>
+            <label>
+                <input type="radio" name="tvgPreset" value="50"> 50% Levels
+            </label>
+            <label>
+                <input type="radio" name="tvgPreset" value="75"> 75% Levels
+            </label>
+            <label>
+                <input type="radio" name="tvgPreset" value="custom_cc"> CC Preset
+            </label>
+            <label>
+                <input type="radio" name="tvgPreset" value="custom"> Custom
+            </label>
+        </div>
+        <div class="control-group">
+            <label for="gainInitSlider">Initial AFE Gain (dB)</label>
+            <input type="range" id="gainInitSlider" min="0.5" max="32.0" step="0.5" value="10.0">
+            <div class="control-value" id="gainInitValue">10.0 dB</div>
+        </div>
+        <div class="control-group">
+            <label for="bpfBwSlider">BPF Bandwidth (kHz)</label>
+            <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
+            <div class="control-value" id="bpfBwValue">2 kHz</div>
+        </div>
+    </div>
+
+    <div class="echo-parameters-container">
+        <div class="input-group">
+            <label for="transducerFreq">Transducer Frequency (Hz)</label>
+            <input type="number" id="transducerFreq" value="40000" min="1">
+        </div>
+        <div class="input-group">
+            <label for="numPulses">Number of Pulses</label>
+            <input type="number" id="numPulses" value="2" min="1"> <!-- Default changed to 2 -->
+        </div>
+        <div class="input-group">
+            <label for="distanceTarget">Distance to Target (mm)</label>
+            <input type="number" id="distanceTarget" value="300" min="0">
+        </div>
+        <div class="input-group">
+            <label for="temperatureC">Temperature (°C)</label>
+            <input type="number" id="temperatureC" value="25" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="pressurePa">Pressure (Pa)</label>
+            <input type="number" id="pressurePa" value="101325" min="0">
+        </div>
+        <div class="input-group">
+            <label for="heightM">Height (m)</label>
+            <input type="number" id="heightM" value="0" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="relativeHumidity">Relative Humidity (%)</label>
+            <input type="number" id="relativeHumidity" value="50" min="0" max="100">
+        </div>
+        <div class="input-group">
+            <label for="decayTime">Decay Time (µs)</label>
+            <input type="number" id="decayTime" value="1000" min="0">
+        </div>
+
+        <!-- P1_REC and P2_REC sliders -->
+        <div class="control-group">
+            <label for="p1RecSlider">P1_REC (Record Time Length)</label>
+            <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
+            <div class="control-value" id="p1RecValue">0 (0 µs)</div>
+        </div>
+        <div class="control-group"> <!-- Moved P2_REC to the right -->
+            <label for="p2RecSlider">P2_REC (Record Time Length)</label>
+            <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
+            <div class="control-value" id="p2RecValue">0 (0 µs)</div>
+        </div>
+
+        <!-- New Threshold Inputs - now in a flex row -->
+        <div class="threshold-inputs-row">
+            <div class="input-group">
+                <label for="thrHigh">THR_HIGH (dB)</label>
+                <input type="number" id="thrHigh" value="15.0" min="0.0" max="31.5" step="0.5">
+            </div>
+            <div class="input-group">
+                <label for="thrLow">THR_LOW (dB)</label>
+                <input type="number" id="thrLow" value="5.0" min="0.0" max="31.5" step="0.5">
+            </div>
+            <div class="input-group">
+                <label for="thP1Off">TH_P1_OFF (dB Offset)</label>
+                <input type="number" id="thP1Off" value="0" min="-8" max="7" step="1">
+            </div>
+            <div class="input-group">
+                <label for="thP2Off">TH_P2_OFF (dB Offset)</label>
+                <input type="number" id="thP2Off" value="7" min="-8" max="7" step="1">
+            </div>
+        </div>
+
+        <!-- P1_GAIN_CTRL and P2_GAIN_CTRL Inputs -->
+        <div class="threshold-inputs-row">
+            <div class="input-group">
+                <label for="p1DigGainLrSt">P1_DIG_GAIN_LR_ST</label>
+                <select id="p1DigGainLrSt">
+                    <option value="0">TH9</option>
+                    <option value="1">TH10</option>
+                    <option value="2">TH11</option>
+                    <option value="3">TH12</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="p1DigGainLr">P1_DIG_GAIN_LR (x)</label>
+                <select id="p1DigGainLr">
+                    <option value="0">x1</option>
+                    <option value="1">x2</option>
+                    <option value="2">x4</option>
+                    <option value="3">x8</option>
+                    <option value="4">x16</option>
+                    <option value="5">x32</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="p1DigGainSr">P1_DIG_GAIN_SR (x)</label>
+                <select id="p1DigGainSr">
+                    <option value="0">x1</option>
+                    <option value="1">x2</option>
+                    <option value="2">x4</option>
+                    <option value="3">x8</option>
+                    <option value="4">x16</option>
+                    <option value="5">x32</option>
+                </select>
+            </div>
+        </div>
+        <div class="threshold-inputs-row">
+            <div class="input-group">
+                <label for="p2DigGainLrSt">P2_DIG_GAIN_LR_ST</label>
+                <select id="p2DigGainLrSt">
+                    <option value="0">TH9</option>
+                    <option value="1">TH10</option>
+                    <option value="2">TH11</option>
+                    <option value="3">TH12</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="p2DigGainLr">P2_DIG_GAIN_LR (x)</label>
+                <select id="p2DigGainLr">
+                    <option value="0">x1</option>
+                    <option value="1">x2</option>
+                    <option value="2">x4</option>
+                    <option value="3">x8</option>
+                    <option value="4">x16</option>
+                    <option value="5">x32</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="p2DigGainSr">P2_DIG_GAIN_SR (x)</label>
+                <select id="p2DigGainSr">
+                    <option value="0">x1</option>
+                    <option value="1">x2</option>
+                    <option value="2">x4</option>
+                    <option value="3">x8</option>
+                    <option value="4">x16</option>
+                    <option value="5">x32</option>
+                </select>
+            </div>
+        </div>
+
+
+        <div class="echo-results" style="grid-column: 1 / -1;">
+            <div>Speed of Sound: <span id="soundSpeedDisplay">0 m/s</span></div>
+            <div>Echo Return Time: <span id="echoReturnTimeDisplay">0 µs</span></div>
+            <div>Pulse Length: <span id="pulseLengthDisplay">0 µs</span></div> <!-- New line for pulse length -->
+            <div>Total Time (Echo + Pulse + Decay): <span id="totalTimeDisplay">0 µs</span></div> <!-- New line for total time -->
+            <div>Theoretical REC_LENGTH (P1_REC/P2_REC): <span id="theoreticalRecLengthDisplay">0</span> (Dec) <span>0x00</span> (Hex) <span>0b00000000</span> (Bin)
+                <div class="note" id="recLengthNote">
+                    Note: REC_LENGTH is 0 when the theoretical record time is less than 4096 µs. Try increasing Distance to Target, Number of Pulses, or Decay Time.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tvgChartContainer">
+        <canvas id="tvgChart"></canvas>
+    </div>
+
+    <div class="point-info-grid" id="pointInfoDisplay">
+        <!-- Point information will be displayed here -->
+    </div>
+
+    <div class="register-display">
+        <h2>Calculated Register Values</h2>
+        <table class="register-table">
+            <thead>
+                <tr>
+                    <th>Register</th>
+                    <th>Decimal</th>
+                    <th>Hexadecimal</th>
+                    <th>Binary</th>
+                </tr>
+            </thead>
+            <tbody id="registerTableBody">
+                <!-- Register values will be displayed here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let tvgChart;
+        let activePoint = null;
+        let currentPresetMode = '25'; // Default to 25% Levels
+
+        // --- Lookup Tables ---
+        const timeLookup = {
+            '0000': 100, '0001': 200, '0010': 300, '0011': 400,
+            '0100': 600, '0101': 800, '0110': 1000, '0111': 1200,
+            '1000': 1400, '1001': 2000, '1010': 2400, '1011': 3200,
+            '1100': 4000, '1101': 5200, '1110': 6400, '1111': 8000
+        };
+
+        // Inverse lookup for converting microseconds to 4-bit binary string
+        const timeInverseLookup = Object.fromEntries(
+            Object.entries(timeLookup).map(([bin, us]) => [us, bin])
+        );
+
+        const bpfBwLookup = {
+            0: '2 kHz', // 00b
+            1: '4 kHz', // 01b
+            2: '6 kHz', // 10b
+            3: '8 kHz'  // 11b
+        };
+
+        const digGainLookup = {
+            0: 1, // x1
+            1: 2, // x2
+            2: 4, // x4
+            3: 8, // x8
+            4: 16, // x16
+            5: 32 // x32
+        };
+
+        const digGainInverseLookup = Object.fromEntries(
+            Object.entries(digGainLookup).map(([reg, val]) => [val, parseInt(reg)])
+        );
+
+        const digGainLrStLookup = {
+            0: 'TH9',
+            1: 'TH10',
+            2: 'TH11',
+            3: 'TH12'
+        };
+
+        const digGainLrStInverseLookup = Object.fromEntries(
+            Object.entries(digGainLrStLookup).map(([reg, val]) => [val, parseInt(reg)])
+        );
+
+        // --- Conversion Functions ---
+
+        // Converts dB gain to a 6-bit register value (0-63)
+        // NOTE: This function currently assumes value(AFE_GAIN_RNG) is 0.
+        // If value(AFE_GAIN_RNG) is known, it should be added to the calculated gain.
+        function gainToRegisterValue(gain_dB) {
+            let regVal = Math.round((gain_dB * 2) - 1);
+            // Clamp to 6-bit range (0-63)
+            regVal = Math.max(0, Math.min(63, regVal));
+            return regVal;
+        }
+
+        // Converts 6-bit register value back to dB gain
+        // NOTE: This function currently assumes value(AFE_GAIN_RNG) is 0.
+        // If value(AFE_GAIN_RNG) is known, it should be added to the calculated gain.
+        function registerValueToGain(regVal) {
+            return 0.5 * (regVal + 1);
+        }
+
+        // Converts time in microseconds to its 4-bit register value (0-15)
+        function timeToRegisterValue(time_us) {
+            // Find the closest time in the lookup table
+            const closestTime = Object.keys(timeInverseLookup).reduce((prev, curr) => {
+                return (Math.abs(curr - time_us) < Math.abs(prev - time_us) ? curr : prev);
+            }, Object.keys(timeInverseLookup)[0]); // Start with the first key as initial prev
+            
+            return parseInt(timeInverseLookup[closestTime], 2); // Return decimal value of binary
+        }
+
+        // Converts 4-bit register value (0-15) back to microseconds
+        function registerValueToTime(regVal) {
+            const binString = regVal.toString(2).padStart(4, '0');
+            return timeLookup[binString];
+        }
+
+        // Converts dB threshold to a register value (0.5 dB step)
+        function thresholdLevelToRegisterValue(dB_value, bitWidth) {
+            let regVal = Math.round(dB_value * 2);
+            const maxRegVal = Math.pow(2, bitWidth) - 1;
+            regVal = Math.max(0, Math.min(maxRegVal, regVal));
+            return regVal;
+        }
+
+        // Converts register value back to dB threshold
+        function registerValueToThresholdLevel(regVal) {
+            return regVal * 0.5;
+        }
+
+        // Converts decimal offset (-8 to 7) to 4-bit signed magnitude binary string
+        function decimalToSignedMagnitude4Bit(decimal) {
+            // Clamp decimal to the valid range
+            decimal = Math.max(-8, Math.min(7, decimal));
+
+            if (decimal === -8) {
+                return '1000'; // Special case for -8
+            }
+            const signBit = decimal < 0 ? '1' : '0';
+            const magnitude = Math.abs(decimal);
+            const magnitudeBits = magnitude.toString(2).padStart(3, '0');
+            return signBit + magnitudeBits;
+        }
+
+        // Converts 4-bit signed magnitude binary string to decimal offset
+        function signedMagnitude4BitToDecimal(binaryString) {
+            if (binaryString === '1000') {
+                return -8; // Special case for -8
+            }
+            const signBit = binaryString[0];
+            const magnitude = parseInt(binaryString.substring(1), 2);
+            return signBit === '1' ? -magnitude : magnitude;
+        }
+
+        // CRC Calculation function
+        function PGA460_CalculateChecksum(dataArray) {
+            let carry = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                carry += dataArray[i];
+                if (carry > 0xFF) {
+                    carry -= 255;
+                }
+            }
+            return (~carry) & 0xFF;
+        }
+
+
+        // --- Preset Register Values ---
+        const presets = {
+            '25': {
+                TVGAIN0: 0x88, TVGAIN1: 0x88, TVGAIN2: 0x88,
+                TVGAIN3: 0x41, TVGAIN4: 0x04, TVGAIN5: 0x10, TVGAIN6: 0x40,
+                THR_HIGH: thresholdLevelToRegisterValue(15.0, 8), // Example value
+                THR_LOW: thresholdLevelToRegisterValue(5.0, 8),   // Example value
+                TH_P1_OFF: decimalToSignedMagnitude4Bit(0),
+                TH_P2_OFF: decimalToSignedMagnitude4Bit(0),
+                REG_P1_THR_0: 0x88, REG_P1_THR_1: 0x88, REG_P1_THR_2: 0x88, REG_P1_THR_3: 0x88,
+                REG_P1_THR_4: 0x88, REG_P1_THR_5: 0x88, REG_P1_THR_6: 0x42, REG_P1_THR_7: 0x10,
+                REG_P1_THR_8: 0x84, REG_P1_THR_9: 0x21, REG_P1_THR_10: 0x08, REG_P1_THR_11: 0x40,
+                REG_P1_THR_12: 0x40, REG_P1_THR_13: 0x40, REG_P1_THR_14: 0x40, REG_P1_THR_15: 0x00,
+                
+                REG_P2_THR_0: 0x88, REG_P2_THR_1: 0x88, REG_P2_THR_2: 0x88, REG_P2_THR_3: 0x88,
+                REG_P2_THR_4: 0x88, REG_P2_THR_5: 0x88, REG_P2_THR_6: 0x42, REG_P2_THR_7: 0x10,
+                REG_P2_THR_8: 0x84, REG_P2_THR_9: 0x21, REG_P2_THR_10: 0x08, REG_P2_THR_11: 0x40,
+                REG_P2_THR_12: 0x40, REG_P2_THR_13: 0x40, REG_P2_THR_14: 0x40, REG_P2_THR_15: 0x00,
+                THR_CRC: 0x87,
+                P1_GAIN_CTRL: 0x00, // Default for presets
+                P2_GAIN_CTRL: 0x00  // Default for presets
+            },
+            '50': {
+                TVGAIN0: 0x88, TVGAIN1: 0x88, TVGAIN2: 0x88,
+                TVGAIN3: 0x82, TVGAIN4: 0x08, TVGAIN5: 0x20, TVGAIN6: 0x80,
+                THR_HIGH: thresholdLevelToRegisterValue(20.0, 8),
+                THR_LOW: thresholdLevelToRegisterValue(10.0, 8),
+                TH_P1_OFF: decimalToSignedMagnitude4Bit(0),
+                TH_P2_OFF: decimalToSignedMagnitude4Bit(0),
+                REG_P1_THR_0: 0x88, REG_P1_THR_1: 0x88, REG_P1_THR_2: 0x88, REG_P1_THR_3: 0x88,
+                REG_P1_THR_4: 0x88, REG_P1_THR_5: 0x88, REG_P1_THR_6: 0x84, REG_P1_THR_7: 0x21,
+                REG_P1_THR_8: 0x08, REG_P1_THR_9: 0x42, REG_P1_THR_10: 0x10, REG_P1_THR_11: 0x80,
+                REG_P1_THR_12: 0x80, REG_P1_THR_13: 0x80, REG_P1_THR_14: 0x80, REG_P1_THR_15: 0x00,
+                
+                REG_P2_THR_0: 0x88, REG_P2_THR_1: 0x88, REG_P2_THR_2: 0x88, REG_P2_THR_3: 0x88,
+                REG_P2_THR_4: 0x88, REG_P2_THR_5: 0x88, REG_P2_THR_6: 0x84, REG_P2_THR_7: 0x21,
+                REG_P2_THR_8: 0x08, REG_P2_THR_9: 0x42, REG_P2_THR_10: 0x10, REG_P2_THR_11: 0x80,
+                REG_P2_THR_12: 0x80, REG_P2_THR_13: 0x80, REG_P2_THR_14: 0x80, REG_P2_THR_15: 0x00,
+                THR_CRC: 0x85,
+                P1_GAIN_CTRL: 0x00,
+                P2_GAIN_CTRL: 0x00
+            },
+            '75': {
+                TVGAIN0: 0x88, TVGAIN1: 0x88, TVGAIN2: 0x88,
+                TVGAIN3: 0xC3, TVGAIN4: 0x0C, TVGAIN5: 0x30, TVGAIN6: 0xC0,
+                THR_HIGH: thresholdLevelToRegisterValue(25.0, 8),
+                THR_LOW: thresholdLevelToRegisterValue(15.0, 8),
+                TH_P1_OFF: decimalToSignedMagnitude4Bit(0),
+                TH_P2_OFF: decimalToSignedMagnitude4Bit(0),
+                REG_P1_THR_0: 0x88, REG_P1_THR_1: 0x88, REG_P1_THR_2: 0x88, REG_P1_THR_3: 0x88,
+                REG_P1_THR_4: 0x88, REG_P1_THR_5: 0x88, REG_P1_THR_6: 0xC6, REG_P1_THR_7: 0x31,
+                REG_P1_THR_8: 0x8C, REG_P1_THR_9: 0x63, REG_P1_THR_10: 0x18, REG_P1_THR_11: 0xC0,
+                REG_P1_THR_12: 0xC0, REG_P1_THR_13: 0xC0, REG_P1_THR_14: 0xC0, REG_P1_THR_15: 0x00,
+                
+                REG_P2_THR_0: 0x88, REG_P2_THR_1: 0x88, REG_P2_THR_2: 0x88, REG_P2_THR_3: 0x88,
+                REG_P2_THR_4: 0x88, REG_P2_THR_5: 0x88, REG_P2_THR_6: 0xC6, REG_P2_THR_7: 0x31,
+                REG_P2_THR_8: 0x8C, REG_P2_THR_9: 0x63, REG_P2_THR_10: 0x18, REG_P2_THR_11: 0xC0,
+                REG_P2_THR_12: 0xC0, REG_P2_THR_13: 0xC0, REG_P2_THR_14: 0xC0, REG_P2_THR_15: 0x00,
+                THR_CRC: 0x83,
+                P1_GAIN_CTRL: 0x00,
+                P2_GAIN_CTRL: 0x00
+            },
+            'custom_cc': {
+                TVGAIN0: 0x88, TVGAIN1: 0x88, TVGAIN2: 0x88, // Default TVG values for custom_cc
+                TVGAIN3: 0x41, TVGAIN4: 0x04, TVGAIN5: 0x10, TVGAIN6: 0x40,
+                THR_HIGH: thresholdLevelToRegisterValue(15.0, 8),
+                THR_LOW: thresholdLevelToRegisterValue(5.0, 8),
+                TH_P1_OFF: decimalToSignedMagnitude4Bit(0),
+                TH_P2_OFF: decimalToSignedMagnitude4Bit(7), // Applied an offset of +7 dB
+                REG_P1_THR_0: 0xF0, REG_P1_THR_1: 0xF0, REG_P1_THR_2: 0xC0, REG_P1_THR_3: 0xA0,
+                REG_P1_THR_4: 0x80, REG_P1_THR_5: 0x60, REG_P1_THR_6: 0x50, REG_P1_THR_7: 0x40,
+                REG_P1_THR_8: 0x30, REG_P1_THR_9: 0x28, REG_P1_THR_10: 0x20, REG_P1_THR_11: 0x18,
+                REG_P1_THR_12: 0x18, REG_P1_THR_13: 0x10, REG_P1_THR_14: 0x08, REG_P1_THR_15: 0x08,
+                
+                REG_P2_THR_0: 0xFF, REG_P2_THR_1: 0xFF, REG_P2_THR_2: 0xF0, REG_P2_THR_3: 0xD0,
+                REG_P2_THR_4: 0xA0, REG_P2_THR_5: 0x70, REG_P2_THR_6: 0x50, REG_P2_THR_7: 0x30,
+                REG_P2_THR_8: 0x20, REG_P2_THR_9: 0x18, REG_P2_THR_10: 0x10, REG_P2_THR_11: 0x10,
+                REG_P2_THR_12: 0x10, REG_P2_THR_13: 0x08, REG_P2_THR_14: 0x08, REG_P2_THR_15: 0x00,
+                THR_CRC: 0xA6, // Corrected CRC value based on TH_P2_OFF = 7
+                P1_GAIN_CTRL: 0x00,
+                P2_GAIN_CTRL: 0x00
+            }
+        };
+
+        // --- Internal Data Representation (Register Values) ---
+        let chartDataInternal = {
+            BPF_BW_reg: 0, // Default BPF_BW value (00b)
+            GAIN_INIT_reg: gainToRegisterValue(10), // Default Initial Gain
+
+            TVG_T0_abs_reg: timeToRegisterValue(100),
+            TVG_T1_delta_reg: timeToRegisterValue(200),
+            TVG_T2_delta_reg: timeToRegisterValue(300),
+            TVG_T3_delta_reg: timeToRegisterValue(400),
+            TVG_T4_delta_reg: timeToRegisterValue(600),
+            TVG_T5_delta_reg: timeToRegisterValue(800),
+
+            TVG_G1_reg: gainToRegisterValue(5),
+            TVG_G2_reg: gainToRegisterValue(5),
+            TVG_G3_reg: gainToRegisterValue(15),
+            TVG_G4_reg: gainToRegisterValue(20),
+            TVG_G5_reg: gainToRegisterValue(20),
+
+            P1_REC_reg: 0, // Default P1_REC value (0000b)
+            P2_REC_reg: 0,  // Default P2_REC value (0000b)
+
+            THR_HIGH_reg: thresholdLevelToRegisterValue(15.0, 8), // Default THR_HIGH
+            THR_LOW_reg: thresholdLevelToRegisterValue(5.0, 8),   // Default THR_LOW
+            TH_P1_OFF_reg: decimalToSignedMagnitude4Bit(0),
+            TH_P2_OFF_reg: decimalToSignedMagnitude4Bit(0),
+
+            P1_DIG_GAIN_LR_ST_reg: 0, // 00b = TH9
+            P1_DIG_GAIN_LR_reg: 0,    // 000b = x1
+            P1_DIG_GAIN_SR_reg: 0,    // 000b = x1
+            P2_DIG_GAIN_LR_ST_reg: 0,
+            P2_DIG_GAIN_LR_reg: 0,
+            P2_DIG_GAIN_SR_reg: 0,
+
+            // Internal storage for parsed threshold time and level points (not directly from UI)
+            p1ThresholdTimes: [], // Absolute times
+            p1ThresholdLevels: [], // dB levels
+            p2ThresholdTimes: [],
+            p2ThresholdLevels: []
+        };
+
+        // Function to parse register values (either initial or from preset) and populate chartDataInternal
+        function applyRegisterValues(regs) {
+            // TVG Gain and Time Registers (existing logic)
+            const tvgain0_bin = regs.TVGAIN0.toString(2).padStart(8, '0');
+            const tvgain1_bin = regs.TVGAIN1.toString(2).padStart(8, '0');
+            const tvgain2_bin = regs.TVGAIN2.toString(2).padStart(8, '0');
+            const tvgain3_bin = regs.TVGAIN3.toString(2).padStart(8, '0');
+            const tvgain4_bin = regs.TVGAIN4.toString(2).padStart(8, '0');
+            const tvgain5_bin = regs.TVGAIN5.toString(2).padStart(8, '0');
+            const tvgain6_bin = regs.TVGAIN6.toString(2).padStart(8, '0');
+
+            chartDataInternal.TVG_T0_abs_reg = parseInt(tvgain0_bin.substring(0, 4), 2);
+            chartDataInternal.TVG_T1_delta_reg = parseInt(tvgain0_bin.substring(4, 8), 2);
+            chartDataInternal.TVG_T2_delta_reg = parseInt(tvgain1_bin.substring(0, 4), 2);
+            chartDataInternal.TVG_T3_delta_reg = parseInt(tvgain1_bin.substring(4, 8), 2);
+            chartDataInternal.TVG_T4_delta_reg = parseInt(tvgain2_bin.substring(0, 4), 2);
+            chartDataInternal.TVG_T5_delta_reg = parseInt(tvgain2_bin.substring(4, 8), 2);
+
+            chartDataInternal.TVG_G1_reg = parseInt(tvgain3_bin.substring(0, 6), 2);
+            const tvgG2_lower2 = tvgain3_bin.substring(6, 8);
+            const tvgG2_upper4 = tvgain4_bin.substring(0, 4);
+            chartDataInternal.TVG_G2_reg = parseInt(tvgG2_upper4 + tvgG2_lower2, 2);
+            const tvgG3_lower4 = tvgain4_bin.substring(4, 8);
+            const tvgG3_upper2 = tvgain5_bin.substring(0, 2);
+            chartDataInternal.TVG_G3_reg = parseInt(tvgG3_upper2 + tvgG3_lower4, 2);
+            chartDataInternal.TVG_G4_reg = parseInt(tvgain5_bin.substring(2, 8), 2);
+            chartDataInternal.TVG_G5_reg = parseInt(tvgain6_bin.substring(0, 6), 2);
+
+            // New Threshold Registers
+            chartDataInternal.THR_HIGH_reg = regs.THR_HIGH;
+            chartDataInternal.THR_LOW_reg = regs.THR_LOW;
+            chartDataInternal.TH_P1_OFF_reg = regs.TH_P1_OFF;
+            chartDataInternal.TH_P2_OFF_reg = regs.TH_P2_OFF;
+
+            // P1_GAIN_CTRL and P2_GAIN_CTRL
+            if (regs.P1_GAIN_CTRL !== undefined) {
+                const p1GainCtrl_bin = regs.P1_GAIN_CTRL.toString(2).padStart(8, '0');
+                chartDataInternal.P1_DIG_GAIN_LR_ST_reg = parseInt(p1GainCtrl_bin.substring(0, 2), 2);
+                chartDataInternal.P1_DIG_GAIN_LR_reg = parseInt(p1GainCtrl_bin.substring(2, 5), 2);
+                chartDataInternal.P1_DIG_GAIN_SR_reg = parseInt(p1GainCtrl_bin.substring(5, 8), 2);
+            }
+            if (regs.P2_GAIN_CTRL !== undefined) {
+                const p2GainCtrl_bin = regs.P2_GAIN_CTRL.toString(2).padStart(8, '0');
+                chartDataInternal.P2_DIG_GAIN_LR_ST_reg = parseInt(p2GainCtrl_bin.substring(0, 2), 2);
+                chartDataInternal.P2_DIG_GAIN_LR_reg = parseInt(p2GainCtrl_bin.substring(2, 5), 2);
+                chartDataInternal.P2_DIG_GAIN_SR_reg = parseInt(p2GainCtrl_bin.substring(5, 8), 2);
+            }
+
+            // Parse P1 Threshold Time and Level points from registers
+            chartDataInternal.p1ThresholdTimes = [];
+            chartDataInternal.p1ThresholdLevels = [];
+            parseThresholdRegisters(regs, 'P1', chartDataInternal.p1ThresholdTimes, chartDataInternal.p1ThresholdLevels);
+
+            // Parse P2 Threshold Time and Level points from registers
+            chartDataInternal.p2ThresholdTimes = [];
+            chartDataInternal.p2ThresholdLevels = [];
+            parseThresholdRegisters(regs, 'P2', chartDataInternal.p2ThresholdTimes, chartDataInternal.p2ThresholdLevels);
+        }
+
+        // Helper to parse P1/P2 Threshold registers into time/level arrays
+        function parseThresholdRegisters(regs, prefix, timeArray, levelArray) {
+            // Times (TH_Px_T1 to T12) from REG_Px_THR_0 to REG_Px_THR_5
+            for (let i = 0; i < 6; i++) {
+                const regValue = regs[`REG_${prefix}_THR_${i}`];
+                const binString = regValue.toString(2).padStart(8, '0');
+                timeArray.push(registerValueToTime(parseInt(binString.substring(0, 4), 2))); // T(2i+1)
+                timeArray.push(registerValueToTime(parseInt(binString.substring(4, 8), 2))); // T(2i+2)
+            }
+
+            // Levels (TH_Px_L1 to L12) from REG_Px_THR_6 to REG_Px_THR_14
+            const reg6_bin = regs[`REG_${prefix}_THR_6`].toString(2).padStart(8, '0');
+            const reg7_bin = regs[`REG_${prefix}_THR_7`].toString(2).padStart(8, '0');
+            const reg8_bin = regs[`REG_${prefix}_THR_8`].toString(2).padStart(8, '0');
+            const reg9_bin = regs[`REG_${prefix}_THR_9`].toString(2).padStart(8, '0');
+            const reg10_bin = regs[`REG_${prefix}_THR_10`].toString(2).padStart(8, '0');
+            const reg11_bin = regs[`REG_${prefix}_THR_11`].toString(2).padStart(8, '0');
+            const reg12_bin = regs[`REG_${prefix}_THR_12`].toString(2).padStart(8, '0');
+            const reg13_bin = regs[`REG_${prefix}_THR_13`].toString(2).padStart(8, '0');
+            const reg14_bin = regs[`REG_${prefix}_THR_14`].toString(2).padStart(8, '0');
+
+            // L1 (5 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg6_bin.substring(0, 5), 2)));
+            // L2 (5 bits) - 3 bits from THR_6, 2 bits from THR_7
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg6_bin.substring(5, 8) + reg7_bin.substring(0, 2), 2)));
+            // L3 (5 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg7_bin.substring(2, 7), 2)));
+            // L4 (5 bits) - 1 bit from THR_7, 4 bits from THR_8
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg7_bin.substring(7, 8) + reg8_bin.substring(0, 4), 2)));
+            // L5 (5 bits) - 4 bits from THR_8, 1 bit from THR_9
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg8_bin.substring(4, 8) + reg9_bin.substring(0, 1), 2)));
+            // L6 (5 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg9_bin.substring(1, 6), 2)));
+            // L7 (5 bits) - 2 bits from THR_9, 3 bits from THR_10
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg9_bin.substring(6, 8) + reg10_bin.substring(0, 3), 2)));
+            // L8 (5 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg10_bin.substring(3, 8), 2)));
+            // L9 (8 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg11_bin, 2)));
+            // L10 (8 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg12_bin, 2)));
+            // L11 (8 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg13_bin, 2)));
+            // L12 (8 bits)
+            levelArray.push(registerValueToThresholdLevel(parseInt(reg14_bin, 2)));
+        }
+
+        // --- Chart Data for Display ---
+        let chartPoints = [];
+        let p1ThresholdChartPoints = [];
+        let p2ThresholdChartPoints = [];
+        const chartLabels = ['Start of Record', 'TVG_T0', 'TVG_T1', 'TVG_T2', 'TVG_T3', 'TVG_T4', 'TVG_T5', 'End of Record Time'];
+
+        function updateChartPointsFromInternalData() {
+            const absTimes = [];
+            const absGains = [];
+
+            const gainInit_dB = registerValueToGain(chartDataInternal.GAIN_INIT_reg);
+
+            // Point 0: Start of Record (t=0, GAIN_INIT)
+            absTimes[0] = 0;
+            absGains[0] = gainInit_dB;
+
+            // Point 1: TVG_T0 (absolute time, GAIN_INIT)
+            absTimes[1] = registerValueToTime(chartDataInternal.TVG_T0_abs_reg);
+            absGains[1] = gainInit_dB;
+
+            // Points 2 to 6: TVG_T1 to TVG_T5
+            for (let i = 2; i <= 6; i++) {
+                const deltaReg = chartDataInternal['TVG_T' + (i - 1) + '_delta_reg'];
+                absTimes[i] = absTimes[i - 1] + registerValueToTime(deltaReg);
+                absGains[i] = registerValueToGain(chartDataInternal['TVG_G' + (i - 1) + '_reg']);
+            }
+
+            // Point 7: End of Record Time (follows TVG_T5's time and gain)
+            absTimes[7] = absTimes[6] + 1000; // Arbitrary offset for visibility
+            absGains[7] = absGains[6]; // End of Record Time gain is G5
+
+            chartPoints = absTimes.map((time, index) => ({
+                x: time,
+                y: absGains[index]
+            }));
+
+            // Calculate P1 Threshold Curve Points
+            p1ThresholdChartPoints = [];
+            let currentP1Time = 0;
+            const p1Offset = signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg);
+            for (let i = 0; i < chartDataInternal.p1ThresholdTimes.length; i++) {
+                currentP1Time += chartDataInternal.p1ThresholdTimes[i]; // Delta time
+                p1ThresholdChartPoints.push({
+                    x: currentP1Time,
+                    y: chartDataInternal.p1ThresholdLevels[i] + p1Offset // Apply offset
+                });
+            }
+
+            // Calculate P2 Threshold Curve Points
+            p2ThresholdChartPoints = [];
+            let currentP2Time = 0;
+            const p2Offset = signedMagnitude4BitToDecimal(chartDataInternal.TH_P2_OFF_reg);
+            for (let i = 0; i < chartDataInternal.p2ThresholdTimes.length; i++) {
+                currentP2Time += chartDataInternal.p2ThresholdTimes[i]; // Delta time
+                p2ThresholdChartPoints.push({
+                    x: currentP2Time,
+                    y: chartDataInternal.p2ThresholdLevels[i] + p2Offset // Apply offset
+                });
+            }
+
+
+            if (tvgChart) {
+                tvgChart.data.datasets[0].data = chartPoints;
+                tvgChart.data.datasets[1].data = p1ThresholdChartPoints; // P1 Threshold
+                tvgChart.data.datasets[2].data = p2ThresholdChartPoints; // P2 Threshold
+                
+                // Rescale X-axis logic
+                const minRecLengthTime = 4096; // 4.096 ms in microseconds
+                const allTimes = [...absTimes, ...p1ThresholdChartPoints.map(p => p.x), ...p2ThresholdChartPoints.map(p => p.x)];
+                const calculatedMaxTime = Math.max(...allTimes);
+                
+                // Ensure the max X-axis is at least minRecLengthTime, and scales up dynamically
+                let newMaxX = calculatedMaxTime + 500; // Add some padding
+                if (newMaxX < minRecLengthTime) {
+                    newMaxX = minRecLengthTime;
+                }
+                tvgChart.options.scales.x.max = newMaxX;
+
+                tvgChart.update();
+            }
+        }
+
+        const config = {
+            type: 'line',
+            data: {
+                labels: chartLabels, // Will be overridden by direct data points
+                datasets: [{
+                    label: 'AFE Gain (dB)',
+                    data: chartPoints, // This will be populated by updateChartPointsFromInternalData
+                    borderColor: '#3498db', /* Blue line */
+                    backgroundColor: '#e74c3c', /* Red points */
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    fill: false,
+                    tension: 0, // Straight lines
+                    showLine: true
+                },
+                {
+                    label: 'P1 Threshold (dB)',
+                    data: p1ThresholdChartPoints,
+                    borderColor: '#2ecc71', /* Green line */
+                    backgroundColor: '#27ae60', /* Darker green points */
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false,
+                    tension: 0,
+                    showLine: true
+                },
+                {
+                    label: 'P2 Threshold (dB)',
+                    data: p2ThresholdChartPoints,
+                    borderColor: '#9b59b6', /* Purple line */
+                    backgroundColor: '#8e44ad', /* Darker purple points */
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false,
+                    tension: 0,
+                    showLine: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Time (μs)'
+                        },
+                        min: 0,
+                        max: 8000 // Initial max time. This will be updated dynamically.
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'AFE Gain (dB)'
+                        },
+                        min: 0,
+                        max: 60.0 // Increased max gain to accommodate AFE_GAIN_RNG if it exists
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true, // Show legend for multiple curves
+                        position: 'top',
+                    },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + ' dB';
+                                }
+                                if (context.parsed.x !== null) {
+                                    label += ' at ' + context.parsed.x.toFixed(0) + ' µs';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        function initializeChart() {
+            const ctx = document.getElementById('tvgChart').getContext('2d');
+            tvgChart = new Chart(ctx, config);
+
+            // Apply the initial preset (25% Levels)
+            applyPreset('25');
+            document.querySelector('input[name="tvgPreset"][value="25"]').checked = true;
+
+            // Initialize sliders and add event listeners
+            const gainInitSlider = document.getElementById('gainInitSlider');
+            const gainInitValueDisplay = document.getElementById('gainInitValue');
+            const bpfBwSlider = document.getElementById('bpfBwSlider');
+            const bpfBwValueDisplay = document.getElementById('bpfBwValue');
+            const p1RecSlider = document.getElementById('p1RecSlider');
+            const p1RecValueDisplay = document.getElementById('p1RecValue');
+            const p2RecSlider = document.getElementById('p2RecSlider');
+            const p2RecValueDisplay = document.getElementById('p2RecValue');
+            const thrHighInput = document.getElementById('thrHigh');
+            const thrLowInput = document.getElementById('thrLow');
+            const thP1OffInput = document.getElementById('thP1Off');
+            const thP2OffInput = document.getElementById('thP2Off');
+
+            const p1DigGainLrStInput = document.getElementById('p1DigGainLrSt');
+            const p1DigGainLrInput = document.getElementById('p1DigGainLr');
+            const p1DigGainSrInput = document.getElementById('p1DigGainSr');
+            const p2DigGainLrStInput = document.getElementById('p2DigGainLrSt');
+            const p2DigGainLrInput = document.getElementById('p2DigGainLr');
+            const p2DigGainSrInput = document.getElementById('p2DigGainSr');
+
+
+            // Set initial slider values based on internal data
+            gainInitSlider.value = registerValueToGain(chartDataInternal.GAIN_INIT_reg).toFixed(1);
+            gainInitValueDisplay.textContent = `${gainInitSlider.value} dB`;
+            bpfBwSlider.value = chartDataInternal.BPF_BW_reg;
+            bpfBwValueDisplay.textContent = bpfBwLookup[bpfBwSlider.value];
+            
+            p1RecSlider.value = chartDataInternal.P1_REC_reg;
+            p1RecValueDisplay.textContent = `${p1RecSlider.value} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+            p2RecSlider.value = chartDataInternal.P2_REC_reg;
+            p2RecValueDisplay.textContent = `${p2RecSlider.value} (${(4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+
+            thrHighInput.value = registerValueToThresholdLevel(chartDataInternal.THR_HIGH_reg).toFixed(1);
+            thrLowInput.value = registerValueToThresholdLevel(chartDataInternal.THR_LOW_reg).toFixed(1);
+            thP1OffInput.value = signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg);
+            thP2OffInput.value = signedMagnitude4BitToDecimal(chartDataInternal.TH_P2_OFF_reg);
+
+            p1DigGainLrStInput.value = chartDataInternal.P1_DIG_GAIN_LR_ST_reg;
+            p1DigGainLrInput.value = chartDataInternal.P1_DIG_GAIN_LR_reg;
+            p1DigGainSrInput.value = chartDataInternal.P1_DIG_GAIN_SR_reg;
+            p2DigGainLrStInput.value = chartDataInternal.P2_DIG_GAIN_LR_ST_reg;
+            p2DigGainLrInput.value = chartDataInternal.P2_DIG_GAIN_LR_reg;
+            p2DigGainSrInput.value = chartDataInternal.P2_DIG_GAIN_SR_reg;
+
+
+            gainInitSlider.addEventListener('input', (e) => {
+                const newGain = parseFloat(e.target.value);
+                chartDataInternal.GAIN_INIT_reg = gainToRegisterValue(newGain);
+                gainInitValueDisplay.textContent = `${newGain.toFixed(1)} dB`;
+                updateChartPointsFromInternalData();
+                updateInfoDisplays();
+                setCustomMode(); // Switch to custom if slider is used
+            });
+
+            bpfBwSlider.addEventListener('input', (e) => {
+                const newBwReg = parseInt(e.target.value);
+                chartDataInternal.BPF_BW_reg = newBwReg;
+                bpfBwValueDisplay.textContent = bpfBwLookup[newBwReg];
+                updateInfoDisplays(); // Only register display needs update for BPF_BW
+                setCustomMode(); // Switch to custom if slider is used
+            });
+
+            p1RecSlider.addEventListener('input', (e) => {
+                const newP1Rec = parseInt(e.target.value);
+                chartDataInternal.P1_REC_reg = newP1Rec;
+                p1RecValueDisplay.textContent = `${newP1Rec} (${(4.096 * (newP1Rec + 1) * 1000).toFixed(0)} µs)`;
+                updateInfoDisplays(); // Update register table
+                setCustomMode();
+            });
+
+            p2RecSlider.addEventListener('input', (e) => {
+                const newP2Rec = parseInt(e.target.value);
+                chartDataInternal.P2_REC_reg = newP2Rec;
+                p2RecValueDisplay.textContent = `${newP2Rec} (${(4.096 * (newP2Rec + 1) * 1000).toFixed(0)} µs)`;
+                updateInfoDisplays(); // Update register table
+                setCustomMode();
+            });
+
+            thrHighInput.addEventListener('input', (e) => {
+                chartDataInternal.THR_HIGH_reg = thresholdLevelToRegisterValue(parseFloat(e.target.value), 8);
+                updateInfoDisplays();
+                updateChartPointsFromInternalData(); // Thresholds are plotted, so update chart
+                setCustomMode();
+            });
+
+            thrLowInput.addEventListener('input', (e) => {
+                chartDataInternal.THR_LOW_reg = thresholdLevelToRegisterValue(parseFloat(e.target.value), 8);
+                updateInfoDisplays();
+                updateChartPointsFromInternalData(); // Thresholds are plotted, so update chart
+                setCustomMode();
+            });
+
+            thP1OffInput.addEventListener('input', (e) => {
+                chartDataInternal.TH_P1_OFF_reg = decimalToSignedMagnitude4Bit(parseInt(e.target.value));
+                updateInfoDisplays();
+                updateChartPointsFromInternalData(); // Offset affects plot
+                setCustomMode();
+            });
+
+            thP2OffInput.addEventListener('input', (e) => {
+                chartDataInternal.TH_P2_OFF_reg = decimalToSignedMagnitude4Bit(parseInt(e.target.value));
+                updateInfoDisplays();
+                updateChartPointsFromInternalData(); // Offset affects plot
+                setCustomMode();
+            });
+
+            p1DigGainLrStInput.addEventListener('change', (e) => {
+                chartDataInternal.P1_DIG_GAIN_LR_ST_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+            p1DigGainLrInput.addEventListener('change', (e) => {
+                chartDataInternal.P1_DIG_GAIN_LR_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+            p1DigGainSrInput.addEventListener('change', (e) => {
+                chartDataInternal.P1_DIG_GAIN_SR_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+            p2DigGainLrStInput.addEventListener('change', (e) => {
+                chartDataInternal.P2_DIG_GAIN_LR_ST_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+            p2DigGainLrInput.addEventListener('change', (e) => {
+                chartDataInternal.P2_DIG_GAIN_LR_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+            p2DigGainSrInput.addEventListener('change', (e) => {
+                chartDataInternal.P2_DIG_GAIN_SR_reg = parseInt(e.target.value);
+                updateInfoDisplays();
+                setCustomMode();
+            });
+
+
+            // Add event listeners for preset radios
+            document.querySelectorAll('input[name="tvgPreset"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value !== 'custom') {
+                        applyPreset(e.target.value);
+                    }
+                });
+            });
+
+            // Add event listeners for echo parameters
+            const echoParamInputs = [
+                'transducerFreq', 'numPulses', 'distanceTarget',
+                'temperatureC', 'pressurePa', 'heightM', 'relativeHumidity', 'decayTime'
+            ];
+            echoParamInputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', calculateEchoParameters);
+            });
+
+            calculateEchoParameters(); // Initial calculation
+        }
+
+        // --- Draggable Logic ---
+        const canvas = document.getElementById('tvgChart');
+
+        canvas.addEventListener('mousedown', (e) => {
+            // Get the actual event coordinates relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+
+            const tolerance = 15; // pixels
+            activePoint = null;
+
+            // Check only the first dataset (AFE Gain) for draggable points
+            tvgChart.data.datasets[0].data.forEach((point, index) => {
+                const pixelX = tvgChart.scales.x.getPixelForValue(point.x);
+                const pixelY = tvgChart.scales.y.getPixelForValue(point.y);
+
+                const distance = Math.sqrt(Math.pow(mouseX - pixelX, 2) + Math.pow(mouseY - pixelY, 2));
+
+                if (distance < tolerance) {
+                    activePoint = index;
+                    // Prevent dragging the last point (End of Record Time) as it's dependent
+                    // Also prevent dragging the 'Start of Record' point's X
+                    if (activePoint === tvgChart.data.datasets[0].data.length - 1) {
+                        activePoint = null;
+                    }
+                }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (activePoint !== null) {
+                setCustomMode(); // Switch to custom if a point is dragged
+
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.clientX || e.touches[0].clientX;
+                const clientY = e.clientY || e.touches[0].clientY;
+                const mouseX = clientX - rect.left;
+                const mouseY = clientY - rect.top;
+
+                // Convert pixel coordinates to chart data coordinates
+                let newX_us = tvgChart.scales.x.getValueForPixel(mouseX);
+                let newY_dB = tvgChart.scales.y.getValueForPixel(mouseY);
+
+                // Clamp Y to chart's min/max gain and snap to 0.5 dB
+                const yMin = tvgChart.options.scales.y.min;
+                const yMax = tvgChart.options.scales.y.max;
+                newY_dB = Math.round(newY_dB * 2) / 2; // Snap to 0.5 dB
+                if (newY_dB < yMin) newY_dB = yMin;
+                if (newY_dB > yMax) newY_dB = yMax;
+
+                // Update internal data based on activePoint
+                if (activePoint === 0) { // 'Start of Record' point (t=0)
+                    // Only Y is draggable, X is fixed at 0
+                    chartDataInternal.GAIN_INIT_reg = gainToRegisterValue(newY_dB);
+                    // Update slider as well
+                    document.getElementById('gainInitSlider').value = newY_dB.toFixed(1);
+                    document.getElementById('gainInitValue').textContent = `${newY_dB.toFixed(1)} dB`;
+
+                } else if (activePoint === 1) { // TVG_T0 point
+                    // X updates TVG_T0_abs_reg
+                    let newT0_abs_us = newX_us;
+                    // Ensure T0 is not before 100us or after T1's absolute time
+                    const minT0_us = 100;
+                    const maxT0_us = chartPoints[2].x - 100; // T0 must be at least 100us before T1
+                    if (newT0_abs_us < minT0_us) newT0_abs_us = minT0_us;
+                    if (newT0_abs_us > maxT0_us) newT0_abs_us = maxT0_us;
+
+                    chartDataInternal.TVG_T0_abs_reg = timeToRegisterValue(newT0_abs_us);
+
+                    // Y updates GAIN_INIT_reg
+                    chartDataInternal.GAIN_INIT_reg = gainToRegisterValue(newY_dB);
+                    // Update slider as well
+                    document.getElementById('gainInitSlider').value = newY_dB.toFixed(1);
+                    document.getElementById('gainInitValue').textContent = `${newY_dB.toFixed(1)} dB`;
+
+                } else if (activePoint >= 2 && activePoint <= 6) { // TVG_T1 to TVG_T5 points
+                    const prevAbsTime = tvgChart.data.datasets[0].data[activePoint - 1].x;
+                    const nextAbsTime = (activePoint + 1 < tvgChart.data.datasets[0].data.length -1) ? tvgChart.data.datasets[0].data[activePoint + 1].x : tvgChart.options.scales.x.max; // Use chart max if no next point
+
+                    let newDeltaTime_us = newX_us - prevAbsTime;
+
+                    // Ensure delta time is positive and within lookup range
+                    const minDeltaTime_us = 100;
+                    if (newDeltaTime_us < minDeltaTime_us) newDeltaTime_us = minDeltaTime_us;
+                    // Ensure current point's absolute time is before next point's absolute time
+                    if (newX_us >= nextAbsTime) newDeltaTime_us = nextAbsTime - prevAbsTime - minDeltaTime_us; // Force it back by a minimum step
+                    if (newDeltaTime_us < minDeltaTime_us) newDeltaTime_us = minDeltaTime_us; // Re-clamp after adjustment
+
+                    // Find closest time value from lookup for snapping
+                    const closestTimeKey = Object.keys(timeLookup).reduce((prev, curr) => {
+                        return (Math.abs(timeLookup[curr] - newDeltaTime_us) < Math.abs(timeLookup[prev] - newDeltaTime_us) ? curr : prev);
+                    }, '0000');
+                    newDeltaTime_us = timeLookup[closestTimeKey];
+
+                    // Update the internal delta time register
+                    chartDataInternal['TVG_T' + (activePoint - 1) + '_delta_reg'] = timeToRegisterValue(newDeltaTime_us);
+                    chartDataInternal['TVG_G' + (activePoint - 1) + '_reg'] = gainToRegisterValue(newY_dB);
+                }
+
+                updateChartPointsFromInternalData(); // Update chart with new absolute values
+                updateInfoDisplays(); // Update info panels
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            activePoint = null;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            activePoint = null; // Reset if mouse leaves canvas while dragging
+        });
+
+        // Add touch event listeners for mobile responsiveness
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            canvas.dispatchEvent(new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            canvas.dispatchEvent(new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        });
+
+        canvas.addEventListener('touchend', () => {
+            canvas.dispatchEvent(new MouseEvent('mouseup'));
+        });
+
+
+        // --- Display Update Functions ---
+
+        function updateInfoDisplays() {
+            updatePointInfo();
+            updateRegisterTable();
+        }
+
+        function updatePointInfo() {
+            const pointInfoDisplay = document.getElementById('pointInfoDisplay');
+            pointInfoDisplay.innerHTML = ''; // Clear previous info
+
+            const absTimes = [];
+            const absGains = [];
+
+            const gainInit_dB = registerValueToGain(chartDataInternal.GAIN_INIT_reg);
+
+            // Point 0: Start of Record (t=0, GAIN_INIT)
+            absTimes[0] = 0;
+            absGains[0] = gainInit_dB;
+
+            // Point 1: TVG_T0 (absolute time, GAIN_INIT)
+            absTimes[1] = registerValueToTime(chartDataInternal.TVG_T0_abs_reg);
+            absGains[1] = gainInit_dB;
+
+            // Points 2 to 6: TVG_T1 to TVG_T5
+            for (let i = 2; i <= 6; i++) {
+                const deltaReg = chartDataInternal['TVG_T' + (i - 1) + '_delta_reg'];
+                absTimes[i] = absTimes[i - 1] + registerValueToTime(deltaReg);
+                absGains[i] = registerValueToGain(chartDataInternal['TVG_G' + (i - 1) + '_reg']);
+            }
+
+            // Point 7: End of Record Time (follows TVG_T5's time and gain)
+            absTimes[7] = absTimes[6] + 1000; // Arbitrary offset for visibility
+            absGains[7] = absGains[6]; // End of Record Time gain is G5
+
+            chartLabels.forEach((label, index) => {
+                const pointDiv = document.createElement('div');
+                pointDiv.classList.add('point-info-item');
+
+                let timeLabel = `Time (Absolute): ${absTimes[index]} µs`;
+                let gainLabel = `Gain: ${absGains[index].toFixed(1)} dB`;
+                let regTimeVal = '';
+                let regGainVal = '';
+
+                if (index === 0) { // Start of Record
+                    // Time is fixed at 0, Gain is GAIN_INIT
+                    regGainVal = `(Reg: ${chartDataInternal.GAIN_INIT_reg.toString(2).padStart(6, '0')}b)`;
+                } else if (index === 1) { // TVG_T0
+                    timeLabel = `Time (Absolute): ${absTimes[index]} µs`;
+                    regTimeVal = `(Reg: ${chartDataInternal.TVG_T0_abs_reg.toString(2).padStart(4, '0')}b)`;
+                    regGainVal = `(Reg: ${chartDataInternal.GAIN_INIT_reg.toString(2).padStart(6, '0')}b)`;
+                } else if (index >= 2 && index <= 6) { // TVG_T1 to TVG_T5
+                    timeLabel = `Time (Delta from T${index-2}): ${registerValueToTime(chartDataInternal['TVG_T' + (index - 1) + '_delta_reg'])} µs (Absolute: ${absTimes[index]} µs)`;
+                    regTimeVal = `(Reg: ${chartDataInternal['TVG_T' + (index - 1) + '_delta_reg'].toString(2).padStart(4, '0')}b)`;
+                    regGainVal = `(Reg: ${chartDataInternal['TVG_G' + (index - 1) + '_reg'].toString(2).padStart(6, '0')}b)`;
+                } else if (index === 7) { // End of Record Time
+                    timeLabel = `Time (Absolute): ${absTimes[index]} µs`;
+                    gainLabel = `Gain (follows TVG_G5): ${absGains[index].toFixed(1)} dB`;
+                }
+
+                pointDiv.innerHTML = `
+                    <strong>${label}</strong><br>
+                    ${timeLabel} ${regTimeVal}<br>
+                    ${gainLabel} ${regGainVal}
+                `;
+                pointInfoDisplay.appendChild(pointDiv);
+            });
+
+            // Add P1 Threshold info
+            const p1ThrDiv = document.createElement('div');
+            p1ThrDiv.classList.add('point-info-item');
+            p1ThrDiv.innerHTML = `
+                <strong>P1 Threshold Curve</strong><br>
+                Offset: ${signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg)} dB<br>
+                Points: ${chartDataInternal.p1ThresholdTimes.length}
+            `;
+            pointInfoDisplay.appendChild(p1ThrDiv);
+
+            // Add P2 Threshold info
+            const p2ThrDiv = document.createElement('div');
+            p2ThrDiv.classList.add('point-info-item');
+            p2ThrDiv.innerHTML = `
+                <strong>P2 Threshold Curve</strong><br>
+                Offset: ${signedMagnitude4BitToDecimal(chartDataInternal.TH_P2_OFF_reg)} dB<br>
+                Points: ${chartDataInternal.p2ThresholdTimes.length}
+            `;
+            pointInfoDisplay.appendChild(p2ThrDiv);
+
+            // Add P1_GAIN_CTRL info
+            const p1GainCtrlDiv = document.createElement('div');
+            p1GainCtrlDiv.classList.add('point-info-item');
+            p1GainCtrlDiv.innerHTML = `
+                <strong>P1_GAIN_CTRL</strong><br>
+                LR_ST: ${digGainLrStLookup[chartDataInternal.P1_DIG_GAIN_LR_ST_reg]}<br>
+                LR: x${digGainLookup[chartDataInternal.P1_DIG_GAIN_LR_reg]}<br>
+                SR: x${digGainLookup[chartDataInternal.P1_DIG_GAIN_SR_reg]}
+            `;
+            pointInfoDisplay.appendChild(p1GainCtrlDiv);
+
+            // Add P2_GAIN_CTRL info
+            const p2GainCtrlDiv = document.createElement('div');
+            p2GainCtrlDiv.classList.add('point-info-item');
+            p2GainCtrlDiv.innerHTML = `
+                <strong>P2_GAIN_CTRL</strong><br>
+                LR_ST: ${digGainLrStLookup[chartDataInternal.P2_DIG_GAIN_LR_ST_reg]}<br>
+                LR: x${digGainLookup[chartDataInternal.P2_DIG_GAIN_LR_reg]}<br>
+                SR: x${digGainLookup[chartDataInternal.P2_DIG_GAIN_SR_reg]}
+            `;
+            pointInfoDisplay.appendChild(p2GainCtrlDiv);
+        }
+
+        function updateRegisterTable() {
+            const registerTableBody = document.getElementById('registerTableBody');
+            registerTableBody.innerHTML = ''; // Clear previous info
+
+            const regs = calculateRegisters(); // Get the combined register values
+
+            const registerOrder = [
+                { name: "INIT_GAIN", address: "1Bh" },
+                { name: "REG_REC_LENGTH", address: "XXh" },
+                { name: "REG_TVGAIN0", address: "XXh" },
+                { name: "REG_TVGAIN1", address: "XXh" },
+                { name: "REG_TVGAIN2", address: "XXh" },
+                { name: "REG_TVGAIN3", address: "XXh" },
+                { name: "REG_TVGAIN4", address: "XXh" },
+                { name: "REG_TVGAIN5", address: "XXh" },
+                { name: "REG_TVGAIN6", address: "XXh" },
+                { name: "THR_HIGH", address: "XXh" },
+                { name: "THR_LOW", address: "XXh" }
+            ];
+
+            // Add P1_THR_X registers
+            for (let i = 0; i <= 15; i++) {
+                registerOrder.push({ name: `REG_P1_THR_${i}`, address: `XXh` });
+            }
+            // Add P2_THR_X registers
+            for (let i = 0; i <= 15; i++) {
+                registerOrder.push({ name: `REG_P2_THR_${i}`, address: `XXh` });
+            }
+            registerOrder.push({ name: "P1_GAIN_CTRL", address: "XXh" });
+            registerOrder.push({ name: "P2_GAIN_CTRL", address: "XXh" });
+            registerOrder.push({ name: "THR_CRC", address: "XXh" });
+
+
+            registerOrder.forEach(reg => {
+                const decimal = regs[reg.name];
+                const hex = '0x' + decimal.toString(16).toUpperCase().padStart(2, '0');
+                let bin;
+                if (reg.name === "THR_HIGH" || reg.name === "THR_LOW" || reg.name === "THR_CRC" || reg.name.includes("GAIN_CTRL")) {
+                    bin = '0b' + decimal.toString(2).padStart(8, '0'); // 8-bit for these
+                } else if (reg.name.includes("THR_15")) { // TH_P1/P2_OFF is 4-bit in THR_15
+                    bin = '0b' + decimal.toString(2).padStart(8, '0'); // Still display 8-bit for the full register
+                }
+                else {
+                    bin = '0b' + decimal.toString(2).padStart(8, '0'); // All other registers are 8-bit
+                }
+
+                const row = document.createElement('tr');
+                let extraInfo = '';
+                if (reg.name === "INIT_GAIN") {
+                    extraInfo = `<br>BPF_BW: ${bpfBwLookup[chartDataInternal.BPF_BW_reg]}`;
+                } else if (reg.name === "REG_REC_LENGTH") {
+                    const p1RecTime = (4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0);
+                    const p2RecTime = (4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0);
+                    extraInfo = `<br>P1_REC: ${chartDataInternal.P1_REC_reg} (${p1RecTime} µs)<br>P2_REC: ${p2RecTime} µs)`;
+                } else if (reg.name === "REG_P1_THR_15") {
+                     const p1Off = signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg);
+                     extraInfo = `<br>TH_P1_OFF: ${p1Off} dB`;
+                } else if (reg.name === "REG_P2_THR_15") {
+                     const p2Off = signedMagnitude4BitToDecimal(chartDataInternal.TH_P2_OFF_reg);
+                     extraInfo = `<br>TH_P2_OFF: ${p2Off} dB`;
+                } else if (reg.name === "P1_GAIN_CTRL") {
+                    extraInfo = `<br>LR_ST: ${digGainLrStLookup[chartDataInternal.P1_DIG_GAIN_LR_ST_reg]}<br>LR: x${digGainLookup[chartDataInternal.P1_DIG_GAIN_LR_reg]}<br>SR: x${digGainLookup[chartDataInternal.P1_DIG_GAIN_SR_reg]}`;
+                } else if (reg.name === "P2_GAIN_CTRL") {
+                    extraInfo = `<br>LR_ST: ${digGainLrStLookup[chartDataInternal.P2_DIG_GAIN_LR_ST_reg]}<br>LR: x${digGainLookup[chartDataInternal.P2_DIG_GAIN_LR_reg]}<br>SR: x${digGainLookup[chartDataInternal.P2_DIG_GAIN_SR_reg]}`;
+                }
+
+
+                row.innerHTML = `
+                    <td>${reg.name}</td>
+                    <td>${decimal}${extraInfo}</td>
+                    <td><span>${hex}</span></td>
+                    <td><span>${bin}</span></td>
+                `;
+                registerTableBody.appendChild(row);
+            });
+        }
+
+        // --- Register Combination Logic ---
+        function calculateRegisters() {
+            const regs = {};
+
+            // INIT_GAIN Register (Address = 1Bh): Bit 7-6 BPF_BW, 5-0 GAIN_INIT
+            const bpfBw_bin = chartDataInternal.BPF_BW_reg.toString(2).padStart(2, '0');
+            const gainInit_bin = chartDataInternal.GAIN_INIT_reg.toString(2).padStart(6, '0');
+            const regINIT_GAIN_bin = bpfBw_bin + gainInit_bin;
+            regs.INIT_GAIN = parseInt(regINIT_GAIN_bin, 2);
+
+            // REG_REC_LENGTH: Bit 7-4 P1_REC, 3-0 P2_REC
+            const p1Rec_bin = chartDataInternal.P1_REC_reg.toString(2).padStart(4, '0');
+            const p2Rec_bin = chartDataInternal.P2_REC_reg.toString(2).padStart(4, '0');
+            const regREC_LENGTH_bin = p1Rec_bin + p2Rec_bin;
+            regs.REG_REC_LENGTH = parseInt(regREC_LENGTH_bin, 2);
+
+            // REG_TVGAIN0: Bit 7-4 TVG_T0, 3-0 TVG_T1
+            const tvgT0_bin = chartDataInternal.TVG_T0_abs_reg.toString(2).padStart(4, '0');
+            const tvgT1_bin = chartDataInternal.TVG_T1_delta_reg.toString(2).padStart(4, '0');
+            const regTVGAIN0_bin = tvgT0_bin + tvgT1_bin;
+            regs.REG_TVGAIN0 = parseInt(regTVGAIN0_bin, 2);
+
+            // REG_TVGAIN1: Bit 7-4 TVG_T2, 3-0 TVG_T3
+            const tvgT2_bin = chartDataInternal.TVG_T2_delta_reg.toString(2).padStart(4, '0');
+            const tvgT3_bin = chartDataInternal.TVG_T3_delta_reg.toString(2).padStart(4, '0');
+            const regTVGAIN1_bin = tvgT2_bin + tvgT3_bin;
+            regs.REG_TVGAIN1 = parseInt(regTVGAIN1_bin, 2);
+
+            // REG_TVGAIN2: Bit 7-4 TVG_T4, 3-0 TVG_T5
+            const tvgT4_bin = chartDataInternal.TVG_T4_delta_reg.toString(2).padStart(4, '0');
+            const tvgT5_bin = chartDataInternal.TVG_T5_delta_reg.toString(2).padStart(4, '0');
+            const regTVGAIN2_bin = tvgT4_bin + tvgT5_bin;
+            regs.REG_TVGAIN2 = parseInt(regTVGAIN2_bin, 2);
+
+            // Gain register values (6-bit for G1-G5)
+            const g1_val = chartDataInternal.TVG_G1_reg;
+            const g2_val = chartDataInternal.TVG_G2_reg;
+            const g3_val = chartDataInternal.TVG_G3_reg;
+            const g4_val = chartDataInternal.TVG_G4_reg;
+            const g5_val = chartDataInternal.TVG_G5_reg;
+
+            // REG_TVGAIN3: Bit 7-2 TVG_G1, 1-0 TVG_G2 (lower 2 bits of G2)
+            const tvgG1_bin = g1_val.toString(2).padStart(6, '0');
+            const tvgG2_lower2_bin = g2_val.toString(2).padStart(6, '0').slice(-2); // Get last 2 bits
+            const regTVGAIN3_bin = tvgG1_bin + tvgG2_lower2_bin;
+            regs.REG_TVGAIN3 = parseInt(regTVGAIN3_bin, 2);
+
+            // REG_TVGAIN4: Bit 7-4 TVG_G2 (upper 4 bits of G2), 3-0 TVG_G3 (lower 4 bits of G3)
+            const tvgG2_upper4_bin = g2_val.toString(2).padStart(6, '0').slice(0, 4); // Get first 4 bits
+            const tvgG3_lower4_bin = g3_val.toString(2).padStart(6, '0').slice(-4); // Get last 4 bits
+            const regTVGAIN4_bin = tvgG2_upper4_bin + tvgG3_lower4_bin;
+            regs.REG_TVGAIN4 = parseInt(regTVGAIN4_bin, 2);
+
+            // REG_TVGAIN5: Bit 7-6 TVG_G3 (upper 2 bits of G3), 5-0 TVG_G4
+            const tvgG3_upper2_bin = g3_val.toString(2).padStart(6, '0').slice(0, 2); // Get first 2 bits
+            const tvgG4_bin = g4_val.toString(2).padStart(6, '0');
+            const regTVGAIN5_bin = tvgG3_upper2_bin + tvgG4_bin;
+            regs.REG_TVGAIN5 = parseInt(regTVGAIN5_bin, 2);
+
+            // REG_TVGAIN6: Bit 7-2 TVG_G5, 1 reserved (0), 0 FREQ_SHIFT (0 for now)
+            const tvgG5_bin = g5_val.toString(2).padStart(6, '0');
+            const regTVGAIN6_bin = tvgG5_bin + '00'; // Assuming reserved and FREQ_SHIFT are 0
+            regs.REG_TVGAIN6 = parseInt(regTVGAIN6_bin, 2);
+
+            // --- Threshold Registers ---
+            regs.THR_HIGH = chartDataInternal.THR_HIGH_reg;
+            regs.THR_LOW = chartDataInternal.THR_LOW_reg;
+
+            // P1_GAIN_CTRL (Address = 14h): Bit 7-6 P1_DIG_GAIN_LR_ST, 5-3 P1_DIG_GAIN_LR, 2-0 P1_DIG_GAIN_SR
+            const p1LrSt_bin = chartDataInternal.P1_DIG_GAIN_LR_ST_reg.toString(2).padStart(2, '0');
+            const p1Lr_bin = chartDataInternal.P1_DIG_GAIN_LR_reg.toString(2).padStart(3, '0');
+            const p1Sr_bin = chartDataInternal.P1_DIG_GAIN_SR_reg.toString(2).padStart(3, '0');
+            regs.P1_GAIN_CTRL = parseInt(p1LrSt_bin + p1Lr_bin + p1Sr_bin, 2);
+
+            // P2_GAIN_CTRL (Address = 15h): Bit 7-6 P2_DIG_GAIN_LR_ST, 5-3 P2_DIG_GAIN_LR, 2-0 P2_DIG_GAIN_SR
+            const p2LrSt_bin = chartDataInternal.P2_DIG_GAIN_LR_ST_reg.toString(2).padStart(2, '0');
+            const p2Lr_bin = chartDataInternal.P2_DIG_GAIN_LR_reg.toString(2).padStart(3, '0');
+            const p2Sr_bin = chartDataInternal.P2_DIG_GAIN_SR_reg.toString(2).padStart(3, '0');
+            regs.P2_GAIN_CTRL = parseInt(p2LrSt_bin + p2Lr_bin + p2Sr_bin, 2);
+
+
+            // Helper to pack threshold time/level points into registers
+            // This function is now used to pack the internal chartDataInternal.pXThresholdTimes/Levels
+            // into the REG_Px_THR_X registers, which are then used for CRC calculation.
+            function packThresholdRegisters(prefix, timePoints, levelPoints, thOffsetBin) {
+                const thresholdRegs = {};
+
+                // Time registers (REG_Px_THR_0 to REG_Px_THR_5)
+                for (let i = 0; i < 6; i++) {
+                    // Ensure timePoints has enough elements, use a default if not
+                    const t1_val = timePoints[2 * i] !== undefined ? timePoints[2 * i] : 100;
+                    const t2_val = timePoints[2 * i + 1] !== undefined ? timePoints[2 * i + 1] : 100;
+
+                    const t1_reg = timeToRegisterValue(t1_val).toString(2).padStart(4, '0');
+                    const t2_reg = timeToRegisterValue(t2_val).toString(2).padStart(4, '0');
+                    thresholdRegs[`REG_${prefix}_THR_${i}`] = parseInt(t1_reg + t2_reg, 2);
+                }
+
+                // Level registers (REG_Px_THR_6 to REG_Px_THR_14)
+                // Use default levels if not enough points are available in levelPoints
+                const getLevelRegValue = (index, bitWidth) => {
+                    const level = levelPoints[index] !== undefined ? levelPoints[index] : 10; // Default to 10dB
+                    return thresholdLevelToRegisterValue(level, bitWidth).toString(2).padStart(bitWidth, '0');
+                };
+
+                const l1_bin = getLevelRegValue(0, 5);
+                const l2_bin = getLevelRegValue(1, 5);
+                const l3_bin = getLevelRegValue(2, 5);
+                const l4_bin = getLevelRegValue(3, 5);
+                const l5_bin = getLevelRegValue(4, 5);
+                const l6_bin = getLevelRegValue(5, 5);
+                const l7_bin = getLevelRegValue(6, 5);
+                const l8_bin = getLevelRegValue(7, 5);
+                const l9_bin = getLevelRegValue(8, 8);
+                const l10_bin = getLevelRegValue(9, 8);
+                const l11_bin = getLevelRegValue(10, 8);
+                const l12_bin = getLevelRegValue(11, 8);
+
+                // REG_Px_THR_6: Bit 7-3 TH_Px_L1, 2-0 TH_Px_L2 Bit4 to Bit2
+                thresholdRegs[`REG_${prefix}_THR_6`] = parseInt(l1_bin + l2_bin.substring(0, 3), 2);
+                // REG_Px_THR_7: Bit 7-6 TH_Px_L2 Bit 1 to Bit 0, 5-1 TH_Px_L3, TH_Px_L4 Bit4
+                thresholdRegs[`REG_${prefix}_THR_7`] = parseInt(l2_bin.substring(3, 5) + l3_bin + l4_bin.substring(0, 1), 2);
+                // REG_Px_THR_8: Bit 7-4 TH_Px_L4 Bits3 to Bit0, 3-0 TH_Px_L5 Bit4 to Bit1
+                thresholdRegs[`REG_${prefix}_THR_8`] = parseInt(l4_bin.substring(1, 5) + l5_bin.substring(0, 4), 2);
+                // REG_Px_THR_9: Bit 7 TH_Px_L5 Bit0, 6-2 TH_Px_L6, 1-0 TH_Px_L7 Bit4 to Bit3
+                thresholdRegs[`REG_${prefix}_THR_9`] = parseInt(l5_bin.substring(4, 5) + l6_bin + l7_bin.substring(0, 2), 2);
+                // REG_Px_THR_10: Bit 7-5 TH_Px_L7 Bit2 to Bit0, 4-0 TH_Px_L8
+                thresholdRegs[`REG_${prefix}_THR_10`] = parseInt(l7_bin.substring(2, 5) + l8_bin, 2);
+                // REG_Px_THR_11: Bit 7-0 TH_Px_L9
+                thresholdRegs[`REG_${prefix}_THR_11`] = parseInt(l9_bin, 2);
+                // REG_Px_THR_12: Bit 7-0 TH_Px_L10
+                thresholdRegs[`REG_${prefix}_THR_12`] = parseInt(l10_bin, 2);
+                // REG_Px_THR_13: Bit 7-0 TH_Px_L11
+                thresholdRegs[`REG_${prefix}_THR_13`] = parseInt(l11_bin, 2);
+                // REG_Px_THR_14: Bit 7-0 TH_Px_L12
+                thresholdRegs[`REG_${prefix}_THR_14`] = parseInt(l12_bin, 2);
+
+                // REG_Px_THR_15: Bit 7-4 Reserved, 3-0 TH_Px_OFF
+                thresholdRegs[`REG_${prefix}_THR_15`] = parseInt('0000' + thOffsetBin, 2); // Reserved bits are 0
+
+                return thresholdRegs;
+            }
+
+            // Pack P1 and P2 threshold registers using current internal data
+            // Note: For presets, chartDataInternal.pXThresholdTimes/Levels are populated by parseThresholdRegisters
+            // For custom, these arrays might be empty or contain default values if no UI for them.
+            Object.assign(regs, packThresholdRegisters('P1', chartDataInternal.p1ThresholdTimes, chartDataInternal.p1ThresholdLevels, chartDataInternal.TH_P1_OFF_reg));
+            Object.assign(regs, packThresholdRegisters('P2', chartDataInternal.p2ThresholdTimes, chartDataInternal.p2ThresholdLevels, chartDataInternal.TH_P2_OFF_reg));
+            
+            // Prepare data for CRC calculation
+            const crcDataForChecksum = [0x10]; // Start with the command byte (frame[1])
+
+            // Add P1_THR_0 to P1_THR_15 (16 bytes)
+            for (let i = 0; i <= 15; i++) {
+                crcDataForChecksum.push(regs[`REG_P1_THR_${i}`]);
+            }
+
+            // Add P2_THR_0 to P2_THR_15 (16 bytes)
+            for (let i = 0; i <= 15; i++) {
+                crcDataForChecksum.push(regs[`REG_P2_THR_${i}`]);
+            }
+
+            regs.THR_CRC = PGA460_CalculateChecksum(crcDataForChecksum);
+
+            return regs;
+        }
+
+        // Function to apply a selected preset
+        function applyPreset(presetName) {
+            if (presets[presetName]) {
+                // Directly apply the register values from the preset
+                // This means THR_HIGH, THR_LOW, TH_P1_OFF, TH_P2_OFF, and all REG_Px_THR_X
+                chartDataInternal.THR_HIGH_reg = presets[presetName].THR_HIGH;
+                chartDataInternal.THR_LOW_reg = presets[presetName].THR_LOW;
+                chartDataInternal.TH_P1_OFF_reg = presets[presetName].TH_P1_OFF;
+                chartDataInternal.TH_P2_OFF_reg = presets[presetName].TH_P2_OFF;
+
+                // Directly set the REG_Px_THR_X values for parsing
+                const tempRegs = {};
+                for (let i = 0; i <= 15; i++) {
+                    tempRegs[`REG_P1_THR_${i}`] = presets[presetName][`REG_P1_THR_${i}`];
+                    tempRegs[`REG_P2_THR_${i}`] = presets[presetName][`REG_P2_THR_${i}`];
+                }
+                
+                // Parse these raw register values into time/level arrays for plotting
+                parseThresholdRegisters(tempRegs, 'P1', chartDataInternal.p1ThresholdTimes, chartDataInternal.p1ThresholdLevels);
+                parseThresholdRegisters(tempRegs, 'P2', chartDataInternal.p2ThresholdTimes, chartDataInternal.p2ThresholdLevels);
+
+                // Update TVG values from preset
+                chartDataInternal.TVG_T0_abs_reg = presets[presetName].TVGAIN0 !== undefined ? parseInt(presets[presetName].TVGAIN0.toString(2).padStart(8, '0').substring(0, 4), 2) : timeToRegisterValue(100);
+                chartDataInternal.TVG_T1_delta_reg = presets[presetName].TVGAIN0 !== undefined ? parseInt(presets[presetName].TVGAIN0.toString(2).padStart(8, '0').substring(4, 8), 2) : timeToRegisterValue(200);
+                chartDataInternal.TVG_T2_delta_reg = presets[presetName].TVGAIN1 !== undefined ? parseInt(presets[presetName].TVGAIN1.toString(2).padStart(8, '0').substring(0, 4), 2) : timeToRegisterValue(300);
+                chartDataInternal.TVG_T3_delta_reg = presets[presetName].TVGAIN1 !== undefined ? parseInt(presets[presetName].TVGAIN1.toString(2).padStart(8, '0').substring(4, 8), 2) : timeToRegisterValue(400);
+                chartDataInternal.TVG_T4_delta_reg = presets[presetName].TVGAIN2 !== undefined ? parseInt(presets[presetName].TVGAIN2.toString(2).padStart(8, '0').substring(0, 4), 2) : timeToRegisterValue(600);
+                chartDataInternal.TVG_T5_delta_reg = presets[presetName].TVGAIN2 !== undefined ? parseInt(presets[presetName].TVGAIN2.toString(2).padStart(8, '0').substring(4, 8), 2) : timeToRegisterValue(800);
+                
+                chartDataInternal.TVG_G1_reg = presets[presetName].TVGAIN3 !== undefined ? parseInt(presets[presetName].TVGAIN3.toString(2).padStart(8, '0').substring(0, 6), 2) : gainToRegisterValue(5);
+                
+                const presetG2Lower2 = presets[presetName].TVGAIN3 !== undefined ? presets[presetName].TVGAIN3.toString(2).padStart(8, '0').substring(6, 8) : '00';
+                const presetG2Upper4 = presets[presetName].TVGAIN4 !== undefined ? presets[presetName].TVGAIN4.toString(2).padStart(8, '0').substring(0, 4) : '0000';
+                chartDataInternal.TVG_G2_reg = parseInt(presetG2Upper4 + presetG2Lower2, 2);
+
+                const presetG3Lower4 = presets[presetName].TVGAIN4 !== undefined ? presets[presetName].TVGAIN4.toString(2).padStart(8, '0').substring(4, 8) : '0000';
+                const presetG3Upper2 = presets[presetName].TVGAIN5 !== undefined ? presets[presetName].TVGAIN5.toString(2).padStart(8, '0').substring(0, 2) : '00';
+                chartDataInternal.TVG_G3_reg = parseInt(presetG3Upper2 + presetG3Lower4, 2);
+
+                chartDataInternal.TVG_G4_reg = presets[presetName].TVGAIN5 !== undefined ? parseInt(presets[presetName].TVGAIN5.toString(2).padStart(8, '0').substring(2, 8), 2) : gainToRegisterValue(20);
+                chartDataInternal.TVG_G5_reg = presets[presetName].TVGAIN6 !== undefined ? parseInt(presets[presetName].TVGAIN6.toString(2).padStart(8, '0').substring(0, 6), 2) : gainToRegisterValue(20);
+
+                // Update P1_GAIN_CTRL and P2_GAIN_CTRL from preset
+                if (presets[presetName].P1_GAIN_CTRL !== undefined) {
+                    const p1GainCtrl_bin = presets[presetName].P1_GAIN_CTRL.toString(2).padStart(8, '0');
+                    chartDataInternal.P1_DIG_GAIN_LR_ST_reg = parseInt(p1GainCtrl_bin.substring(0, 2), 2);
+                    chartDataInternal.P1_DIG_GAIN_LR_reg = parseInt(p1GainCtrl_bin.substring(2, 5), 2);
+                    chartDataInternal.P1_DIG_GAIN_SR_reg = parseInt(p1GainCtrl_bin.substring(5, 8), 2);
+                }
+                if (presets[presetName].P2_GAIN_CTRL !== undefined) {
+                    const p2GainCtrl_bin = presets[presetName].P2_GAIN_CTRL.toString(2).padStart(8, '0');
+                    chartDataInternal.P2_DIG_GAIN_LR_ST_reg = parseInt(p2GainCtrl_bin.substring(0, 2), 2);
+                    chartDataInternal.P2_DIG_GAIN_LR_reg = parseInt(p2GainCtrl_bin.substring(2, 5), 2);
+                    chartDataInternal.P2_DIG_GAIN_SR_reg = parseInt(p2GainCtrl_bin.substring(5, 8), 2);
+                }
+
+
+                updateChartPointsFromInternalData();
+                updateInfoDisplays();
+                currentPresetMode = presetName;
+
+                // Update input fields based on preset values
+                document.getElementById('gainInitSlider').value = registerValueToGain(chartDataInternal.GAIN_INIT_reg).toFixed(1);
+                document.getElementById('gainInitValue').textContent = `${document.getElementById('gainInitSlider').value} dB`;
+                document.getElementById('bpfBwSlider').value = chartDataInternal.BPF_BW_reg;
+                document.getElementById('bpfBwValue').textContent = bpfBwLookup[chartDataInternal.BPF_BW_reg];
+                document.getElementById('p1RecSlider').value = chartDataInternal.P1_REC_reg;
+                document.getElementById('p1RecValue').textContent = `${p1RecSlider.value} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+                document.getElementById('p2RecSlider').value = chartDataInternal.P2_REC_reg;
+                document.getElementById('p2RecValue').textContent = `${p2RecSlider.value} (${(4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+
+                document.getElementById('thrHigh').value = registerValueToThresholdLevel(chartDataInternal.THR_HIGH_reg).toFixed(1);
+                document.getElementById('thrLow').value = registerValueToThresholdLevel(chartDataInternal.THR_LOW_reg).toFixed(1);
+                document.getElementById('thP1Off').value = signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg);
+                document.getElementById('thP2Off').value = signedMagnitude4BitToDecimal(chartDataInternal.TH_P2_OFF_reg);
+
+                document.getElementById('p1DigGainLrSt').value = chartDataInternal.P1_DIG_GAIN_LR_ST_reg;
+                document.getElementById('p1DigGainLr').value = chartDataInternal.P1_DIG_GAIN_LR_reg;
+                document.getElementById('p1DigGainSr').value = chartDataInternal.P1_DIG_GAIN_SR_reg;
+                document.getElementById('p2DigGainLrSt').value = chartDataInternal.P2_DIG_GAIN_LR_ST_reg;
+                document.getElementById('p2DigGainLr').value = chartDataInternal.P2_DIG_GAIN_LR_reg;
+                document.getElementById('p2DigGainSr').value = chartDataInternal.P2_DIG_GAIN_SR_reg;
+            }
+        }
+
+        // Function to set the mode to "Custom"
+        function setCustomMode() {
+            if (currentPresetMode !== 'custom') {
+                currentPresetMode = 'custom';
+                document.querySelector('input[name="tvgPreset"][value="custom"]').checked = true;
+            }
+        }
+
+        // --- Echo Parameter Calculation Logic ---
+        // Constants from your C code
+        const R_D = 287.05; // Specific gas constant for dry air (J/kg·K)
+        const R_V = 461.495; // Specific gas constant for water vapor (J/kg·K)
+        const GAMMA = 1.4; // Adiabatic index for air
+        const L = 0.0065; // Temperature lapse rate (K/m)
+        const T0_KELVIN = 288.15; // Standard temperature at sea level (K)
+        const P0_PA = 101325.0; // Standard pressure at sea level (Pa)
+        const G = 9.80665; // Gravitational acceleration (m/s²)
+        const M = 0.0289644; // Molar mass of air (kg/mol)
+        const R = 8.3144598; // Universal gas constant (J/(mol·K))
+        const KELVIN_OFFSET = 273.15; // Conversion from Celsius to Kelvin
+        const RH_DIVISOR = 100.0; // Converts RH percentage to a fraction
+        const WATER_VAPOR_EFFECT = 0.6077; // Effect of water vapor on speed of sound
+        const SATURATION_CONSTANT = 6.1078; // Constant for saturation vapor pressure calculation
+
+        function calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity) {
+            let T_k = temperatureC + KELVIN_OFFSET;
+
+            let P_total = pressurePa;
+            if (heightM !== 0) {
+                if (heightM > 0) {
+                    P_total = P0_PA * Math.pow((1 - (L * heightM) / T0_KELVIN), (G * M) / (R * L));
+                } else {
+                    P_total = P0_PA * Math.pow((1 + (L * Math.abs(heightM)) / T0_KELVIN), (G * M) / (R * L));
+                }
+            }
+
+            let P_sat = SATURATION_CONSTANT * Math.pow(10, (7.5 * temperatureC) / (temperatureC + 237.3)) * 100;
+            let P_v = P_sat * (relativeHumidity / RH_DIVISOR); // Partial pressure of water vapor
+            let P_d = P_total - P_v; // Partial pressure of dry air
+            let H = P_v / P_d;
+
+            let soundSpeed = Math.sqrt(GAMMA * R_D * T_k * (1 + WATER_VAPOR_EFFECT * H));
+            return soundSpeed;
+        }
+
+        function calculateEchoParameters() {
+            const transducerFreq = parseFloat(document.getElementById('transducerFreq').value);
+            const numPulses = parseInt(document.getElementById('numPulses').value);
+            const distanceTarget_mm = parseFloat(document.getElementById('distanceTarget').value);
+            const temperatureC = parseFloat(document.getElementById('temperatureC').value);
+            const pressurePa = parseFloat(document.getElementById('pressurePa').value);
+            const heightM = parseFloat(document.getElementById('heightM').value);
+            const relativeHumidity = parseFloat(document.getElementById('relativeHumidity').value);
+            const decayTime_us = parseFloat(document.getElementById('decayTime').value);
+
+            // Convert distance from mm to meters for sound speed calculation
+            const distanceTarget_m = distanceTarget_mm / 1000;
+
+            const soundSpeed = calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity);
+            document.getElementById('soundSpeedDisplay').textContent = `${soundSpeed.toFixed(2)} m/s`;
+
+            // Calculate echo return time (two-way travel) in seconds, then microseconds
+            const echoReturnTime_s = (2 * distanceTarget_m) / soundSpeed;
+            const echoReturnTime_us = echoReturnTime_s * 1e6;
+            document.getElementById('echoReturnTimeDisplay').textContent = `${echoReturnTime_us.toFixed(2)} µs`;
+
+            // Calculate pulse duration in microseconds
+            const pulseDuration_s = numPulses / transducerFreq;
+            const pulseDuration_us = pulseDuration_s * 1e6;
+            document.getElementById('pulseLengthDisplay').textContent = `${pulseDuration_us.toFixed(2)} µs`; // Display pulse length
+
+            // Calculate theoretical REC_LENGTH time in microseconds
+            // This is the total time the record needs to cover
+            const theoreticalRecordTime_us = echoReturnTime_us + pulseDuration_us + decayTime_us;
+            document.getElementById('totalTimeDisplay').textContent = `${theoreticalRecordTime_us.toFixed(2)} µs`; // Display total time
+
+            // Calculate P_REC register value (for theoretical display)
+            // Record time = 4.096 × (P_REC + 1) [ms]
+            // theoreticalRecordTime_us / 1000 = 4.096 * (P_REC + 1)
+            // (theoreticalRecordTime_us / 1000) / 4.096 = P_REC + 1
+            // P_REC = (theoreticalRecordTime_us / 4096) - 1
+            let theoreticalPRecValue = (theoreticalRecordTime_us / 4096) - 1;
+            theoreticalPRecValue = Math.round(theoreticalPRecValue); // Round to nearest integer for register
+
+            // Clamp P_REC to 8-bit range (0-255)
+            theoreticalPRecValue = Math.max(0, Math.min(255, theoreticalPRecValue));
+
+            document.getElementById('theoreticalRecLengthDisplay').innerHTML = `
+                ${theoreticalPRecValue} (Dec)
+                <span>0x${theoreticalPRecValue.toString(16).toUpperCase().padStart(2, '0')}</span> (Hex)
+                <span>0b${theoreticalPRecValue.toString(2).padStart(8, '0')}</span> (Bin)
+            `;
+
+            // Show/hide the note based on theoreticalPRecValue
+            const recLengthNote = document.getElementById('recLengthNote');
+            if (theoreticalPRecValue === 0) {
+                recLengthNote.style.display = 'block';
+            } else {
+                recLengthNote.style.display = 'none';
+            }
+        }
+
+        // Initialize the chart when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initializeChart);
+    </script>
+</body>
+</html>

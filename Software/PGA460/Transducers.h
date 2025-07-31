@@ -173,7 +173,7 @@ const PGA460_t transducer = {
             .TVGAIN6.Val.Value = 0xDC, // TVG6 includes TVG and FreqShift control
         },
         // Initial Gain — reduced for short distances
-        .INIT_GAIN.Val = 0x18,  // ~17 dB
+        .INIT_GAIN.Val = 0x10,  // ~17 dB
         // Transmit Frequency (0.2 × 50 + 30 = 40 kHz)
         .FREQ = 0x32,
         // Deadtime + Comparator Deglitch
@@ -184,16 +184,16 @@ const PGA460_t transducer = {
         .PULSE_P2.Val = 0x04,  // 4 pulses
         // Current Limits (moderate drive strength)
         // 7×0x28 + 50 = 246 mA
-        .CURR_LIM_P1.Val = 0x28,
-        .CURR_LIM_P2.Val = 0x32,  // ~400 mA if needed for farther range
+        .CURR_LIM_P1.Val.BitField.CURR_LIM1 = 0x08, //98mA
+        .CURR_LIM_P2.Val = 0x16,  // 204mA if needed for farther range
         // Record Length — maximize resolution
         // 4096 µs total ? 32 µs per bin
         .REC_LENGTH.Val = 0x00,
         // Diagnostics and scaling
         .FREQ_DIAG.Val     = 0x33,
-        .SAT_FDIAG_TH.Val  = 0xEE,
+        .SAT_FDIAG_TH.Val  = 0xFF,
         .FVOLT_DEC.Val     = 0x02,
-        .DECPL_TEMP.Val    = 0x8F,
+        .DECPL_TEMP.Val    = 0x00,
         .DSP_SCALE.Val     = 0x00,
         .TEMP_TRIM.Val     = 0x00,
         // Gain control for P1 and P2
@@ -243,22 +243,44 @@ const PGA460_THR_t THRESHOLD_75_STRUCT = {
 };
 
 PGA460_THR_t THRESHOLD_CC_STRUCT = {
-    // P1
-    .P1_THR_0.Val.Value  = 0x00, .P1_THR_1.Val.Value  = 0x00, .P1_THR_2.Val.Value  = 0x00, .P1_THR_3.Val.Value  = 0x00,
-    .P1_THR_4.Val.Value  = 0x00, .P1_THR_5.Val.Value  = 0x00, .P1_THR_6.Val.Value  = 0x21, .P1_THR_7.Val.Value  = 0x04,
-    .P1_THR_8.Val.Value  = 0x22, .P1_THR_9.Val.Value  = 0x10, .P1_THR_10.Val.Value = 0x42, .P1_THR_11           = 0x04,
-    .P1_THR_12           = 0x04, .P1_THR_13           = 0x02, .P1_THR_14           = 0x02, .P1_THR_15.Val.Value = 0x07,
+    .P1_THR_0.Val.Value  = 0xF0,  // bin 0
+    .P1_THR_1.Val.Value  = 0xF0,  // bin 1
+    .P1_THR_2.Val.Value  = 0xC0,  // bin 2
+    .P1_THR_3.Val.Value  = 0xA0,  // bin 3
+    .P1_THR_4.Val.Value  = 0x80,  // bin 4
+    .P1_THR_5.Val.Value  = 0x60,  // bin 5
+    .P1_THR_6.Val.Value  = 0x50,  // bin 6 — usable echo edge starts here
+    .P1_THR_7.Val.Value  = 0x40,  // bin 7
+    .P1_THR_8.Val.Value  = 0x30,  // bin 8
+    .P1_THR_9.Val.Value  = 0x28,
+    .P1_THR_10.Val.Value = 0x20,
+    .P1_THR_11           = 0x18,
+    .P1_THR_12           = 0x18,
+    .P1_THR_13           = 0x10,
+    .P1_THR_14           = 0x08,
+    .P1_THR_15.Val.Value = 0x08,
 
-    // P2
-    .P2_THR_0.Val.Value  = 0x00, .P2_THR_1.Val.Value  = 0x00, .P2_THR_2.Val.Value  = 0x00, .P2_THR_3.Val.Value  = 0x00,
-    .P2_THR_4.Val.Value  = 0x00, .P2_THR_5.Val.Value  = 0x00, .P2_THR_6.Val.Value  = 0x20, .P2_THR_7.Val.Value  = 0x84,
-    .P2_THR_8.Val.Value  = 0x22, .P2_THR_9.Val.Value  = 0x08, .P2_THR_10.Val.Value = 0x42, .P2_THR_11           = 0x04,
-    .P2_THR_12           = 0x02, .P2_THR_13           = 0x02, .P2_THR_14           = 0x02, .P2_THR_15.Val.Value = 0x07,
+    .P2_THR_0.Val.Value  = 0xFF,
+    .P2_THR_1.Val.Value  = 0xFF,
+    .P2_THR_2.Val.Value  = 0xF0,
+    .P2_THR_3.Val.Value  = 0xD0,
+    .P2_THR_4.Val.Value  = 0xA0,
+    .P2_THR_5.Val.Value  = 0x70,
+    .P2_THR_6.Val.Value  = 0x50,
+    .P2_THR_7.Val.Value  = 0x30,
+    .P2_THR_8.Val.Value  = 0x20,
+    .P2_THR_9.Val.Value  = 0x18,
+    .P2_THR_10.Val.Value = 0x10,
+    .P2_THR_11           = 0x10,
+    .P2_THR_12           = 0x10,
+    .P2_THR_13           = 0x08,
+    .P2_THR_14           = 0x08,
+    .P2_THR_15.Val.Value = 0x00,
 
-    .THR_CRC = 0xBE // for Sensor 1; recalc with your CRC function if needed
+    .THR_CRC = 0x00  // to be recalculated
 };
 
-const PGA460_TGV_t TGV_25_STRUCT = {
+const PGA460_TVG_t TGV_25_STRUCT = {
     .TVGAIN0.Val.Value = 0x88,
     .TVGAIN1.Val.Value = 0x88,
     .TVGAIN2.Val.Value = 0x88,
@@ -268,7 +290,7 @@ const PGA460_TGV_t TGV_25_STRUCT = {
     .TVGAIN6.Val.Value = 0x40
 };
 
-const PGA460_TGV_t TGV_50_STRUCT = {
+const PGA460_TVG_t TGV_50_STRUCT = {
     .TVGAIN0.Val.Value = 0x88,
     .TVGAIN1.Val.Value = 0x88,
     .TVGAIN2.Val.Value = 0x88,
@@ -278,7 +300,7 @@ const PGA460_TGV_t TGV_50_STRUCT = {
     .TVGAIN6.Val.Value = 0x80
 };
 
-const PGA460_TGV_t TGV_75_STRUCT = {
+const PGA460_TVG_t TGV_75_STRUCT = {
     .TVGAIN0.Val.Value = 0x88,
     .TVGAIN1.Val.Value = 0x88,
     .TVGAIN2.Val.Value = 0x88,
@@ -288,13 +310,13 @@ const PGA460_TGV_t TGV_75_STRUCT = {
     .TVGAIN6.Val.Value = 0xC0
 };
 
-PGA460_TGV_t TGV_CUSTOM_STRUCT = {
-    .TVGAIN0.Val.Value = 0x78,  // Early: avoid saturation
-    .TVGAIN1.Val.Value = 0x88,  // Slight ramp up
-    .TVGAIN2.Val.Value = 0xA0,
-    .TVGAIN3.Val.Value = 0xC8,  // Mid-echo strong gain
-    .TVGAIN4.Val.Value = 0xE0,
-    .TVGAIN5.Val.Value = 0xF4,  // Tail amplification
-    .TVGAIN6.Val.Value = 0xF8   // Max gain for final echoes
+PGA460_TVG_t TGV_CUSTOM_STRUCT = {
+    .TVGAIN0.Val.Value = 0x12,  // Start: 200 µs, Duration: 200 µs
+    .TVGAIN1.Val.Value = 0x22,  // Start: 400 µs, Duration: 200 µs
+    .TVGAIN2.Val.Value = 0x43,  // Start: 600 µs, Duration: 400 µs
+    .TVGAIN3.Val.Value = 0x03,  // G1=0, G2=3 ? 24.5–26 dB
+    .TVGAIN4.Val.Value = 0x73,  // G2=7, G3=3 ? 28–26 dB
+    .TVGAIN5.Val.Value = 0x77,  // G3=7, G4=7 ? flat at 28 dB
+    .TVGAIN6.Val.Value = 0x60   // G5=6 ? 27.5 dB, fixed gain, no freq shift
 };
 #endif /* __Transducers_H */

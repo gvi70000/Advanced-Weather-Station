@@ -924,11 +924,11 @@ typedef struct __attribute__((packed)) {
 		TVGAIN4_t TVGAIN4;						// Address 0x18
 		TVGAIN5_t TVGAIN5;						// Address 0x19
 		TVGAIN6_t TVGAIN6;						// Address 0x1A
-} PGA460_TGV_t;
+} PGA460_TVG_t;
 
 typedef struct __attribute__((packed)) {
 		PGA460_UserData_t USER;				// Address 0x00 0x13
-		PGA460_TGV_t TGV;							// Address 0x14 0x1A 
+		PGA460_TVG_t TGV;							// Address 0x14 0x1A 
 		INIT_GAIN_t INIT_GAIN;				// Address 0x1B
 		uint8_t FREQ;									// Burst frequency equation parameter (Address 0x1C) Frequency = 0.2 × FREQ + 30 [kHz]
 		DEADTIME_t DEADTIME;					// Address 0x1D
