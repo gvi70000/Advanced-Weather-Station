@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time-Varying Gain (TVG) Plot</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js Zoom Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif; /* Using Inter font */
@@ -23,16 +25,16 @@
             margin-bottom: 25px;
             color: #555;
             text-align: center;
-            max-width: 600px;
+            max-width: 800px; /* Increased max-width */
         }
         .controls-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
+            gap: 10px;
             margin-bottom: 30px;
             width: 90%;
-            max-width: 900px;
+            max-width: 1200px; /* Increased max-width */
             background-color: white;
             padding: 20px;
             border-radius: 12px;
@@ -42,7 +44,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 250px;
+            min-width: 150px;
         }
         .control-group label {
             font-weight: bold;
@@ -141,11 +143,11 @@
 
         .echo-parameters-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
             width: 90%;
-            max-width: 900px;
+            max-width: 1200px; /* Increased max-width */
             background-color: white;
             padding: 20px;
             border-radius: 12px;
@@ -161,11 +163,14 @@
             color: #34495e;
             font-size: 0.95em;
         }
-        .echo-parameters-container .input-group input[type="number"] {
+        .echo-parameters-container .input-group input[type="number"],
+        .echo-parameters-container .input-group select,
+        .echo-parameters-container .input-group textarea { /* Apply to select and textarea as well */
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 1em;
+            background-color: #fff; /* Ensure white background for selects */
         }
         .echo-results {
             margin-top: 20px;
@@ -202,21 +207,23 @@
         }
 
         .threshold-inputs-row .input-group {
-            flex: 1 1 calc(25% - 15px); /* Each item takes roughly 25% width, accounting for gap */
-            min-width: 150px; /* Minimum width to prevent too much squeezing */
+            flex: 1 1 calc(10% - 15px); /* Each item takes roughly 25% width, accounting for gap */
+            min-width: 50px; /* Minimum width to prevent too much squeezing */
             /* Override default column behavior from parent grid if necessary */
             margin-bottom: 0; /* Remove extra margin if it was there */
+			padding: 0px 20px;
         }
 
         /* Adjust input width within this group if needed */
-        .threshold-inputs-row .input-group input {
+        .threshold-inputs-row .input-group input,
+        .threshold-inputs-row .input-group select { /* Apply to select as well */
             width: 100%; /* Make input fill its container */
         }
 
         /* Responsive adjustments for threshold inputs */
         @media (max-width: 768px) {
             .threshold-inputs-row .input-group {
-                flex: 1 1 calc(50% - 15px); /* Two per row on smaller screens */
+                flex: 1 1 calc(25% - 15px); /* Two per row on smaller screens */
             }
         }
         @media (max-width: 480px) {
@@ -229,7 +236,7 @@
         #tvgChartContainer {
             position: relative;
             width: 90%; /* Responsive width */
-            max-width: 900px; /* Max width for larger screens */
+            max-width: 1200px; /* Increased max-width */
             height: 500px;
             background-color: white;
             border: 1px solid #e0e0e0;
@@ -245,7 +252,7 @@
         .point-info-grid {
             margin-top: 20px;
             width: 90%; /* Responsive width */
-            max-width: 900px; /* Max width for larger screens */
+            max-width: 1200px; /* Increased max-width */
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
             gap: 15px;
@@ -265,12 +272,12 @@
             color: #34495e; /* Slightly darker text for labels */
             font-size: 1.1em;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 0px;
         }
         .register-display {
             margin-top: 30px;
             width: 90%;
-            max-width: 900px;
+            max-width: 1200px; /* Increased max-width */
             background-color: #e8f0f7; /* Light blue background for registers */
             border: 1px solid #cce0f0;
             border-radius: 12px;
@@ -349,22 +356,19 @@
 </head>
 <body>
     <h1>Time-Varying Gain (TVG) Assignment</h1>
-    <p class="instruction">Adjust the initial gain and bandwidth using the sliders. Drag the red circular points on the graph to adjust the TVG. The time values (except TVG_T0) are delta times, and gain values snap to 0.5 dB. Register values will update below.</p>
+    <p class="instruction">Adjust the initial gain and bandwidth using the sliders. Drag the red circular points on the graph to adjust the TVG. The time values (except TVG_T0) are delta times, and gain values snap to 0.5 dB. Register values will update below. Use mouse wheel/pinch to zoom, and drag to pan the graph. The Echo Data Dump and Noise Floor are now plotted for visual reference.</p>
 
     <div class="controls-container">
         <div class="preset-radios">
-            <strong>Choose Preset:</strong>
+            <strong>Preset:</strong>
             <label>
-                <input type="radio" name="tvgPreset" value="25" checked> 25% Levels
+                <input type="radio" name="tvgPreset" value="25" checked> 25%
             </label>
             <label>
-                <input type="radio" name="tvgPreset" value="50"> 50% Levels
+                <input type="radio" name="tvgPreset" value="50"> 50%
             </label>
             <label>
-                <input type="radio" name="tvgPreset" value="75"> 75% Levels
-            </label>
-            <label>
-                <input type="radio" name="tvgPreset" value="custom_cc"> CC Preset
+                <input type="radio" name="tvgPreset" value="75"> 75%
             </label>
             <label>
                 <input type="radio" name="tvgPreset" value="custom"> Custom
@@ -380,20 +384,34 @@
             <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
             <div class="control-value" id="bpfBwValue">2 kHz</div>
         </div>
+        <div class="control-group">
+            <label for="lpfCoSlider">LPF Cutoff (kHz)</label>
+            <input type="range" id="lpfCoSlider" min="0" max="3" step="1" value="0">
+            <div class="control-value" id="lpfCoValue">1 kHz</div>
+        </div>
     </div>
 
     <div class="echo-parameters-container">
-        <div class="input-group">
-            <label for="transducerFreq">Transducer Frequency (Hz)</label>
-            <input type="number" id="transducerFreq" value="40000" min="1">
+        <div class="input-group" style="grid-column: 1 / -1;">
+            <label for="echoDataDump">Echo Data Dump (Comma-separated values)</label>
+            <textarea id="echoDataDump" rows="3">255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,182,170,157,144,130,116,103,91,80,70,61,54,48,42,38,34,30,27,24,21,18,16,13,12,10,9,8,8,7,7,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,5,5,5,4,4,4,4,4,3,3,3,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,150</textarea>
         </div>
         <div class="input-group">
-            <label for="numPulses">Number of Pulses</label>
+            <label for="noiseLevelInput">Noise Level (ADC)</label>
+            <input type="number" id="noiseLevelInput" value="5" min="0">
+        </div>
+
+        <div class="input-group">
+            <label for="transducerFreq">Transducer (Hz)</label>
+            <input type="number" id="transducerFreq" value="58000" min="1">
+        </div>
+        <div class="input-group">
+            <label for="numPulses">N Pulses</label>
             <input type="number" id="numPulses" value="2" min="1"> <!-- Default changed to 2 -->
         </div>
         <div class="input-group">
-            <label for="distanceTarget">Distance to Target (mm)</label>
-            <input type="number" id="distanceTarget" value="300" min="0">
+            <label for="distanceTarget">Dist. to Target (mm)</label>
+            <input type="number" id="distanceTarget" value="250" min="0">
         </div>
         <div class="input-group">
             <label for="temperatureC">Temperature (°C)</label>
@@ -405,10 +423,10 @@
         </div>
         <div class="input-group">
             <label for="heightM">Height (m)</label>
-            <input type="number" id="heightM" value="0" step="0.1">
+            <input type="number" id="heightM" value="58" step="0.1">
         </div>
         <div class="input-group">
-            <label for="relativeHumidity">Relative Humidity (%)</label>
+            <label for="relativeHumidity">RH (%)</label>
             <input type="number" id="relativeHumidity" value="50" min="0" max="100">
         </div>
         <div class="input-group">
@@ -418,12 +436,12 @@
 
         <!-- P1_REC and P2_REC sliders -->
         <div class="control-group">
-            <label for="p1RecSlider">P1_REC (Record Time Length)</label>
+            <label for="p1RecSlider">P1 Record Time</label>
             <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
             <div class="control-value" id="p1RecValue">0 (0 µs)</div>
         </div>
         <div class="control-group"> <!-- Moved P2_REC to the right -->
-            <label for="p2RecSlider">P2_REC (Record Time Length)</label>
+            <label for="p2RecSlider">P2 Record Time</label>
             <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
             <div class="control-value" id="p2RecValue">0 (0 µs)</div>
         </div>
@@ -439,17 +457,13 @@
                 <input type="number" id="thrLow" value="5.0" min="0.0" max="31.5" step="0.5">
             </div>
             <div class="input-group">
-                <label for="thP1Off">TH_P1_OFF (dB Offset)</label>
-                <input type="number" id="thP1Off" value="0" min="-8" max="7" step="1">
+                <label for="thP1Off">TH_P1_OFF (dB)</label>
+                <input type="number" id="thP1Off" value="-8" min="-8" max="7" step="1">
             </div>
             <div class="input-group">
-                <label for="thP2Off">TH_P2_OFF (dB Offset)</label>
+                <label for="thP2Off">TH_P2_OFF (dB)</label>
                 <input type="number" id="thP2Off" value="7" min="-8" max="7" step="1">
             </div>
-        </div>
-
-        <!-- P1_GAIN_CTRL and P2_GAIN_CTRL Inputs -->
-        <div class="threshold-inputs-row">
             <div class="input-group">
                 <label for="p1DigGainLrSt">P1_DIG_GAIN_LR_ST</label>
                 <select id="p1DigGainLrSt">
@@ -459,8 +473,12 @@
                     <option value="3">TH12</option>
                 </select>
             </div>
+        </div>
+
+        <!-- P1_GAIN_CTRL and P2_GAIN_CTRL Inputs -->
+        <div class="threshold-inputs-row">
             <div class="input-group">
-                <label for="p1DigGainLr">P1_DIG_GAIN_LR (x)</label>
+                <label for="p1DigGainLr">P1_DIG_GAIN_LR</label>
                 <select id="p1DigGainLr">
                     <option value="0">x1</option>
                     <option value="1">x2</option>
@@ -471,7 +489,7 @@
                 </select>
             </div>
             <div class="input-group">
-                <label for="p1DigGainSr">P1_DIG_GAIN_SR (x)</label>
+                <label for="p1DigGainSr">P1_DIG_GAIN_SR</label>
                 <select id="p1DigGainSr">
                     <option value="0">x1</option>
                     <option value="1">x2</option>
@@ -481,8 +499,6 @@
                     <option value="5">x32</option>
                 </select>
             </div>
-        </div>
-        <div class="threshold-inputs-row">
             <div class="input-group">
                 <label for="p2DigGainLrSt">P2_DIG_GAIN_LR_ST</label>
                 <select id="p2DigGainLrSt">
@@ -493,7 +509,7 @@
                 </select>
             </div>
             <div class="input-group">
-                <label for="p2DigGainLr">P2_DIG_GAIN_LR (x)</label>
+                <label for="p2DigGainLr">P2_DIG_GAIN_LR</label>
                 <select id="p2DigGainLr">
                     <option value="0">x1</option>
                     <option value="1">x2</option>
@@ -504,7 +520,7 @@
                 </select>
             </div>
             <div class="input-group">
-                <label for="p2DigGainSr">P2_DIG_GAIN_SR (x)</label>
+                <label for="p2DigGainSr">P2_DIG_GAIN_SR</label>
                 <select id="p2DigGainSr">
                     <option value="0">x1</option>
                     <option value="1">x2</option>
@@ -515,14 +531,8 @@
                 </select>
             </div>
         </div>
-
-
         <div class="echo-results" style="grid-column: 1 / -1;">
-            <div>Speed of Sound: <span id="soundSpeedDisplay">0 m/s</span></div>
-            <div>Echo Return Time: <span id="echoReturnTimeDisplay">0 µs</span></div>
-            <div>Pulse Length: <span id="pulseLengthDisplay">0 µs</span></div> <!-- New line for pulse length -->
-            <div>Total Time (Echo + Pulse + Decay): <span id="totalTimeDisplay">0 µs</span></div> <!-- New line for total time -->
-            <div>Theoretical REC_LENGTH (P1_REC/P2_REC): <span id="theoreticalRecLengthDisplay">0</span> (Dec) <span>0x00</span> (Hex) <span>0b00000000</span> (Bin)
+            <div>Speed of Sound: <span id="soundSpeedDisplay">0 m/s</span>Echo Return Time: <span id="echoReturnTimeDisplay">0 µs</span>Pulse Length: <span id="pulseLengthDisplay">0 µs</span>Total Time (Echo + Pulse + Decay): <span id="totalTimeDisplay">0 µs</span></div>
                 <div class="note" id="recLengthNote">
                     Note: REC_LENGTH is 0 when the theoretical record time is less than 4096 µs. Try increasing Distance to Target, Number of Pulses, or Decay Time.
                 </div>
@@ -548,7 +558,7 @@
                     <th>Hexadecimal</th>
                     <th>Binary</th>
                 </tr>
-            </thead>
+</thead>
             <tbody id="registerTableBody">
                 <!-- Register values will be displayed here -->
             </tbody>
@@ -559,6 +569,18 @@
         let tvgChart;
         let activePoint = null;
         let currentPresetMode = '25'; // Default to 25% Levels
+
+        // Declare display elements globally so they are accessible by applyPreset
+        let gainInitValueDisplay;
+        let bpfBwValueDisplay;
+        let lpfCoValueDisplay;
+        let p1RecValueDisplay;
+        let p2RecValueDisplay;
+
+
+        // Define the dB range for echo data mapping
+        const ECHO_MIN_DB = -20; // Example minimum dB for echo data
+        const ECHO_MAX_DB = 30; // Example maximum dB for echo data
 
         // --- Lookup Tables ---
         const timeLookup = {
@@ -578,6 +600,13 @@
             1: '4 kHz', // 01b
             2: '6 kHz', // 10b
             3: '8 kHz'  // 11b
+        };
+
+        const lpfCoLookup = {
+            0: '1 kHz', // 00b
+            1: '2 kHz', // 01b
+            2: '3 kHz', // 10b
+            3: '4 kHz'  // 11b
         };
 
         const digGainLookup = {
@@ -603,6 +632,37 @@
         const digGainLrStInverseLookup = Object.fromEntries(
             Object.entries(digGainLrStLookup).map(([reg, val]) => [val, parseInt(reg)])
         );
+
+        // BPF Coefficient Lookups (from TI forum post)
+        const bpfB1Lookup = {
+            '2 kHz': 409,
+            '4 kHz': 813,
+            '6 kHz': 1213,
+            '8 kHz': 1607
+        };
+
+        const bpfA3Lookup = {
+            '2 kHz': 64718,
+            '4 kHz': 63909,
+            '6 kHz': 63111,
+            '8 kHz': 62322
+        };
+
+        // LPF Coefficient Lookups (from TI forum post)
+        const lpfB1Lookup = {
+            '1 kHz': 103,
+            '2 kHz': 205,
+            '3 kHz': 306,
+            '4 kHz': 407
+        };
+
+        const lpfA2Lookup = {
+            '1 kHz': -32563,
+            '2 kHz': -32359,
+            '3 kHz': -32156,
+            '4 kHz': -31955
+        };
+
 
         // --- Conversion Functions ---
 
@@ -688,6 +748,52 @@
             return (~carry) & 0xFF;
         }
 
+        // Helper to split a 16-bit signed integer into MSB and LSB
+        function splitInt16ToBytes(value) {
+            // Ensure value is within signed 16-bit range for bitwise operations
+            // JavaScript numbers are 64-bit float, but bitwise ops treat them as 32-bit signed ints.
+            // For 16-bit, we need to handle the sign extension if the number is negative.
+            let val = value;
+            // If the value is negative, ensure it's treated as a 16-bit signed integer
+            if (val < 0) {
+                val = (val + 65536) % 65536; // Simulate 16-bit two's complement for negative numbers
+            } else {
+                val = val % 65536; // Ensure it fits in 16 bits
+            }
+
+            const msb = (val >> 8) & 0xFF;
+            const lsb = val & 0xFF;
+            return { msb, lsb };
+        }
+
+        // BPF A2 Coefficient Calculation (from TI forum post)
+        function calculateBpfA2(cf_kHz, bpf_bw_text) {
+            let a2_val;
+            switch (bpf_bw_text) {
+                case '2 kHz':
+                    a2_val = 0.6036 * Math.pow(cf_kHz, 2) + 2.7401 * cf_kHz - 32615;
+                    break;
+                case '4 kHz':
+                    a2_val = 0.5999 * Math.pow(cf_kHz, 2) + 2.7217 * cf_kHz - 32415;
+                    break;
+                case '6 kHz':
+                    a2_val = 0.5965 * Math.pow(cf_kHz, 2) + 2.6791 * cf_kHz - 32217;
+                    break;
+                case '8 kHz':
+                    a2_val = 0.5928 * Math.pow(cf_kHz, 2) - 2.6726 * cf_kHz - 32024;
+                    break;
+                default:
+                    a2_val = 0; // Default or error case
+            }
+            return Math.round(a2_val); // Round to nearest integer as specified for 16-bit precision
+        }
+
+        function convertRawEchoToDb(rawValue) {
+            if (rawValue <= 0) return ECHO_MIN_DB; // Avoid log(0) and map 0 to min_dB
+            // Scale raw_value (0-255) to the dB range (ECHO_MIN_DB to ECHO_MAX_DB)
+            return ECHO_MIN_DB + (rawValue / 255) * (ECHO_MAX_DB - ECHO_MIN_DB);
+        }
+
 
         // --- Preset Register Values ---
         const presets = {
@@ -750,32 +856,13 @@
                 THR_CRC: 0x83,
                 P1_GAIN_CTRL: 0x00,
                 P2_GAIN_CTRL: 0x00
-            },
-            'custom_cc': {
-                TVGAIN0: 0x88, TVGAIN1: 0x88, TVGAIN2: 0x88, // Default TVG values for custom_cc
-                TVGAIN3: 0x41, TVGAIN4: 0x04, TVGAIN5: 0x10, TVGAIN6: 0x40,
-                THR_HIGH: thresholdLevelToRegisterValue(15.0, 8),
-                THR_LOW: thresholdLevelToRegisterValue(5.0, 8),
-                TH_P1_OFF: decimalToSignedMagnitude4Bit(0),
-                TH_P2_OFF: decimalToSignedMagnitude4Bit(7), // Applied an offset of +7 dB
-                REG_P1_THR_0: 0xF0, REG_P1_THR_1: 0xF0, REG_P1_THR_2: 0xC0, REG_P1_THR_3: 0xA0,
-                REG_P1_THR_4: 0x80, REG_P1_THR_5: 0x60, REG_P1_THR_6: 0x50, REG_P1_THR_7: 0x40,
-                REG_P1_THR_8: 0x30, REG_P1_THR_9: 0x28, REG_P1_THR_10: 0x20, REG_P1_THR_11: 0x18,
-                REG_P1_THR_12: 0x18, REG_P1_THR_13: 0x10, REG_P1_THR_14: 0x08, REG_P1_THR_15: 0x08,
-                
-                REG_P2_THR_0: 0xFF, REG_P2_THR_1: 0xFF, REG_P2_THR_2: 0xF0, REG_P2_THR_3: 0xD0,
-                REG_P2_THR_4: 0xA0, REG_P2_THR_5: 0x70, REG_P2_THR_6: 0x50, REG_P2_THR_7: 0x30,
-                REG_P2_THR_8: 0x20, REG_P2_THR_9: 0x18, REG_P2_THR_10: 0x10, REG_P2_THR_11: 0x10,
-                REG_P2_THR_12: 0x10, REG_P2_THR_13: 0x08, REG_P2_THR_14: 0x08, REG_P2_THR_15: 0x00,
-                THR_CRC: 0xA6, // Corrected CRC value based on TH_P2_OFF = 7
-                P1_GAIN_CTRL: 0x00,
-                P2_GAIN_CTRL: 0x00
             }
         };
 
         // --- Internal Data Representation (Register Values) ---
         let chartDataInternal = {
-            BPF_BW_reg: 0, // Default BPF_BW value (00b)
+            BPF_BW_reg: 0, // Default BPF_BW value (00b) for 2kHz
+            LPF_CO_reg: 0, // Default LPF_CO value (00b) for 1 kHz
             GAIN_INIT_reg: gainToRegisterValue(10), // Default Initial Gain
 
             TVG_T0_abs_reg: timeToRegisterValue(100),
@@ -870,6 +957,12 @@
             chartDataInternal.p2ThresholdTimes = [];
             chartDataInternal.p2ThresholdLevels = [];
             parseThresholdRegisters(regs, 'P2', chartDataInternal.p2ThresholdTimes, chartDataInternal.p2ThresholdLevels);
+
+            // LPF Control
+            if (regs.LPF_CONTROL !== undefined) {
+                const lpfControl_bin = regs.LPF_CONTROL.toString(2).padStart(8, '0');
+                chartDataInternal.LPF_CO_reg = parseInt(lpfControl_bin.substring(0, 2), 2);
+            }
         }
 
         // Helper to parse P1/P2 Threshold registers into time/level arrays
@@ -923,6 +1016,11 @@
         let chartPoints = [];
         let p1ThresholdChartPoints = [];
         let p2ThresholdChartPoints = [];
+        let echoDataPoints = [];
+        let noiseFloorPoints = [];
+        let p1RecLinePoints = []; // New dataset for P1_REC line
+        let p2RecLinePoints = []; // New dataset for P2_REC line
+
         const chartLabels = ['Start of Record', 'TVG_T0', 'TVG_T1', 'TVG_T2', 'TVG_T3', 'TVG_T4', 'TVG_T5', 'End of Record Time'];
 
         function updateChartPointsFromInternalData() {
@@ -979,15 +1077,74 @@
                 });
             }
 
+            // Get echo data and noise level from input fields
+            const echoDataString = document.getElementById('echoDataDump').value;
+            const rawEchoData = echoDataString.split(',').map(Number);
+            const rawNoiseLevel = parseFloat(document.getElementById('noiseLevelInput').value);
+
+            // Calculate Echo Data Points
+            echoDataPoints = [];
+            const totalTimeDisplayElement = document.getElementById('totalTimeDisplay');
+            let totalTime_us_for_echo = 0;
+            if (totalTimeDisplayElement) {
+                 totalTime_us_for_echo = parseFloat(totalTimeDisplayElement.textContent);
+            }
+            // Fallback if totalTime_us_for_echo is NaN or 0
+            if (isNaN(totalTime_us_for_echo) || totalTime_us_for_echo === 0) {
+                totalTime_us_for_echo = Math.max(...chartPoints.map(p => p.x), 8000); // Use max TVG time or a default
+            }
+
+            const timeStepPerEchoPoint = totalTime_us_for_echo / rawEchoData.length;
+            rawEchoData.forEach((value, index) => {
+                const time = index * timeStepPerEchoPoint;
+                echoDataPoints.push({ x: time, y: convertRawEchoToDb(value) });
+            });
+
+            // Calculate Noise Floor Points
+            noiseFloorPoints = [];
+            const noiseLevelDb = convertRawEchoToDb(rawNoiseLevel);
+            // Get the max X from the chart's current scale to ensure the line spans the whole graph
+            const currentMaxX = tvgChart ? tvgChart.options.scales.x.max : Math.max(...chartPoints.map(p => p.x), 8000);
+            noiseFloorPoints.push({ x: 0, y: noiseLevelDb });
+            noiseFloorPoints.push({ x: currentMaxX, y: noiseLevelDb });
+
+            // Calculate P1_REC and P2_REC lines
+            const p1RecTime_us = (4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000);
+            const p2RecTime_us = (4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000);
+
+            // Get current Y-axis min/max for drawing vertical lines
+            const yAxisMin = tvgChart ? tvgChart.options.scales.y.min : -10;
+            const yAxisMax = tvgChart ? tvgChart.options.scales.y.max : 40;
+
+            p1RecLinePoints = [
+                { x: p1RecTime_us, y: yAxisMin },
+                { x: p1RecTime_us, y: yAxisMax }
+            ];
+            p2RecLinePoints = [
+                { x: p2RecTime_us, y: yAxisMin },
+                { x: p2RecTime_us, y: yAxisMax }
+            ];
+
 
             if (tvgChart) {
                 tvgChart.data.datasets[0].data = chartPoints;
-                tvgChart.data.datasets[1].data = p1ThresholdChartPoints; // P1 Threshold
-                tvgChart.data.datasets[2].data = p2ThresholdChartPoints; // P2 Threshold
+                tvgChart.data.datasets[1].data = p1ThresholdChartPoints;
+                tvgChart.data.datasets[2].data = p2ThresholdChartPoints;
+                tvgChart.data.datasets[3].data = echoDataPoints;
+                tvgChart.data.datasets[4].data = noiseFloorPoints;
+                tvgChart.data.datasets[5].data = p1RecLinePoints; // Update P1_REC line
+                tvgChart.data.datasets[6].data = p2RecLinePoints; // Update P2_REC line
                 
                 // Rescale X-axis logic
                 const minRecLengthTime = 4096; // 4.096 ms in microseconds
-                const allTimes = [...absTimes, ...p1ThresholdChartPoints.map(p => p.x), ...p2ThresholdChartPoints.map(p => p.x)];
+                const allTimes = [
+                    ...absTimes,
+                    ...p1ThresholdChartPoints.map(p => p.x),
+                    ...p2ThresholdChartPoints.map(p => p.x),
+                    ...echoDataPoints.map(p => p.x),
+                    p1RecTime_us, // Include record length times in scaling
+                    p2RecTime_us
+                ];
                 const calculatedMaxTime = Math.max(...allTimes);
                 
                 // Ensure the max X-axis is at least minRecLengthTime, and scales up dynamically
@@ -996,6 +1153,28 @@
                     newMaxX = minRecLengthTime;
                 }
                 tvgChart.options.scales.x.max = newMaxX;
+
+                // Dynamic Y-axis scaling
+                const allYValues = [
+                    ...chartPoints.map(p => p.y),
+                    ...p1ThresholdChartPoints.map(p => p.y),
+                    ...p2ThresholdChartPoints.map(p => p.y),
+                    ...echoDataPoints.map(p => p.y),
+                    ...noiseFloorPoints.map(p => p.y)
+                ];
+                const currentMinY = Math.min(...allYValues);
+                const currentMaxY = Math.max(...allYValues);
+
+                // Add some padding to the min and max Y values
+                const paddingY = 5; // dB
+                tvgChart.options.scales.y.min = Math.floor(currentMinY - paddingY);
+                tvgChart.options.scales.y.max = Math.ceil(currentMaxY + paddingY);
+                // Ensure a reasonable default range if data is very flat
+                if (tvgChart.options.scales.y.max - tvgChart.options.scales.y.min < 20) {
+                    tvgChart.options.scales.y.min = Math.min(tvgChart.options.scales.y.min, -10);
+                    tvgChart.options.scales.y.max = Math.max(tvgChart.options.scales.y.max, 40);
+                }
+
 
                 tvgChart.update();
             }
@@ -1037,6 +1216,52 @@
                     fill: false,
                     tension: 0,
                     showLine: true
+                },
+                {
+                    label: 'Echo Data (dB)',
+                    data: echoDataPoints,
+                    borderColor: '#f39c12', /* Orange */
+                    backgroundColor: '#f1c40f', /* Yellow points */
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    fill: false,
+                    tension: 0,
+                    showLine: true
+                },
+                {
+                    label: 'Noise Floor (dB)',
+                    data: noiseFloorPoints,
+                    borderColor: '#e74c3c', /* Red */
+                    backgroundColor: 'transparent',
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    showLine: true
+                },
+                {
+                    label: 'P1 Record Length',
+                    data: p1RecLinePoints,
+                    borderColor: '#00bcd4', /* Turquoise */
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    showLine: true,
+                    xAxisID: 'x', // Ensure it's tied to the x-axis
+                    yAxisID: 'y'  // Ensure it's tied to the y-axis
+                },
+                {
+                    label: 'P2 Record Length',
+                    data: p2RecLinePoints,
+                    borderColor: '#2c3e50', /* Dark Blue-Gray */
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0,
+                    showLine: true,
+                    xAxisID: 'x', // Ensure it's tied to the x-axis
+                    yAxisID: 'y'  // Ensure it's tied to the y-axis
                 }]
             },
             options: {
@@ -1059,7 +1284,7 @@
                             text: 'AFE Gain (dB)'
                         },
                         min: 0,
-                        max: 60.0 // Increased max gain to accommodate AFE_GAIN_RNG if it exists
+                        max: 60.0 // Initial max gain. This will be updated dynamically.
                     }
                 },
                 plugins: {
@@ -1084,6 +1309,21 @@
                                 return label;
                             }
                         }
+                    },
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'xy', // Allow zooming on both X and Y axes
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'xy', // Allow panning on both X and Y axes
+                        }
                     }
                 }
             }
@@ -1093,19 +1333,40 @@
             const ctx = document.getElementById('tvgChart').getContext('2d');
             tvgChart = new Chart(ctx, config);
 
+            // Register the zoom plugin
+            Chart.register(ChartZoom);
+
+            // Initialize and assign global display elements
+            gainInitValueDisplay = document.getElementById('gainInitValue');
+            bpfBwValueDisplay = document.getElementById('bpfBwValue');
+            lpfCoValueDisplay = document.getElementById('lpfCoValue');
+            p1RecValueDisplay = document.getElementById('p1RecValue');
+            p2RecValueDisplay = document.getElementById('p2RecValue');
+
             // Apply the initial preset (25% Levels)
             applyPreset('25');
             document.querySelector('input[name="tvgPreset"][value="25"]').checked = true;
 
+            // Initialize and add event listeners for new input fields
+            const echoDataDumpInput = document.getElementById('echoDataDump');
+            const noiseLevelInput = document.getElementById('noiseLevelInput');
+
+            echoDataDumpInput.addEventListener('input', () => {
+                updateChartPointsFromInternalData();
+                setCustomMode();
+            });
+            noiseLevelInput.addEventListener('input', () => {
+                updateChartPointsFromInternalData();
+                setCustomMode();
+            });
+
+
             // Initialize sliders and add event listeners
             const gainInitSlider = document.getElementById('gainInitSlider');
-            const gainInitValueDisplay = document.getElementById('gainInitValue');
             const bpfBwSlider = document.getElementById('bpfBwSlider');
-            const bpfBwValueDisplay = document.getElementById('bpfBwValue');
+            const lpfCoSlider = document.getElementById('lpfCoSlider'); // New LPF slider
             const p1RecSlider = document.getElementById('p1RecSlider');
-            const p1RecValueDisplay = document.getElementById('p1RecValue');
             const p2RecSlider = document.getElementById('p2RecSlider');
-            const p2RecValueDisplay = document.getElementById('p2RecValue');
             const thrHighInput = document.getElementById('thrHigh');
             const thrLowInput = document.getElementById('thrLow');
             const thP1OffInput = document.getElementById('thP1Off');
@@ -1124,6 +1385,8 @@
             gainInitValueDisplay.textContent = `${gainInitSlider.value} dB`;
             bpfBwSlider.value = chartDataInternal.BPF_BW_reg;
             bpfBwValueDisplay.textContent = bpfBwLookup[bpfBwSlider.value];
+            lpfCoSlider.value = chartDataInternal.LPF_CO_reg; // Set initial LPF value
+            lpfCoValueDisplay.textContent = lpfCoLookup[lpfCoSlider.value]; // Set initial LPF display
             
             p1RecSlider.value = chartDataInternal.P1_REC_reg;
             p1RecValueDisplay.textContent = `${p1RecSlider.value} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
@@ -1160,19 +1423,29 @@
                 setCustomMode(); // Switch to custom if slider is used
             });
 
+            lpfCoSlider.addEventListener('input', (e) => { // New LPF event listener
+                const newCoReg = parseInt(e.target.value);
+                chartDataInternal.LPF_CO_reg = newCoReg;
+                lpfCoValueDisplay.textContent = lpfCoLookup[newCoReg];
+                updateInfoDisplays(); // Update register table
+                setCustomMode(); // Switch to custom if slider is used
+            });
+
             p1RecSlider.addEventListener('input', (e) => {
                 const newP1Rec = parseInt(e.target.value);
                 chartDataInternal.P1_REC_reg = newP1Rec;
-                p1RecValueDisplay.textContent = `${newP1Rec} (${(4.096 * (newP1Rec + 1) * 1000).toFixed(0)} µs)`;
+                p1RecValueDisplay.textContent = `${newP1Rec} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
                 updateInfoDisplays(); // Update register table
+                updateChartPointsFromInternalData(); // Update chart for REC lines
                 setCustomMode();
             });
 
             p2RecSlider.addEventListener('input', (e) => {
                 const newP2Rec = parseInt(e.target.value);
                 chartDataInternal.P2_REC_reg = newP2Rec;
-                p2RecValueDisplay.textContent = `${newP2Rec} (${(4.096 * (newP2Rec + 1) * 1000).toFixed(0)} µs)`;
+                p2RecValueDisplay.textContent = `${newP2Rec} (${(4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0)} µs)`;
                 updateInfoDisplays(); // Update register table
+                updateChartPointsFromInternalData(); // Update chart for REC lines
                 setCustomMode();
             });
 
@@ -1316,7 +1589,7 @@
                     chartDataInternal.GAIN_INIT_reg = gainToRegisterValue(newY_dB);
                     // Update slider as well
                     document.getElementById('gainInitSlider').value = newY_dB.toFixed(1);
-                    document.getElementById('gainInitValue').textContent = `${newY_dB.toFixed(1)} dB`;
+                    gainInitValueDisplay.textContent = `${newY_dB.toFixed(1)} dB`;
 
                 } else if (activePoint === 1) { // TVG_T0 point
                     // X updates TVG_T0_abs_reg
@@ -1333,7 +1606,7 @@
                     chartDataInternal.GAIN_INIT_reg = gainToRegisterValue(newY_dB);
                     // Update slider as well
                     document.getElementById('gainInitSlider').value = newY_dB.toFixed(1);
-                    document.getElementById('gainInitValue').textContent = `${newY_dB.toFixed(1)} dB`;
+                    gainInitValueDisplay.textContent = `${newY_dB.toFixed(1)} dB`;
 
                 } else if (activePoint >= 2 && activePoint <= 6) { // TVG_T1 to TVG_T5 points
                     const prevAbsTime = tvgChart.data.datasets[0].data[activePoint - 1].x;
@@ -1515,6 +1788,7 @@
 
             const registerOrder = [
                 { name: "INIT_GAIN", address: "1Bh" },
+                { name: "LPF_CONTROL", address: "XXh" }, // New LPF control register
                 { name: "REG_REC_LENGTH", address: "XXh" },
                 { name: "REG_TVGAIN0", address: "XXh" },
                 { name: "REG_TVGAIN1", address: "XXh" },
@@ -1524,7 +1798,17 @@
                 { name: "REG_TVGAIN5", address: "XXh" },
                 { name: "REG_TVGAIN6", address: "XXh" },
                 { name: "THR_HIGH", address: "XXh" },
-                { name: "THR_LOW", address: "XXh" }
+                { name: "THR_LOW", address: "XXh" },
+                { name: "BPF_A2_MSB", address: "41h" },
+                { name: "BPF_A2_LSB", address: "42h" },
+                { name: "BPF_A3_MSB", address: "43h" },
+                { name: "BPF_A3_LSB", address: "44h" },
+                { name: "BPF_B1_MSB", address: "45h" },
+                { name: "BPF_B1_LSB", address: "46h" },
+                { name: "LPF_A2_MSB", address: "47h" },
+                { name: "LPF_A2_LSB", address: "48h" },
+                { name: "LPF_B1_MSB", address: "49h" },
+                { name: "LPF_B1_LSB", address: "4Ah" }
             ];
 
             // Add P1_THR_X registers
@@ -1544,10 +1828,14 @@
                 const decimal = regs[reg.name];
                 const hex = '0x' + decimal.toString(16).toUpperCase().padStart(2, '0');
                 let bin;
-                if (reg.name === "THR_HIGH" || reg.name === "THR_LOW" || reg.name === "THR_CRC" || reg.name.includes("GAIN_CTRL")) {
+                if (reg.name === "THR_HIGH" || reg.name === "THR_LOW" || reg.name === "THR_CRC" || reg.name.includes("GAIN_CTRL") || reg.name.includes("LPF_CONTROL")) {
                     bin = '0b' + decimal.toString(2).padStart(8, '0'); // 8-bit for these
                 } else if (reg.name.includes("THR_15")) { // TH_P1/P2_OFF is 4-bit in THR_15
                     bin = '0b' + decimal.toString(2).padStart(8, '0'); // Still display 8-bit for the full register
+                } else if (reg.name.includes("BPF_") || reg.name.includes("LPF_")) {
+                    // For BPF and LPF coefficients, they are 16-bit values split into MSB/LSB
+                    // The decimal value here is already the byte value (0-255)
+                    bin = '0b' + decimal.toString(2).padStart(8, '0'); // Display as 8-bit binary
                 }
                 else {
                     bin = '0b' + decimal.toString(2).padStart(8, '0'); // All other registers are 8-bit
@@ -1557,10 +1845,12 @@
                 let extraInfo = '';
                 if (reg.name === "INIT_GAIN") {
                     extraInfo = `<br>BPF_BW: ${bpfBwLookup[chartDataInternal.BPF_BW_reg]}`;
+                } else if (reg.name === "LPF_CONTROL") {
+                    extraInfo = `<br>LPF_CO: ${lpfCoLookup[chartDataInternal.LPF_CO_reg]}`;
                 } else if (reg.name === "REG_REC_LENGTH") {
                     const p1RecTime = (4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0);
                     const p2RecTime = (4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0);
-                    extraInfo = `<br>P1_REC: ${chartDataInternal.P1_REC_reg} (${p1RecTime} µs)<br>P2_REC: ${p2RecTime} µs)`;
+                    extraInfo = `<br>P1_REC: ${chartDataInternal.P1_REC_reg} (${p1RecTime} µs)<br>P2_REC: ${p2RecTime} µs`;
                 } else if (reg.name === "REG_P1_THR_15") {
                      const p1Off = signedMagnitude4BitToDecimal(chartDataInternal.TH_P1_OFF_reg);
                      extraInfo = `<br>TH_P1_OFF: ${p1Off} dB`;
@@ -1593,6 +1883,11 @@
             const gainInit_bin = chartDataInternal.GAIN_INIT_reg.toString(2).padStart(6, '0');
             const regINIT_GAIN_bin = bpfBw_bin + gainInit_bin;
             regs.INIT_GAIN = parseInt(regINIT_GAIN_bin, 2);
+
+            // LPF_CONTROL Register (New, assuming bits 7-6 for LPF_CO)
+            const lpfCo_bin = chartDataInternal.LPF_CO_reg.toString(2).padStart(2, '0');
+            const regLPF_CONTROL_bin = lpfCo_bin + '000000'; // Assuming remaining bits are 0
+            regs.LPF_CONTROL = parseInt(regLPF_CONTROL_bin, 2);
 
             // REG_REC_LENGTH: Bit 7-4 P1_REC, 3-0 P2_REC
             const p1Rec_bin = chartDataInternal.P1_REC_reg.toString(2).padStart(4, '0');
@@ -1651,6 +1946,39 @@
             // --- Threshold Registers ---
             regs.THR_HIGH = chartDataInternal.THR_HIGH_reg;
             regs.THR_LOW = chartDataInternal.THR_LOW_reg;
+
+            // --- BPF Coefficient Calculations ---
+            const cf_kHz = parseFloat(document.getElementById('transducerFreq').value) / 1000;
+            const bpf_bw_text = bpfBwLookup[chartDataInternal.BPF_BW_reg];
+
+            const bpfA2_val = calculateBpfA2(cf_kHz, bpf_bw_text);
+            const bpfB1_val = bpfB1Lookup[bpf_bw_text];
+            const bpfA3_val = bpfA3Lookup[bpf_bw_text];
+
+            const bpfA2_bytes = splitInt16ToBytes(bpfA2_val);
+            const bpfB1_bytes = splitInt16ToBytes(bpfB1_val);
+            const bpfA3_bytes = splitInt16ToBytes(bpfA3_val);
+
+            regs.BPF_A2_MSB = bpfA2_bytes.msb;
+            regs.BPF_A2_LSB = bpfA2_bytes.lsb;
+            regs.BPF_A3_MSB = bpfA3_bytes.msb;
+            regs.BPF_A3_LSB = bpfA3_bytes.lsb;
+            regs.BPF_B1_MSB = bpfB1_bytes.msb;
+            regs.BPF_B1_LSB = bpfB1_bytes.lsb;
+
+            // --- LPF Coefficient Calculations ---
+            const lpf_co_text = lpfCoLookup[chartDataInternal.LPF_CO_reg];
+            const lpfB1_val = lpfB1Lookup[lpf_co_text];
+            const lpfA2_val = lpfA2Lookup[lpf_co_text];
+
+            const lpfB1_bytes = splitInt16ToBytes(lpfB1_val);
+            const lpfA2_bytes = splitInt16ToBytes(lpfA2_val);
+
+            regs.LPF_A2_MSB = lpfA2_bytes.msb;
+            regs.LPF_A2_LSB = lpfA2_bytes.lsb;
+            regs.LPF_B1_MSB = lpfB1_bytes.msb;
+            regs.LPF_B1_LSB = lpfB1_bytes.lsb;
+
 
             // P1_GAIN_CTRL (Address = 14h): Bit 7-6 P1_DIG_GAIN_LR_ST, 5-3 P1_DIG_GAIN_LR, 2-0 P1_DIG_GAIN_SR
             const p1LrSt_bin = chartDataInternal.P1_DIG_GAIN_LR_ST_reg.toString(2).padStart(2, '0');
@@ -1807,6 +2135,9 @@
                     chartDataInternal.P2_DIG_GAIN_SR_reg = parseInt(p2GainCtrl_bin.substring(5, 8), 2);
                 }
 
+                // Update LPF_CO from preset (if available, otherwise default to 0)
+                chartDataInternal.LPF_CO_reg = presets[presetName].LPF_CONTROL !== undefined ? parseInt(presets[presetName].LPF_CONTROL.toString(2).padStart(8, '0').substring(0, 2), 2) : 0;
+
 
                 updateChartPointsFromInternalData();
                 updateInfoDisplays();
@@ -1814,13 +2145,15 @@
 
                 // Update input fields based on preset values
                 document.getElementById('gainInitSlider').value = registerValueToGain(chartDataInternal.GAIN_INIT_reg).toFixed(1);
-                document.getElementById('gainInitValue').textContent = `${document.getElementById('gainInitSlider').value} dB`;
+                gainInitValueDisplay.textContent = `${document.getElementById('gainInitSlider').value} dB`;
                 document.getElementById('bpfBwSlider').value = chartDataInternal.BPF_BW_reg;
-                document.getElementById('bpfBwValue').textContent = bpfBwLookup[chartDataInternal.BPF_BW_reg];
+                bpfBwValueDisplay.textContent = bpfBwLookup[chartDataInternal.BPF_BW_reg];
+                document.getElementById('lpfCoSlider').value = chartDataInternal.LPF_CO_reg; // Update LPF slider
+                lpfCoValueDisplay.textContent = lpfCoLookup[chartDataInternal.LPF_CO_reg]; // Update LPF display
                 document.getElementById('p1RecSlider').value = chartDataInternal.P1_REC_reg;
-                document.getElementById('p1RecValue').textContent = `${p1RecSlider.value} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+                p1RecValueDisplay.textContent = `${p1RecSlider.value} (${(4.096 * (chartDataInternal.P1_REC_reg + 1) * 1000).toFixed(0)} µs)`;
                 document.getElementById('p2RecSlider').value = chartDataInternal.P2_REC_reg;
-                document.getElementById('p2RecValue').textContent = `${p2RecSlider.value} (${(4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0)} µs)`;
+                p2RecValueDisplay.textContent = `${p2RecSlider.value} (${(4.096 * (chartDataInternal.P2_REC_reg + 1) * 1000).toFixed(0)} µs)`;
 
                 document.getElementById('thrHigh').value = registerValueToThresholdLevel(chartDataInternal.THR_HIGH_reg).toFixed(1);
                 document.getElementById('thrLow').value = registerValueToThresholdLevel(chartDataInternal.THR_LOW_reg).toFixed(1);
@@ -1936,6 +2269,10 @@
             } else {
                 recLengthNote.style.display = 'none';
             }
+
+            // Update chart and info displays after echo parameters change
+            updateChartPointsFromInternalData();
+            updateInfoDisplays();
         }
 
         // Initialize the chart when the DOM is fully loaded
