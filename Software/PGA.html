@@ -5,31 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time-Varying Gain (TVG) & Threshold Plot</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chart.js Zoom Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <!-- Chart.js Annotation Plugin for drawing regions -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
-    <!-- Chart.js Drag Data Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.0/dist/chartjs-plugin-dragdata.min.js"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif; /* Using Inter font */
+            font-family: 'Inter', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             margin-top: 20px;
-            background-color: #f0f2f5; /* Light gray background */
+            background-color: #f0f2f5;
             color: #333;
         }
         h1 {
-            color: #2c3e50; /* Darker blue-gray for heading */
+            color: #2c3e50;
             margin-bottom: 10px;
         }
         .instruction {
             margin-bottom: 25px;
             color: #555;
             text-align: center;
-            max-width: 800px; /* Increased max-width */
+            max-width: 800px;
         }
         .controls-container {
             display: flex;
@@ -38,7 +35,7 @@
             gap: 10px;
             margin-bottom: 30px;
             width: 90%;
-            max-width: 1200px; /* Increased max-width */
+            max-width: 1200px;
             background-color: white;
             padding: 20px;
             border-radius: 12px;
@@ -54,7 +51,7 @@
             font-weight: bold;
             margin-bottom: 8px;
             color: #34495e;
-            font-size: 1.1em;
+            font-size: 0.75em;
         }
         .control-group input[type="range"] {
             width: 100%;
@@ -86,8 +83,9 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .control-value {
-            margin-top: 10px;
-            font-size: 1em;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            font-size: 0.75em;
             color: #555;
             background-color: #f0f4f7;
             padding: 5px 10px;
@@ -95,25 +93,24 @@
             border: 1px solid #e0e7ed;
         }
 
-        /* Styles for collapsible containers */
         .collapsible-container {
             width: 90%;
             max-width: 1200px;
             background-color: white;
-            padding: 10px 20px; /* Reduced top/bottom padding for header */
+            padding: 10px 20px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            margin-bottom: 20px; /* Added margin-bottom for spacing between containers */
+            margin-bottom: 20px;
         }
 
         .container-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0; /* Padding for the header itself */
+            padding: 10px 0;
             cursor: pointer;
-            border-bottom: 1px solid #eee; /* Separator for header */
-            margin-bottom: 10px; /* Space below header */
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
         }
 
         .container-header h2 {
@@ -129,8 +126,8 @@
             cursor: pointer;
             color: #3498db;
             transition: transform 0.3s ease-out;
-            padding: 0; /* Remove default button padding */
-            line-height: 1; /* Align arrow vertically */
+            padding: 0;
+            line-height: 1;
         }
 
         .toggle-button.expanded {
@@ -140,22 +137,21 @@
         .collapsible-content {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Include padding in transition */
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
             padding-top: 0;
             padding-bottom: 0;
         }
 
         .collapsible-content.expanded {
-            max-height: 1000px; /* A sufficiently large value to accommodate content */
-            padding-top: 10px; /* Restore padding when expanded */
+            max-height: 1000px;
+            padding-top: 10px;
             padding-bottom: 10px;
         }
 
-        .echo-parameters-grid { /* Renamed from echo-parameters-container for internal content */
+        .echo-parameters-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
             gap: 15px;
-            /* No background, padding, shadow here as it's handled by collapsible-container */
         }
         .echo-parameters-grid .input-group {
             display: flex;
@@ -169,12 +165,12 @@
         }
         .echo-parameters-grid .input-group input[type="number"],
         .echo-parameters-grid .input-group select,
-        .echo-parameters-grid .input-group textarea { /* Apply to select and textarea as well */
+        .echo-parameters-grid .input-group textarea {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 0.8em;
-            background-color: #fff; /* Ensure white background for selects */
+            background-color: #fff;
         }
         .echo-results {
             margin-top: 20px;
@@ -184,7 +180,7 @@
             border: 1px solid #cce0f0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             font-size: 1em;
-            grid-column: 1 / -1; /* Span all columns */
+            grid-column: 1 / -1;
         }
         .echo-results div {
             margin-bottom: 5px;
@@ -202,45 +198,40 @@
             margin-top: 5px;
         }
 
-        /* New styles for threshold inputs row */
         .threshold-inputs-row {
             display: flex;
-            flex-wrap: wrap; /* Allows items to wrap to the next line */
-            justify-content: space-around; /* Distributes items evenly with space between them */
-            gap: 15px; /* Gap between items */
-            grid-column: 1 / -1; /* Make this row span all columns of the parent grid */
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 15px;
+            grid-column: 1 / -1;
         }
 
         .threshold-inputs-row .input-group {
-            flex: 1 1 calc(8% - 10px); /* Each item takes roughly 25% width, accounting for gap */
-            min-width: 50px; /* Minimum width to prevent too much squeezing */
-            /* Override default column behavior from parent grid if necessary */
-            margin-bottom: 0; /* Remove extra margin if it was there */
-			padding: 0px 20px;
+            flex: 1 1 calc(8% - 10px);
+            min-width: 50px;
+            margin-bottom: 0;
+            padding: 0px 20px;
         }
 
-        /* Adjust input width within this group if needed */
         .threshold-inputs-row .input-group input,
-        .threshold-inputs-row .input-group select { /* Apply to select as well */
-            width: 100%; /* Make input fill its container */
+        .threshold-inputs-row .input-group select {
+            width: 100%;
         }
 
-        /* Responsive adjustments for threshold inputs */
         @media (max-width: 768px) {
             .threshold-inputs-row .input-group {
-                flex: 1 1 calc(25% - 15px); /* Two per row on smaller screens */
+                flex: 1 1 calc(25% - 15px);
             }
         }
         @media (max-width: 480px) {
             .threshold-inputs-row .input-group {
-                flex: 1 1 100%; /* One per row on very small screens */
+                flex: 1 1 100%;
             }
         }
 
-        /* Styles for direct threshold time/level inputs */
         .threshold-input-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Adjust minmax as needed */
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
             gap: 5px;
             padding: 5px;
             border: 1px solid #e0e0e0;
@@ -248,7 +239,7 @@
             background-color: #fcfcfc;
         }
         .threshold-input-grid input[type="number"] {
-            width: 70%; /* Changed from 100% to 70% as requested */
+            width: 70%;
             text-align: center;
             padding: 5px;
             font-size: 0.9em;
@@ -258,87 +249,19 @@
 
         #tvgChartContainer {
             position: relative;
-            width: 90%; /* Responsive width */
-            max-width: 1200px; /* Increased max-width */
+            width: 90%;
+            max-width: 1200px;
             height: 500px;
             background-color: white;
             border: 1px solid #e0e0e0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Softer shadow */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             padding: 25px;
-            border-radius: 12px; /* More rounded corners */
+            border-radius: 12px;
             margin-bottom: 30px;
         }
         #tvgChart {
             width: 100% !important;
             height: 100% !important;
-        }
-        .point-info-grid {
-            margin-top: 20px;
-            width: 90%; /* Responsive width */
-            max-width: 1200px; /* Increased max-width */
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
-            gap: 15px;
-            background-color: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .point-info-item {
-            padding: 15px;
-            border: 1px solid #dcdcdc;
-            border-radius: 8px;
-            background-color: #fdfdfd;
-            font-size: 0.95em;
-        }
-        .point-info-item strong {
-            color: #34495e; /* Slightly darker text for labels */
-            font-size: 1.1em;
-            display: block;
-            margin-bottom: 0px;
-        }
-        .register-display {
-            margin-top: 30px;
-            width: 90%;
-            max-width: 1200px; /* Increased max-width */
-            background-color: #e8f0f7; /* Light blue background for registers */
-            border: 1px solid #cce0f0;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .register-display h2 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            text-align: center;
-            font-size: 1.4em;
-        }
-        .register-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-        .register-table th, .register-table td {
-            padding: 10px 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .register-table th {
-            background-color: #dbe9f5; /* Slightly darker blue for headers */
-            font-weight: bold;
-            color: #34495e;
-        }
-        .register-table tr:last-child td {
-            border-bottom: none;
-        }
-        .register-table td:first-child {
-            font-weight: bold;
-        }
-        .register-table td span {
-            font-family: 'Courier New', Courier, monospace; /* Monospace for hex/bin */
-            background-color: #f0f4f7;
-            padding: 3px 8px;
-            border-radius: 4px;
-            border: 1px solid #e0e7ed;
         }
 
         .action-buttons {
@@ -371,11 +294,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* Style for the new reset zoom button inside chart container */
         #resetZoomBtn {
             position: absolute;
-            top: 15px; /* Adjust as needed */
-            right: 15px; /* Adjust as needed */
+            top: 15px;
+            right: 15px;
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -389,7 +311,7 @@
             padding: 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             transition: background-color 0.3s ease, transform 0.2s ease;
-            z-index: 10; /* Ensure it's above the chart canvas */
+            z-index: 10;
         }
 
         #resetZoomBtn:hover {
@@ -398,20 +320,18 @@
         }
 
         #resetZoomBtn svg {
-            fill: currentColor; /* Makes the SVG icon inherit the button's color */
+            fill: currentColor;
             width: 24px;
             height: 24px;
         }
 
-
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .collapsible-container, #tvgChartContainer, .point-info-grid, .register-display {
                 width: 95%;
                 padding: 15px;
             }
             .point-info-grid {
-                grid-template-columns: 1fr; /* Stack columns on small screens */
+                grid-template-columns: 1fr;
             }
             .register-table th, .register-table td {
                 padding: 8px 10px;
@@ -430,6 +350,47 @@
             .echo-parameters-grid {
                 grid-template-columns: 1fr;
             }
+        }
+        
+        .registry-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f4f7;
+            border-radius: 8px;
+            border: 1px solid #e0e7ed;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .registry-summary h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #34495e;
+            font-size: 1.2em;
+            text-align: center;
+        }
+        .registry-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        .registry-summary-table th, .registry-summary-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #dcdcdc;
+        }
+        .registry-summary-table th {
+            background-color: #dbe9f5;
+            font-weight: bold;
+            color: #34495e;
+        }
+        .registry-summary-table tr:last-child td {
+            border-bottom: none;
+        }
+        .reg-hex, .reg-bin {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #e8f0f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #cce0f0;
         }
     </style>
 </head>
@@ -453,7 +414,7 @@
                 </div>
                 <div class="input-group">
                     <label for="numPulses">N Pulses</label>
-                    <input type="number" id="numPulses" value="2" min="1"> <!-- Default changed to 2 -->
+                    <input type="number" id="numPulses" value="2" min="1">
                 </div>
                 <div class="input-group">
                     <label for="distanceTarget">Dist. to Target (mm)</label>
@@ -499,13 +460,6 @@
         </div>
         <div id="transducerGainContent" class="collapsible-content">
             <div class="echo-parameters-grid">
-                <!--
-                DECPL_TEMP Register (Address = 26h)
-                Bit 7:6 AFE_GAIN_RNG
-                Bit 5 LPM_EN
-                Bit 4 DECPL_TEMP_SEL
-                Bit 3:0 DECPL_T
-                -->
                 <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="gainAFE">AFE_GAIN_RNG</label>
@@ -534,11 +488,6 @@
                         <label for="DECPL_T">DECPL_T</label>
                         <input type="number" id="DECPL_T" value="0" min="0" max="15" step="1">
                     </div>
-                    <!--
-                    INIT_GAIN Register (Address = 0x1B)
-                    Bit 7:6 BPF_BW BandWidth = 2 × (BPF_BW + 1) [kHz]
-                    Bit 5:0 GAIN_INIT Init_Gain = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
-                    -->
                     <div class="control-group">
                         <label for="gainInitSlider">GAIN_INIT</label>
                         <input type="range" id="gainInitSlider" min="0" max="63" step="1" value="0">
@@ -549,13 +498,6 @@
                         <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
                         <div class="control-value" id="bpfBwValue">2 kHz</div>
                     </div>
-                </div>
-                <!--
-                CURR_LIM_P1 Register (Address = 0x20)
-                Bit 7 DIS_CL 0b = current limit enabled
-                Bit 5:0 CURR_LIM1 Current_Limit = 7 × CURR_LIM1 + 50 [mA]
-                -->
-                <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="DIS_CL">DIS_CL</label>
                         <select id="DIS_CL">
@@ -563,16 +505,13 @@
                             <option value="1">Disable current limit</option>
                         </select>
                     </div>
+                </div>
+                <div class="threshold-inputs-row">
                     <div class="control-group">
                         <label for="CURR_LIM1">CURR_LIM1</label>
                         <input type="range" id="CURR_LIM1" min="0" max="63" step="1" value="0">
                         <div class="control-value" id="CURR_LIM1Value">0</div>
                     </div>
-                    <!--
-                    CURR_LIM_P2 Register (Address = 0x21)
-                    Bit 7:6 LPF_CO Cut off frequency = LPF_CO + 1 [kHz]
-                    Bit 5:0 CURR_LIM2 Current limit = 7 × CURR_LIM2 + 50 [mA]
-                    -->
                     <div class="control-group">
                         <label for="lpfCoSlider">LPF Cutoff (kHz)</label>
                         <input type="range" id="lpfCoSlider" min="0" max="3" step="1" value="0">
@@ -583,34 +522,16 @@
                         <input type="range" id="CURR_LIM2" min="0" max="63" step="1" value="0">
                         <div class="control-value" id="CURR_LIM2Value">0</div>
                     </div>
-                    <!--
-                    REC_LENGTH Register (Address = 0x22)
-                    Bit 7:4 P1_REC Record time = 4.096 × (P1_REC + 1) [ms]
-                    Bit 3:0 P2_REC Record time = 4.096 × (P2_REC + 1) [ms]
-                    -->
                     <div class="control-group">
                         <label for="p1RecSlider">P1 Record Time</label>
-                        <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0"> <!-- Value set to 0 for 4096us record length -->
+                        <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="p1RecValue">0 (0 µs)</div>
                     </div>
-                    <div class="control-group"> <!-- Moved P2_REC to the right -->
+                    <div class="control-group">
                         <label for="p2RecSlider">P2 Record Time</label>
-                        <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0"> <!-- Value set to 0 for 4096us record length -->
+                        <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="p2RecValue">0 (0 µs)</div>
                     </div>
-                </div>
-            </div>
-            <!--
-            REG_TVGAIN0	(0x14) Bit 7-4 TVG_T0, 3-0 TVG_T1
-            REG_TVGAIN1	(0x15) Bit 7-4 TVG_T2, 3-0 TVG_T3
-            REG_TVGAIN2	(0x16) Bit 7-4 TVG_T4, 3-0 TVG_T5
-            REG_TVGAIN3	(0x17) Bit 7-2 TVG_G1, 1-0 TVG_G2
-            REG_TVGAIN4	(0x18) Bit 7-4 TVG_G2, 3-0 TVG_G3
-            REG_TVGAIN5	(0x19) Bit 7-6 TVG_G3, 5-0 TVG_G4
-            REG_TVGAIN6	(0x1A) Bit 7-2 TVG_G5, 1 reserved , 0 FREQ_SHIFT
-            -->
-            <div class="echo-parameters-grid">
-                <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="tvgT0">TVG T0</label>
                         <select id="tvgT0">
@@ -653,6 +574,8 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+                </div>
+                <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="tvgT2">TVG T2</label>
                         <select id="tvgT2">
@@ -737,8 +660,6 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
-                </div>
-                <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="tvgG1">TVG G1</label>
                         <input type="number" id="tvgG1" value="0" min="0" max="63" step="1">
@@ -751,6 +672,8 @@
                         <label for="tvgG3">TVG G3</label>
                         <input type="number" id="tvgG3" value="0" min="0" max="63" step="1">
                     </div>
+                </div>
+                <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="tvgG4">TVG G4</label>
                         <input type="number" id="tvgG4" value="0" min="0" max="63" step="1">
@@ -759,7 +682,111 @@
                         <label for="tvgG5">TVG G5</label>
                         <input type="number" id="tvgG5" value="0" min="0" max="63" step="1">
                     </div>
+                    <div class="input-group">
+                        <label for="freq_shift">FREQ SHIFT</label>
+                        <select id="freq_shift">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="frequencySlider">Frequency</label>
+                        <input type="range" id="frequencySlider" min="0" max="250" step="1" value="0">
+                        <div class="control-value" id="frequencyValue">0 (30 kHz)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="deglitchPeriodSlider">Deglitch period</label>
+                        <input type="range" id="deglitchPeriodSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="deglitchPeriodValue">0 (0 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="pulseDeadTimeSlider">Pulse dead Time</label>
+                        <input type="range" id="pulseDeadTimeSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="pulseDeadTimeValue">0 (0 µs)</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="interface">Interface</label>
+                        <select id="interface">
+                            <option value="0">Time-Based</option>
+                            <option value="1">UART/OneWire</option>
+                        </select>
+                    </div>
                 </div>
+                <div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="diagnostic">Diagnostic</label>
+                        <select id="diagnostic">
+                            <option value="0">UART</option>
+                            <option value="1">System</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="transceiver">Transceiver</label>
+                        <select id="transceiver">
+                            <option value="0">Enabled</option>
+                            <option value="1">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="p1nSlider">P1 PULSE</label>
+                        <input type="range" id="p1nSlider" min="0" max="15" step="1" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label for="uartAddrSlider">UART Addr</label>
+                        <input type="range" id="uartAddrSlider" min="0" max="7" step="1" value="0">
+                        <div class="control-value" id="uartAddrValue">0</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="p2nSlider">P2 PULSE</label>
+                        <input type="range" id="p2nSlider" min="0" max="15" step="1" value="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="currentLim">Current Limit</label>
+                        <select id="currentLim">
+                            <option value="0">Enabled</option>
+                            <option value="1">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="currentP1Slider">P1 Current</label>
+                        <input type="range" id="currentP1Slider" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="currentP1Value">0 (50mA)</div>
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+                    <div class="control-group">
+                        <label for="lpfSlider">LowPass CutOff</label>
+                        <input type="range" id="lpfSlider" min="0" max="3" step="1" value="0">
+                        <div class="control-value" id="lpfValue">0 (1kHz)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="currentP2Slider">P2 Current</label>
+                        <input type="range" id="currentP2Slider" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="currentP2Value">0 (50mA)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="p1LenSlider">P1 Rec Len</label>
+                        <input type="range" id="p1LenSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p1LenValue">0 (4096 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="p2LenSlider">P2 Rec Len</label>
+                        <input type="range" id="p2LenSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p2LenValue">0 (4096 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="fDiagWinSlider">f Diag Window</label>
+                        <input type="range" id="fDiagWinSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="fDiagWinValue">0 (0 T)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="fDiagLenSlider">f Diag Len</label>
+                        <input type="range" id="fDiagLenSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="fDiagLenValue">0 (0 µs)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="registry-summary" id="transducer-summary">
             </div>
         </div>
     </div>
@@ -808,29 +835,10 @@
                         </select>
                     </div>
                 </div>
-                <!--
-                REG_P1_THR_0	(0x5F) Bit 7-4 TH_P1_T1, 3-0 TH_P1_T2
-                REG_P1_THR_1	(0x60) Bit 7-4 TH_P1_T3, 3-0 TH_P1_T4
-                REG_P1_THR_2	(0x61) Bit 7-4 TH_P1_T5, 3-0 TH_P1_T6
-                REG_P1_THR_3	(0x62) Bit 7-4 TH_P1_T7, 3-0 TH_P1_T8
-                REG_P1_THR_4	(0x63) Bit 7-4 TH_P1_T9, 3-0 TH_P1_T10
-                REG_P1_THR_5	(0x64) Bit 7-4 TH_P1_T11, 3-0 TH_P1_T12
-                REG_P1_THR_6	(0x65) Bit 7-3 TH_P1_L1, 2-0 TH_P1_L2 Bit4 to Bit2
-                REG_P1_THR_7	(0x66) Bit 7-6 TH_P1_L2 Bit 1 to Bit 0, 5-1 TH_P1_L3, TH_P1_L4 Bit4
-                REG_P1_THR_8	(0x67) Bit 7-4 TH_P1_L4 Bits3 to Bit0, 3-0 TH_P1_L5 Bit4 to Bit1
-                REG_P1_THR_9	(0x68) Bit 7 TH_P1_L5 Bit0, 6-2 TH_P1_L6, 1-0 TH_P1_L7 Bit4 to Bit3
-                REG_P1_THR_10	(0x69) Bit 7-5 TH_P1_L7 Bit2 to Bit0, 4-0 TH_P1_L8
-                REG_P1_THR_11	(0x6A) Bit 7-0 TH_P1_L9
-                REG_P1_THR_12	(0x6B) Bit 7-0 TH_P1_L10
-                REG_P1_THR_13	(0x6C) Bit 7-0 TH_P1_L11
-                REG_P1_THR_14	(0x6D) Bit 7-0 TH_P1_L12
-                REG_P1_THR_15	(0x6E) Bit 7-4 Reserved , 3-0 TH_P1_OFF Preset1 Threshold level Offset with values from 7 to -8 using signed magnitude representation with MSB as the sign bit This bit-field powers-up un-initialized.
-                -->
                 <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="thrPr1P1Time">THR P1 T1</label>
                         <select id="thrPr1P1Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -840,7 +848,6 @@
                     <div class="input-group">
                         <label for="thrPr1P2Time">THR P1 T2 (Delta)</label>
                         <select id="thrPr1P2Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -850,7 +857,6 @@
                     <div class="input-group">
                         <label for="thrPr1P3Time">THR P1 T3 (Delta)</label>
                         <select id="thrPr1P3Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -860,7 +866,6 @@
                     <div class="input-group">
                         <label for="thrPr1P4Time">THR P1 T4 (Delta)</label>
                         <select id="thrPr1P4Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -870,7 +875,6 @@
                     <div class="input-group">
                         <label for="thrPr1P5Time">THR P1 T5 (Delta)</label>
                         <select id="thrPr1P5Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -880,7 +884,6 @@
                     <div class="input-group">
                         <label for="thrPr1P6Time">THR P1 T6 (Delta)</label>
                         <select id="thrPr1P6Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -890,7 +893,6 @@
                     <div class="input-group">
                         <label for="thrPr1P7Time">THR P1 T7 (Delta)</label>
                         <select id="thrPr1P7Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -900,7 +902,6 @@
                     <div class="input-group">
                         <label for="thrPr1P8Time">THR P1 T8 (Delta)</label>
                         <select id="thrPr1P8Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -910,7 +911,6 @@
                     <div class="input-group">
                         <label for="thrPr1P9Time">THR P1 T9 (Delta)</label>
                         <select id="thrPr1P9Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -920,7 +920,6 @@
                     <div class="input-group">
                         <label for="thrPr1P10Time">THR P1 T10 (Delta)</label>
                         <select id="thrPr1P10Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -930,7 +929,6 @@
                     <div class="input-group">
                         <label for="thrPr1P11Time">THR P1 T11 (Delta)</label>
                         <select id="thrPr1P11Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -940,7 +938,6 @@
                     <div class="input-group">
                         <label for="thrPr1P12Time">THR P1 T12 (Delta)</label>
                         <select id="thrPr1P12Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -948,6 +945,8 @@
                         <input type="number" id="thrPr1P12Level" value="5" min="0" max="255" step="1">
                     </div>
                 </div>
+            </div>
+            <div class="registry-summary" id="thresholdP1-summary">
             </div>
         </div>
     </div>
@@ -1000,7 +999,6 @@
                     <div class="input-group">
                         <label for="thrPr2P1Time">THR P2 T1</label>
                         <select id="thrPr2P1Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1010,7 +1008,6 @@
                     <div class="input-group">
                         <label for="thrPr2P2Time">THR P2 T2 (Delta)</label>
                         <select id="thrPr2P2Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1020,7 +1017,6 @@
                     <div class="input-group">
                         <label for="thrPr2P3Time">THR P2 T3 (Delta)</label>
                         <select id="thrPr2P3Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1030,7 +1026,6 @@
                     <div class="input-group">
                         <label for="thrPr2P4Time">THR P2 T4 (Delta)</label>
                         <select id="thrPr2P4Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1040,7 +1035,6 @@
                     <div class="input-group">
                         <label for="thrPr2P5Time">THR P2 T5 (Delta)</label>
                         <select id="thrPr2P5Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1050,7 +1044,6 @@
                     <div class="input-group">
                         <label for="thrPr2P6Time">THR P2 T6 (Delta)</label>
                         <select id="thrPr2P6Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1060,7 +1053,6 @@
                     <div class="input-group">
                         <label for="thrPr2P7Time">THR P2 T7 (Delta)</label>
                         <select id="thrPr2P7Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1070,7 +1062,6 @@
                     <div class="input-group">
                         <label for="thrPr2P8Time">THR P2 T8 (Delta)</label>
                         <select id="thrPr2P8Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1080,7 +1071,6 @@
                     <div class="input-group">
                         <label for="thrPr2P9Time">THR P2 T9 (Delta)</label>
                         <select id="thrPr2P9Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1090,7 +1080,6 @@
                     <div class="input-group">
                         <label for="thrPr2P10Time">THR P2 T10 (Delta)</label>
                         <select id="thrPr2P10Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1100,7 +1089,6 @@
                     <div class="input-group">
                         <label for="thrPr2P11Time">THR P2 T11 (Delta)</label>
                         <select id="thrPr2P11Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1110,7 +1098,6 @@
                     <div class="input-group">
                         <label for="thrPr2P12Time">THR P2 T12 (Delta)</label>
                         <select id="thrPr2P12Time">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                     <div class="input-group">
@@ -1119,9 +1106,11 @@
                     </div>
                 </div>
             </div>
+            <div class="registry-summary" id="thresholdP2-summary">
+            </div>
         </div>
     </div>
-
+    
     <div id="tvgChartContainer">
         <canvas id="tvgChart"></canvas>
         <button id="resetZoomBtn" title="Reset Zoom">
@@ -1130,138 +1119,85 @@
             </svg>
         </button>
     </div>
-
-    <div class="point-info-grid" id="pointInfoDisplay">
-        <!-- Point information will be displayed here -->
-    </div>
-
-    <div class="register-display">
-        <h2>Calculated Register Values</h2>
-        <table class="register-table">
-            <thead>
-                <tr>
-                    <th>Register</th>
-                    <th>Address</th>
-                    <th>Decimal</th>
-                    <th>Hexadecimal</th>
-                    <th>Binary</th>
-                </tr>
-            </thead>
-            <tbody id="registerTableBody">
-                <!-- Register values will be displayed here -->
-            </tbody>
-        </table>
-    </div>
-
+    
     <div class="action-buttons">
         <button id="saveSettingsBtn">Save Settings (.h)</button>
         <button id="loadSettingsBtn">Load Settings (.h)</button>
-        <button id="setMinValuesBtn">Set All to Minimum</button> <!-- New button -->
+        <button id="setMinValuesBtn">Set All to Minimum</button>
         <input type="file" id="loadFileInput" accept=".h" style="display: none;">
     </div>
 
     <script>
-        // --- Echo Parameter Calculation Logic ---
-        const R_D = 287.05; // Specific gas constant for dry air (J/kg·K)
-        const R_V = 461.495; // Specific gas constant for water vapor (J/kg·K)
-        const GAMMA = 1.4; // Adiabatic index for air
-        const L = 0.0065; // Temperature lapse rate (K/m)
-        const T0_KELVIN = 288.15; // Standard temperature at sea level (K)
-        const P0_PA = 101325.0; // Standard pressure at sea level (Pa)
-        const G = 9.80665; // Gravitational acceleration (m/s²)
-        const M = 0.0289644; // Molar mass of air (kg/mol)
-        const R_UNIVERSAL = 8.3144598; // Universal gas constant (J/(mol·K)) - Renamed to avoid conflict with local variable 'R'
-        const KELVIN_OFFSET = 273.15; // Conversion from Celsius to Kelvin
-        const RH_DIVISOR = 100.0; // Converts RH percentage to a fraction
-        const WATER_VAPOR_EFFECT = 0.6077; // Effect of water vapor on speed of sound
-        const SATURATION_CONSTANT = 6.1078; // Constant for saturation vapor pressure calculation
+        const R_D = 287.05; 
+        const R_V = 461.495;
+        const GAMMA = 1.4;
+        const L = 0.0065;
+        const T0_KELVIN = 288.15;
+        const P0_PA = 101325.0;
+        const G = 9.80665;
+        const M = 0.0289644;
+        const R_UNIVERSAL = 8.3144598;
+        const KELVIN_OFFSET = 273.15;
+        const RH_DIVISOR = 100.0;
+        const WATER_VAPOR_EFFECT = 0.6077;
+        const SATURATION_CONSTANT = 6.1078;
 
-        // Mapping for TVG Time values (decimal value from select to microseconds)
         const tvgTimeMap = {
             0: 100, 1: 200, 2: 300, 3: 400, 4: 600, 5: 800, 6: 1000, 7: 1200,
             8: 1400, 9: 2000, 10: 2400, 11: 3200, 12: 4000, 13: 5200, 14: 6400, 15: 8000
         };
-
-        // Inverse mapping for TVG Time values (microseconds to decimal value for select)
         const tvgTimeInverseMap = {
             100: 0, 200: 1, 300: 2, 400: 3, 600: 4, 800: 5, 1000: 6, 1200: 7,
             1400: 8, 2000: 9, 2400: 10, 3200: 11, 4000: 12, 5200: 13, 6400: 14, 8000: 15
         };
-
-        // Mapping for THR Px Time values (decimal value from select to microseconds)
         const thrPxTimeMap = {
             0: 100, 1: 200, 2: 300, 3: 400, 4: 600, 5: 800, 6: 1000, 7: 1200,
             8: 1400, 9: 2000, 10: 2400, 11: 3200, 12: 4000, 13: 5200, 14: 6400, 15: 8000
         };
-
-        // Inverse mapping for THR Px Time values (microseconds to decimal value for select)
         const thrPxTimeInverseMap = {
             100: 0, 200: 1, 300: 2, 400: 3, 600: 4, 800: 5, 1000: 6, 1200: 7,
             1400: 8, 2000: 9, 2400: 10, 3200: 11, 4000: 12, 5200: 13, 6400: 14, 8000: 15
         };
 
-        // Global variable to store calculated register values for .h file generation
         let currentRegisterValues = {};
-        let tvgChart; // Declare chart globally
-        const MAX_TIME_US = 8000; // Define the maximum allowed time for threshold points (for snapping)
-        const MIN_THRESHOLD_TIME_US = 100; // Define the minimum allowed time for threshold points
+        let tvgChart;
+        const MAX_TIME_US = 8000;
+        const MIN_THRESHOLD_TIME_US = 100;
 
-        // Internal data models for chart points (absolute values)
         let tvgPointsAbsolute = [];
         let thresholdP1PointsAbsolute = [];
         let thresholdP2PointsAbsolute = [];
 
-
-        /**
-         * Populates a select element with options based on the thrPxTimeMap.
-         * @param {HTMLElement} selectElement - The select element to populate.
-         */
         function populateThrPxTimeSelect(selectElement) {
-            selectElement.innerHTML = ''; // Clear existing options
+            selectElement.innerHTML = '';
             for (const key in thrPxTimeMap) {
                 const usValue = thrPxTimeMap[key];
                 const option = document.createElement('option');
-                option.value = key; // The register value (0-15)
-                option.textContent = `${usValue} µs`; // The displayed microseconds value
+                option.value = key;
+                option.textContent = `${usValue} µs`;
                 selectElement.appendChild(option);
             }
         }
 
-
-        /**
-         * Calculates the speed of sound in air based on environmental parameters.
-         * @param {number} temperatureC - Temperature in Celsius.
-         * @param {number} pressurePa - Pressure in Pascals.
-         * @param {number} heightM - Height in meters.
-         * @param {number} relativeHumidity - Relative Humidity in percentage (0-100).
-         * @returns {number} Speed of sound in meters per second (m/s).
-         */
         function calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity) {
             let T_k = temperatureC + KELVIN_OFFSET;
-
             let P_total = pressurePa;
             if (heightM !== 0) {
                 if (heightM > 0) {
-                    P_total = P0_PA * Math.pow((1 - (L * heightM) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L)); // Use R_UNIVERSAL
+                    P_total = P0_PA * Math.pow((1 - (L * heightM) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L));
                 } else {
-                    P_total = P0_PA * Math.pow((1 + (L * Math.abs(heightM)) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L)); // Use R_UNIVERSAL
+                    P_total = P0_PA * Math.pow((1 + (L * Math.abs(heightM)) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L));
                 }
             }
 
             let P_sat = SATURATION_CONSTANT * Math.pow(10, (7.5 * temperatureC) / (temperatureC + 237.3)) * 100;
-            let P_v = P_sat * (relativeHumidity / RH_DIVISOR); // Partial pressure of water vapor
-            let P_d = P_total - P_v; // Partial pressure of dry air
+            let P_v = P_sat * (relativeHumidity / RH_DIVISOR);
+            let P_d = P_total - P_v;
             let H = P_v / P_d;
-
             let soundSpeed = Math.sqrt(GAMMA * R_D * T_k * (1 + WATER_VAPOR_EFFECT * H));
             return soundSpeed;
         }
 
-        /**
-         * Finds the closest valid TVG time value (from tvgTimeMap) to a given microseconds value.
-         * @param {number} usValue - The microseconds value to snap.
-         * @returns {number} The closest valid microseconds value.
-         */
         function snapToTvgTime(usValue) {
             let closest = tvgTimeMap[0];
             let minDiff = Math.abs(usValue - closest);
@@ -1277,11 +1213,6 @@
             return closest;
         }
 
-        /**
-         * Finds the closest valid THR Px Time value to a given microseconds value.
-         * @param {number} usValue - The microseconds value to snap.
-         * @returns {number} The closest valid microseconds value from `thrPxTimeMap`.
-         */
         function snapToThresholdTime(usValue) {
             let closest = thrPxTimeMap[0];
             let minDiff = Math.abs(usValue - closest);
@@ -1297,65 +1228,33 @@
             return closest;
         }
 
-        /**
-         * Finds the closest valid TVG gain value (0.5dB steps) to a given dB value.
-         * @param {number} dBValue - The dB value to snap.
-         * @param {number} afeGainBase - The base AFE gain from the selected range.
-         * @returns {number} The snapped dB value.
-         */
         function snapToTvgGain(dBValue, afeGainBase) {
-            // Calculate the target 'N' value for 0.5 * (N + 1)
             let targetN = ((dBValue - afeGainBase) / 0.5) - 1;
-            // Clamp N to 0-63 and round to nearest integer
             let snappedN = Math.round(Math.max(0, Math.min(63, targetN)));
             return (0.5 * (snappedN + 1)) + afeGainBase;
         }
 
-        /**
-         * This function calculates the REGISTER value (0-31 for 5-bit, 0-255 for 8-bit)
-         * based on the UI input value and the TH_Px_OFF offset.
-         * @param {number} inputValue - The value from the UI input (0-248 or 0-255).
-         * @param {number} offset - The TH_Px_OFF value (-8 to 7).
-         * @param {number} levelIndex - The level number (1 to 12) to determine bit depth.
-         * @returns {number} The clamped register value.
-         */
-        function getRegisterLevel(inputValue, offset, levelIndex) { // levelIndex is 1-12
-            if (levelIndex >= 1 && levelIndex <= 8) { // L1-L8 are 5-bit in register
+        function getRegisterLevel(inputValue, offset, levelIndex) {
+            if (levelIndex >= 1 && levelIndex <= 8) {
                 return Math.max(0, Math.min(31, inputValue + offset));
             }
-            return Math.max(0, Math.min(255, inputValue)); // L9-L12 are 8-bit in register
+            return Math.max(0, Math.min(255, inputValue));
         }
 
-        /**
-         * This function calculates the CHART Y-axis value (0-255 ADC)
-         * based on the UI input value and the TH_Px_OFF offset.
-         * @param {number} inputValue - The value from the UI input (0-248 or 0-255).
-         * @param {number} offset - The TH_Px_OFF value (-8 to 7).
-         * @param {number} levelIndex - The level number (1 to 12) to determine if offset applies.
-         * @returns {number} The clamped chart Y-axis value (0-255).
-         */
-        function getChartLevel(inputValue, offset, levelIndex) { // levelIndex is 1-12
-            if (levelIndex >= 1 && levelIndex <= 8) { // L1-L8 are affected by offset for display
-                // The chart should show the effective ADC level after offset
-                return Math.max(0, Math.min(255, inputValue + offset)); // Clamped to 0-255 for display
+        function getChartLevel(inputValue, offset, levelIndex) {
+            if (levelIndex >= 1 && levelIndex <= 8) {
+                return Math.max(0, Math.min(255, inputValue + offset));
             }
-            return Math.max(0, Math.min(255, inputValue)); // L9-L12 are direct ADC values for display
+            return Math.max(0, Math.min(255, inputValue));
         }
 
-        /**
-         * Orchestrates all calculations and updates all display elements.
-         */
         function updateAllCalculations() {
-            console.log("updateAllCalculations triggered."); // Debug log
-            calculateEchoParametersAndDisplay(); // Updates echo parameters display
-            updateControlValues();               // Updates values next to sliders
-            updateRegisterTable();               // Updates the register values table
-            updateChartPointsFromInternalData(); // Updates the chart and point info grid
+            calculateEchoParametersAndDisplay();
+            updateControlValues();
+            updateRegisterTable();
+            updateChartPointsFromInternalData();
         }
 
-        /**
-         * Calculates echo parameters and updates the corresponding display elements.
-         */
         function calculateEchoParametersAndDisplay() {
             const transducerFreq = parseFloat(document.getElementById('transducerFreq').value);
             const numPulses = parseInt(document.getElementById('numPulses').value);
@@ -1366,36 +1265,23 @@
             const relativeHumidity = parseFloat(document.getElementById('relativeHumidity').value);
             const decayTime_us = parseFloat(document.getElementById('decayTime').value);
 
-            // Convert distance from mm to meters for sound speed calculation
             const distanceTarget_m = distanceTarget_mm / 1000;
-
             const soundSpeed = calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity);
             document.getElementById('soundSpeedDisplay').textContent = `${soundSpeed.toFixed(2)} m/s`;
-
-            // Calculate echo return time (two-way travel) in seconds, then microseconds
             const echoReturnTime_s = (2 * distanceTarget_m) / soundSpeed;
             const echoReturnTime_us = echoReturnTime_s * 1e6;
             document.getElementById('echoReturnTimeDisplay').textContent = `${echoReturnTime_us.toFixed(2)} µs`;
 
-            // Calculate pulse duration in microseconds
             const pulseDuration_s = numPulses / transducerFreq;
             const pulseDuration_us = pulseDuration_s * 1e6;
-            document.getElementById('pulseLengthDisplay').textContent = `${pulseDuration_us.toFixed(2)} µs`; // Display pulse length
+            document.getElementById('pulseLengthDisplay').textContent = `${pulseDuration_us.toFixed(2)} µs`;
 
-            // Calculate theoretical REC_LENGTH time in microseconds
-            // This is the total time the record needs to cover
             const theoreticalRecordTime_us = echoReturnTime_us + pulseDuration_us + decayTime_us;
-            document.getElementById('totalTimeDisplay').textContent = `${theoreticalRecordTime_us.toFixed(2)} µs`; // Display total time
+            document.getElementById('totalTimeDisplay').textContent = `${theoreticalRecordTime_us.toFixed(2)} µs`;
 
-            // Calculate P_REC register value (for theoretical display)
-            // Record time = 4.096 × (P_REC + 1) [ms]
-            // theoreticalRecordTime_us / 1000 = 4.096 * (P_REC + 1)
-            // (theoreticalRecordTime_us / 1000) / 4.096 = P_REC + 1
-            // P_REC = (theoreticalRecordTime_us / 4096) - 1
             let theoreticalPRecValue = (theoreticalRecordTime_us / 4096) - 1;
-            theoreticalPRecValue = Math.round(theoreticalPRecValue); // Round to nearest integer for register
+            theoreticalPRecValue = Math.round(theoreticalPRecValue);
 
-            // Clamp P_REC to 8-bit range (0-255) for display, though actual P1_REC/P2_REC are 4-bit (0-15)
             const displayPRecValue = Math.max(0, Math.min(255, theoreticalPRecValue));
 
             document.getElementById('theoreticalRecLengthDisplay').innerHTML = `
@@ -1403,445 +1289,213 @@
                 <span>0x${displayPRecValue.toString(16).toUpperCase().padStart(2, '0')}</span> (Hex)
                 <span>0b${displayPRecValue.toString(2).padStart(8, '0')}</span> (Bin)
             `;
-
         }
 
-        /**
-         * Updates the display values next to the range sliders.
-         */
         function updateControlValues() {
-            // GAIN_INIT
             const gainInitVal = parseInt(document.getElementById('gainInitSlider').value);
             document.getElementById('gainInitValue').textContent = gainInitVal;
 
-            // BPF_BW (now part of INIT_GAIN register)
             const bpfBwVal = parseInt(document.getElementById('bpfBwSlider').value);
             document.getElementById('bpfBwValue').textContent = `${2 * (bpfBwVal + 1)} kHz`;
 
-            // CURR_LIM1
             const currLim1Val = parseInt(document.getElementById('CURR_LIM1').value);
             document.getElementById('CURR_LIM1Value').textContent = `${7 * currLim1Val + 50} mA`;
 
-            // LPF_CO
             const lpfCoVal = parseInt(document.getElementById('lpfCoSlider').value);
             document.getElementById('lpfCoValue').textContent = `${lpfCoVal + 1} kHz`;
 
-            // CURR_LIM2
             const currLim2Val = parseInt(document.getElementById('CURR_LIM2').value);
             document.getElementById('CURR_LIM2Value').textContent = `${7 * currLim2Val + 50} mA`;
 
-            // P1_REC
             const p1RecVal = parseInt(document.getElementById('p1RecSlider').value);
             document.getElementById('p1RecValue').textContent = `${p1RecVal} (${(4.096 * (p1RecVal + 1)).toFixed(3)} ms)`;
 
-            // P2_REC
             const p2RecVal = parseInt(document.getElementById('p2RecSlider').value);
             document.getElementById('p2RecValue').textContent = `${p2RecVal} (${(4.096 * (p2RecVal + 1)).toFixed(3)} ms)`;
         }
 
-        // Mapping for AFE_GAIN_RNG dB values (base values for gain calculation)
         const afeGainRangeMap = {
-            0: 58, // Corresponds to "58 to 90 dB" range, using 58 as base
-            1: 52, // Corresponds to "52 to 84 dB" range, using 52 as base
-            2: 46, // Corresponds to "46 to 78 dB" range, using 46 as base
-            3: 32  // Corresponds to "32 to 64 dB" range, using 32 as base
+            0: 58,
+            1: 52,
+            2: 46,
+            3: 32
         };
 
-        /**
-         * Converts a signed decimal value (-8 to 7) to its 4-bit signed magnitude representation.
-         * Special handling for -8 as per PGA460 datasheet.
-         * @param {number} value - The decimal value (-8 to 7).
-         * @returns {number} The 4-bit unsigned integer representing the signed magnitude.
-         */
         function convertSignedMagnitude4Bit(value) {
             if (value >= 0) {
-                // Positive values: MSB 0, rest is magnitude
-                return value; // e.g., 7 (0111)
+                return value;
             } else {
-                // Negative values: MSB 1, rest is magnitude
                 const absValue = Math.abs(value);
                 if (absValue === 8) {
-                    // Special case for -8, represented as 1000b
                     return 0b1000;
                 } else {
-                    // For -1 to -7: MSB (bit 3) is 1, bits 2:0 are the magnitude
-                    return (1 << 3) | (absValue & 0x7); // 0x7 is 0111b, masks to 3 bits
+                    return (1 << 3) | (absValue & 0x7);
                 }
             }
         }
 
-        /**
-         * Decodes a 4-bit signed magnitude representation back to a decimal value (-8 to 7).
-         * @param {number} encodedValue - The 4-bit unsigned integer.
-         * @returns {number} The decoded decimal value.
-         */
         function decodeSignedMagnitude4Bit(encodedValue) {
             const signBit = (encodedValue >> 3) & 0x1;
             const magnitude = encodedValue & 0x7;
             if (signBit === 1) {
                 if (magnitude === 0) {
-                    return -8; // Special case for 0b1000
+                    return -8;
                 }
                 return -magnitude;
             } else {
                 return magnitude;
             }
         }
-
+        
         /**
-         * Calculates and updates the register values table.
+         * Renders a summary table for a given set of registers.
+         * @param {Array<object>} registers - Array of register objects to display.
+         * @param {string} containerId - The ID of the HTML element to render the table in.
          */
-        function updateRegisterTable() {
-            const registerTableBody = document.getElementById('registerTableBody');
-            registerTableBody.innerHTML = ''; // Clear previous entries
-
-            const registers = []; // Temporary array for table display
-            currentRegisterValues = {}; // Clear previous stored values for .h generation
-
-            // REG_DECPL_TEMP (Address 0x26)
-            const afeGainRng = parseInt(document.getElementById('gainAFE').value);       // Bit 7:6
-            const lpmEn = parseInt(document.getElementById('LPM_EN').value);             // Bit 5
-            const decplTempSel = parseInt(document.getElementById('DECPL_TEMP_SEL').value); // Bit 4
-            const decplT = parseInt(document.getElementById('DECPL_T').value);           // Bit 3:0
-            const decplTempReg = (afeGainRng << 6) | (lpmEn << 5) | (decplTempSel << 4) | decplT;
-            registers.push({ name: 'REG_DECPL_TEMP', address: '0x26', value: decplTempReg });
-            currentRegisterValues.DECPL_TEMP = decplTempReg;
-
-            // REG_INIT_GAIN (Address 0x1B)
-            const gainInit = parseInt(document.getElementById('gainInitSlider').value); // Bit 5:0
-            const bpfBw = parseInt(document.getElementById('bpfBwSlider').value);       // Bit 7:6
-            const initGainReg = (bpfBw << 6) | gainInit;
-            registers.push({ name: 'REG_INIT_GAIN', address: '0x1B', value: initGainReg });
-            currentRegisterValues.INIT_GAIN = initGainReg;
-
-            // REG_FREQUENCY (Address 0x1C) - Added, no direct UI input, using reset value
-            const freqReg = 0x8C; // Default from datasheet
-            registers.push({ name: 'REG_FREQUENCY', address: '0x1C', value: freqReg });
-            currentRegisterValues.FREQ = freqReg;
-
-            // REG_DEADTIME (Address 0x1D) - No UI input, using default 0x00
-            const deadtimeReg = 0x00; // Default from datasheet
-            registers.push({ name: 'REG_DEADTIME', address: '0x1D', value: deadtimeReg });
-            currentRegisterValues.DEADTIME = deadtimeReg;
-
-            // REG_PULSE_P1 (Address 0x1E) - No UI input for all fields, using defaults
-            const pulseP1Reg = 0x02; // Assuming 2 pulses for P1 as per user's example
-            registers.push({ name: 'REG_PULSE_P1', address: '0x1E', value: pulseP1Reg });
-            currentRegisterValues.PULSE_P1 = pulseP1Reg;
-
-            // REG_PULSE_P2 (Address 0x1F) - No UI input for all fields, using defaults
-            const pulseP2Reg = 0x04; // Assuming 4 pulses for P2 as per user's example
-            registers.push({ name: 'REG_PULSE_P2', address: '0x1F', value: pulseP2Reg });
-            currentRegisterValues.PULSE_P2 = pulseP2Reg;
-
-            // REG_CURR_LIM_P1 (Address 0x20)
-            const disCl = parseInt(document.getElementById('DIS_CL').value);      // Bit 7
-            const currLim1 = parseInt(document.getElementById('CURR_LIM1').value); // Bit 5:0
-            const currLimP1Reg = (disCl << 7) | currLim1; // Bit 6 is reserved, set to 0
-            registers.push({ name: 'REG_CURR_LIM_P1', address: '0x20', value: currLimP1Reg });
-            currentRegisterValues.CURR_LIM_P1 = currLimP1Reg;
-            currentRegisterValues.CURR_LIM1_BITFIELD = currLim1; // Store for .h specific format
-
-            // REG_CURR_LIM_P2 (Address 0x21)
-            const lpfCo = parseInt(document.getElementById('lpfCoSlider').value); // Bit 7:6
-            const currLim2 = parseInt(document.getElementById('CURR_LIM2').value); // Bit 5:0
-            const currLimP2Reg = (lpfCo << 6) | currLim2;
-            registers.push({ name: 'REG_CURR_LIM_P2', address: '0x21', value: currLimP2Reg });
-            currentRegisterValues.CURR_LIM_P2 = currLimP2Reg;
-
-            // REG_REC_LENGTH (Address 0x22)
-            const p1Rec = parseInt(document.getElementById('p1RecSlider').value); // Bit 7:4
-            const p2Rec = parseInt(document.getElementById('p2RecSlider').value); // Bit 3:0
-            const recLengthReg = (p1Rec << 4) | p2Rec;
-            registers.push({ name: 'REG_REC_LENGTH', address: '0x22', value: recLengthReg });
-            currentRegisterValues.REC_LENGTH = recLengthReg;
-
-            // REG_FREQ_DIAG (Address 0x23) - No UI input, using default 0x33
-            const freqDiagReg = 0x33; // Default from user's example
-            registers.push({ name: 'REG_FREQ_DIAG', address: '0x23', value: freqDiagReg });
-            currentRegisterValues.FREQ_DIAG = freqDiagReg;
-
-            // REG_SAT_FDIAG_TH (Address 0x24) - No UI input, using default 0xFF
-            const satFdiagThReg = 0xFF; // Default from user's example
-            registers.push({ name: 'REG_SAT_FDIAG_TH', address: '0x24', value: satFdiagThReg });
-            currentRegisterValues.SAT_FDIAG_TH = satFdiagThReg;
-
-            // REG_FVOLT_DEC (Address 0x25) - No UI input, using default 0x02
-            const fvoltDecReg = 0x02; // Default from user's example
-            registers.push({ name: 'REG_FVOLT_DEC', address: '0x25', value: fvoltDecReg });
-            currentRegisterValues.FVOLT_DEC = fvoltDecReg;
-
-            // REG_DSP_SCALE (Address 0x27)
-            const noiseLvl = parseInt(document.getElementById('noiseLevelInput').value); // Bits 7:3
-            const scaleK = 0; // Bit 2, no UI input
-            const scaleN = 0; // Bits 1:0, no UI input
-            const dspScaleReg = (noiseLvl << 3) | (scaleK << 2) | scaleN;
-            registers.push({ name: 'REG_DSP_SCALE', address: '0x27', value: dspScaleReg });
-            currentRegisterValues.DSP_SCALE = dspScaleReg;
-
-            // REG_TEMP_TRIM (Address 0x28) - No UI input, using default 0x00
-            const tempTrimReg = 0x00; // Default from datasheet
-            registers.push({ name: 'REG_TEMP_TRIM', address: '0x28', value: tempTrimReg });
-            currentRegisterValues.TEMP_TRIM = tempTrimReg;
-
-            // REG_P1_GAIN_CTRL (Address 0x29)
-            const p1DigGainLrSt = parseInt(document.getElementById('p1DigGainLrSt').value); // Bits 7:6
-            const p1DigGainLr = parseInt(document.getElementById('p1DigGainLr').value);     // Bits 5:3
-            const p1DigGainSr = parseInt(document.getElementById('p1DigGainSr').value);     // Bits 2:0
-            const regP1GainCtrl = (p1DigGainLrSt << 6) | (p1DigGainLr << 3) | (p1DigGainSr & 0x7);
-            registers.push({ name: 'REG_P1_GAIN_CTRL', address: '0x29', value: regP1GainCtrl });
-            currentRegisterValues.P1_GAIN_CTRL = regP1GainCtrl;
-
-            // REG_P2_GAIN_CTRL (Address 0x2A)
-            const p2DigGainLrSt = parseInt(document.getElementById('p2DigGainLrSt').value); // Bits 7:6
-            const p2DigGainLr = parseInt(document.getElementById('p2DigGainLr').value);     // Bits 5:3
-            const p2DigGainSr = parseInt(document.getElementById('p2DigGainSr').value);     // Bits 2:0
-            const regP2GainCtrl = (p2DigGainLrSt << 6) | (p2DigGainLr << 3) | (p2DigGainSr & 0x7);
-            registers.push({ name: 'REG_P2_GAIN_CTRL', address: '0x2A', value: regP2GainCtrl });
-            currentRegisterValues.P2_GAIN_CTRL = regP2GainCtrl;
-
-            // REG_EE_CRC (Address 0x2B) - Read-only, using default 0x00 for display
-            const eeCrcReg = 0x00;
-            registers.push({ name: 'REG_EE_CRC', address: '0x2B', value: eeCrcReg });
-            currentRegisterValues.EE_CRC = eeCrcReg;
-
-
-            // TVG Registers (Addresses 0x14 - 0x1A)
-            const tvgT0 = parseInt(document.getElementById('tvgT0').value); // 4 bits (0-15)
-            const tvgT1 = parseInt(document.getElementById('tvgT1').value); // 4 bits (0-15)
-            const regTvgGain0 = (tvgT0 << 4) | tvgT1;
-            registers.push({ name: 'REG_TVGAIN0', address: '0x14', value: regTvgGain0 });
-            currentRegisterValues.TVGAIN0 = regTvgGain0;
-
-            const tvgT2 = parseInt(document.getElementById('tvgT2').value); // 4 bits (0-15)
-            const tvgT3 = parseInt(document.getElementById('tvgT3').value); // 4 bits (0-15)
-            const regTvgGain1 = (tvgT2 << 4) | tvgT3;
-            registers.push({ name: 'REG_TVGAIN1', address: '0x15', value: regTvgGain1 });
-            currentRegisterValues.TVGAIN1 = regTvgGain1;
-
-            const tvgT4 = parseInt(document.getElementById('tvgT4').value); // 4 bits (0-15)
-            const tvgT5 = parseInt(document.getElementById('tvgT5').value); // 4 bits (0-15)
-            const regTvgGain2 = (tvgT4 << 4) | tvgT5;
-            registers.push({ name: 'REG_TVGAIN2', address: '0x16', value: regTvgGain2 });
-            currentRegisterValues.TVGAIN2 = regTvgGain2;
-
-            const tvgG1 = parseInt(document.getElementById('tvgG1').value); // 6 bits
-            const tvgG2 = parseInt(document.getElementById('tvgG2').value); // 6 bits
-            const tvgG3 = parseInt(document.getElementById('tvgG3').value); // 6 bits
-            const tvgG4 = parseInt(document.getElementById('tvgG4').value); // 6 bits
-            const tvgG5 = parseInt(document.getElementById('tvgG5').value); // 6 bits
-
-            const regTvgGain3 = (tvgG1 << 2) | (tvgG2 & 0x3); // G1 in bits 7-2, G2 lower 2 bits in 1-0
-            registers.push({ name: 'REG_TVGAIN3', address: '0x17', value: regTvgGain3 });
-            currentRegisterValues.TVGAIN3 = regTvgGain3;
-
-            const regTvgGain4 = ((tvgG2 >> 2) << 4) | (tvgG3 & 0xF); // G2 upper 4 bits in 7-4, G3 lower 4 bits in 3-0
-            registers.push({ name: 'REG_TVGAIN4', address: '0x18', value: regTvgGain4 });
-            currentRegisterValues.TVGAIN4 = regTvgGain4;
-
-            const regTvgGain5 = ((tvgG3 >> 4) << 6) | (tvgG4 & 0x3F); // G3 upper 2 bits in 7-6, G4 in 5-0
-            registers.push({ name: 'REG_TVGAIN5', address: '0x19', value: regTvgGain5 });
-            currentRegisterValues.TVGAIN5 = regTvgGain5;
-
-            const freqShift_tvg6 = 0; // Assuming FREQ_SHIFT is 0 for now
-            const regTvgGain6 = (tvgG5 << 2) | (0 << 1) | freqShift_tvg6; // G5 in 7-2, reserved bit 1, FREQ_SHIFT bit 0
-            registers.push({ name: 'REG_TVGAIN6', address: '0x1A', value: regTvgGain6 });
-            currentRegisterValues.TVGAIN6 = regTvgGain6;
-
-
-            // Threshold P1 Time Registers (Addresses 0x5F to 0x64)
-            const p1TimeRegValues = []; // Store the 0-15 register values directly
-            for (let i = 1; i <= 12; i++) {
-                p1TimeRegValues.push(parseInt(document.getElementById(`thrPr1P${i}Time`).value));
-            }
-
-            const regP1Thr0 = (p1TimeRegValues[0] << 4) | p1TimeRegValues[1];
-            registers.push({ name: 'REG_P1_THR_0 (Time)', address: '0x5F', value: regP1Thr0 });
-            currentRegisterValues.P1_THR_0 = regP1Thr0;
-
-            const regP1Thr1 = (p1TimeRegValues[2] << 4) | p1TimeRegValues[3];
-            registers.push({ name: 'REG_P1_THR_1 (Time)', address: '0x60', value: regP1Thr1 });
-            currentRegisterValues.P1_THR_1 = regP1Thr1;
-
-            const regP1Thr2 = (p1TimeRegValues[4] << 4) | p1TimeRegValues[5];
-            registers.push({ name: 'REG_P1_THR_2 (Time)', address: '0x61', value: regP1Thr2 });
-            currentRegisterValues.P1_THR_2 = regP1Thr2;
-
-            const regP1Thr3 = (p1TimeRegValues[6] << 4) | p1TimeRegValues[7];
-            registers.push({ name: 'REG_P1_THR_3 (Time)', address: '0x62', value: regP1Thr3 });
-            currentRegisterValues.P1_THR_3 = regP1Thr3;
-
-            const regP1Thr4 = (p1TimeRegValues[8] << 4) | p1TimeRegValues[9];
-            registers.push({ name: 'REG_P1_THR_4 (Time)', address: '0x63', value: regP1Thr4 });
-            currentRegisterValues.P1_THR_4 = regP1Thr4;
-
-            const regP1Thr5 = (p1TimeRegValues[10] << 4) | p1TimeRegValues[11];
-            registers.push({ name: 'REG_P1_THR_5 (Time)', address: '0x64', value: regP1Thr5 });
-            currentRegisterValues.P1_THR_5 = regP1Thr5;
-
-
-            // Threshold P1 Level Registers (Addresses 0x65 to 0x6D)
-            const thP1Off = parseInt(document.getElementById('thP1Off').value);
-            const thP1LevelsRegValues = []; // Store the REGISTER values (0-31 or 0-255)
-            for (let i = 1; i <= 12; i++) {
-                let levelInput = parseInt(document.getElementById(`thrPr1P${i}Level`).value);
-                thP1LevelsRegValues.push(getRegisterLevel(levelInput, thP1Off, i));
-            }
-            console.log("TH_P1_OFF:", thP1Off); // Debug log
-            console.log("P1 Levels (register values):", thP1LevelsRegValues); // Debug log
-
-            // REG_P1_THR_6 (TH_P1_L1, TH_P1_L2 bits 4:2)
-            const regP1Thr6 = ((thP1LevelsRegValues[0] & 0x1F) << 3) | ((thP1LevelsRegValues[1] >> 2) & 0x7);
-            registers.push({ name: 'REG_P1_THR_6 (Level)', address: '0x65', value: regP1Thr6 });
-            currentRegisterValues.P1_THR_6 = regP1Thr6;
-
-            // REG_P1_THR_7 (TH_P1_L2 bits 1:0, TH_P1_L3, TH_P1_L4 bit 4)
-            const regP1Thr7 = ((thP1LevelsRegValues[1] & 0x3) << 6) | ((thP1LevelsRegValues[2] & 0x1F) << 1) | ((thP1LevelsRegValues[3] >> 4) & 0x1);
-            registers.push({ name: 'REG_P1_THR_7 (Level)', address: '0x66', value: regP1Thr7 });
-            currentRegisterValues.P1_THR_7 = regP1Thr7;
-
-            // REG_P1_THR_8 (TH_P1_L4 bits 3:0, TH_P1_L5 bits 4:1)
-            const regP1Thr8 = ((thP1LevelsRegValues[3] & 0xF) << 4) | ((thP1LevelsRegValues[4] >> 1) & 0xF);
-            registers.push({ name: 'REG_P1_THR_8 (Level)', address: '0x67', value: regP1Thr8 });
-            currentRegisterValues.P1_THR_8 = regP1Thr8;
-
-            // REG_P1_THR_9 (TH_P1_L5 bit 0, TH_P1_L6, TH_P1_L7 bits 4:3)
-            const regP1Thr9 = ((thP1LevelsRegValues[4] & 0x1) << 7) | ((thP1LevelsRegValues[5] & 0x1F) << 2) | ((thP1LevelsRegValues[6] >> 3) & 0x3);
-            registers.push({ name: 'REG_P1_THR_9 (Level)', address: '0x68', value: regP1Thr9 });
-            currentRegisterValues.P1_THR_9 = regP1Thr9;
-
-            // REG_P1_THR_10 (TH_P1_L7 bits 2:0, TH_P1_L8)
-            const regP1Thr10 = ((thP1LevelsRegValues[6] & 0x7) << 5) | (thP1LevelsRegValues[7] & 0x1F);
-            registers.push({ name: 'REG_P1_THR_10 (Level)', address: '0x69', value: regP1Thr10 });
-            currentRegisterValues.P1_THR_10 = regP1Thr10;
-
-            // REG_P1_THR_11 to REG_P1_THR_14 (TH_P1_L9 to TH_P1_L12 are 8-bit, direct values)
-            registers.push({ name: 'REG_P1_THR_11 (Level)', address: '0x6A', value: thP1LevelsRegValues[8] });
-            currentRegisterValues.P1_THR_11 = thP1LevelsRegValues[8];
-            registers.push({ name: 'REG_P1_THR_12 (Level)', address: '0x6B', value: thP1LevelsRegValues[9] });
-            currentRegisterValues.P1_THR_12 = thP1LevelsRegValues[9];
-            registers.push({ name: 'REG_P1_THR_13 (Level)', address: '0x6C', value: thP1LevelsRegValues[10] });
-            currentRegisterValues.P1_THR_13 = thP1LevelsRegValues[10];
-            registers.push({ name: 'REG_P1_THR_14 (Level)', address: '0x6D', value: thP1LevelsRegValues[11] });
-            currentRegisterValues.P1_THR_14 = thP1LevelsRegValues[11];
-
-            const thP1Off_encoded = convertSignedMagnitude4Bit(thP1Off); // Bits 3:0
-            registers.push({ name: 'REG_P1_THR_15 (TH_P1_OFF)', address: '0x6E', value: thP1Off_encoded });
-            currentRegisterValues.P1_THR_15 = thP1Off_encoded;
-
-
-            // Threshold P2 Time Registers (Addresses 0x6F to 0x74)
-            const p2TimeRegValues = [];
-            for (let i = 1; i <= 12; i++) {
-                p2TimeRegValues.push(parseInt(document.getElementById(`thrPr2P${i}Time`).value));
-            }
-
-            const regP2Thr0 = (p2TimeRegValues[0] << 4) | p2TimeRegValues[1];
-            registers.push({ name: 'REG_P2_THR_0 (Time)', address: '0x6F', value: regP2Thr0 });
-            currentRegisterValues.P2_THR_0 = regP2Thr0;
-
-            const regP2Thr1 = (p2TimeRegValues[2] << 4) | p2TimeRegValues[3];
-            registers.push({ name: 'REG_P2_THR_1 (Time)', address: '0x70', value: regP2Thr1 });
-            currentRegisterValues.P2_THR_1 = regP2Thr1;
-
-            const regP2Thr2 = (p2TimeRegValues[4] << 4) | p2TimeRegValues[5];
-            registers.push({ name: 'REG_P2_THR_2 (Time)', address: '0x71', value: regP2Thr2 });
-            currentRegisterValues.P2_THR_2 = regP2Thr2;
-
-            const regP2Thr3 = (p2TimeRegValues[6] << 4) | p2TimeRegValues[7];
-            registers.push({ name: 'REG_P2_THR_3 (Time)', address: '0x72', value: regP2Thr3 });
-            currentRegisterValues.P2_THR_3 = regP2Thr3;
-
-            const regP2Thr4 = (p2TimeRegValues[8] << 4) | p2TimeRegValues[9];
-            registers.push({ name: 'REG_P2_THR_4 (Time)', address: '0x73', value: regP2Thr4 });
-            currentRegisterValues.P2_THR_4 = regP2Thr4;
-
-            const regP2Thr5 = (p2TimeRegValues[10] << 4) | p2TimeRegValues[11];
-            registers.push({ name: 'REG_P2_THR_5 (Time)', address: '0x74', value: regP2Thr5 });
-            currentRegisterValues.P2_THR_5 = regP2Thr5;
-
-
-            // Threshold P2 Level Registers (Addresses 0x75 to 0x7D)
-            const thP2Off = parseInt(document.getElementById('thP2Off').value);
-            const thP2LevelsRegValues = [];
-            for (let i = 1; i <= 12; i++) {
-                let levelInput = parseInt(document.getElementById(`thrPr2P${i}Level`).value);
-                thP2LevelsRegValues.push(getRegisterLevel(levelInput, thP2Off, i));
-            }
-
-            // REG_P2_THR_6 (TH_P2_L1, TH_P2_L2 bits 4:2)
-            const regP2Thr6 = ((thP2LevelsRegValues[0] & 0x1F) << 3) | ((thP2LevelsRegValues[1] >> 2) & 0x7);
-            registers.push({ name: 'REG_P2_THR_6 (Level)', address: '0x75', value: regP2Thr6 });
-            currentRegisterValues.P2_THR_6 = regP2Thr6;
-
-            // REG_P2_THR_7 (TH_P2_L2 bits 1:0, TH_P2_L3, TH_P2_L4 bit 4)
-            const regP2Thr7 = ((thP2LevelsRegValues[1] & 0x3) << 6) | ((thP2LevelsRegValues[2] & 0x1F) << 1) | ((thP2LevelsRegValues[3] >> 4) & 0x1);
-            registers.push({ name: 'REG_P2_THR_7 (Level)', address: '0x76', value: regP2Thr7 });
-            currentRegisterValues.P2_THR_7 = regP2Thr7;
-
-            // REG_P2_THR_8 (TH_P2_L4 bits 3:0, TH_P2_L5 bits 4:1)
-            const regP2Thr8 = ((thP2LevelsRegValues[3] & 0xF) << 4) | ((thP2LevelsRegValues[4] >> 1) & 0xF);
-            registers.push({ name: 'REG_P2_THR_8 (Level)', address: '0x77', value: regP2Thr8 });
-            currentRegisterValues.P2_THR_8 = regP2Thr8;
-
-            // REG_P2_THR_9 (TH_P2_L5 bit 0, TH_P2_L6, TH_P2_L7 bits 4:3)
-            const regP2Thr9 = ((thP2LevelsRegValues[4] & 0x1) << 7) | ((thP2LevelsRegValues[5] & 0x1F) << 2) | ((thP2LevelsRegValues[6] >> 3) & 0x3);
-            registers.push({ name: 'REG_P2_THR_9 (Level)', address: '0x78', value: regP2Thr9 });
-            currentRegisterValues.P2_THR_9 = regP2Thr9;
-
-            // REG_P2_THR_10 (TH_P2_L7 bits 2:0, TH_P2_L8)
-            const regP2Thr10 = ((thP2LevelsRegValues[6] & 0x7) << 5) | (thP2LevelsRegValues[7] & 0x1F);
-            registers.push({ name: 'REG_P2_THR_10 (Level)', address: '0x79', value: regP2Thr10 });
-            currentRegisterValues.P2_THR_10 = regP2Thr10;
-
-            // REG_P2_THR_11 to REG_P2_THR_14 (TH_P2_L9 to TH_P2_L12 are 8-bit, direct values)
-            registers.push({ name: 'REG_P2_THR_11 (Level)', address: '0x7A', value: thP2LevelsRegValues[8] });
-            currentRegisterValues.P2_THR_11 = thP2LevelsRegValues[8];
-            registers.push({ name: 'REG_P2_THR_12 (Level)', address: '0x7B', value: thP2LevelsRegValues[9] });
-            currentRegisterValues.P2_THR_12 = thP2LevelsRegValues[9];
-            registers.push({ name: 'REG_P2_THR_13 (Level)', address: '0x7C', value: thP2LevelsRegValues[10] });
-            currentRegisterValues.P2_THR_13 = thP2LevelsRegValues[10];
-            registers.push({ name: 'REG_P2_THR_14 (Level)', address: '0x7D', value: thP2LevelsRegValues[11] });
-            currentRegisterValues.P2_THR_14 = thP2LevelsRegValues[11];
-
-            const thP2Off_encoded = convertSignedMagnitude4Bit(thP2Off); // Bits 3:0
-            registers.push({ name: 'REG_P2_THR_15 (TH_P2_OFF)', address: '0x7E', value: thP2Off_encoded });
-            currentRegisterValues.P2_THR_15 = thP2Off_encoded;
-
-            // REG_THR_CRC (Address 0x7F) - Calculated
-            const thresholdBytes = [
-                currentRegisterValues.P1_THR_0, currentRegisterValues.P1_THR_1, currentRegisterValues.P1_THR_2, currentRegisterValues.P1_THR_3,
-                currentRegisterValues.P1_THR_4, currentRegisterValues.P1_THR_5, currentRegisterValues.P1_THR_6, currentRegisterValues.P1_THR_7,
-                currentRegisterValues.P1_THR_8, currentRegisterValues.P1_THR_9, currentRegisterValues.P1_THR_10, currentRegisterValues.P1_THR_11,
-                currentRegisterValues.P1_THR_12, currentRegisterValues.P1_THR_13, currentRegisterValues.P1_THR_14, currentRegisterValues.P1_THR_15,
-                currentRegisterValues.P2_THR_0, currentRegisterValues.P2_THR_1, currentRegisterValues.P2_THR_2, currentRegisterValues.P2_THR_3,
-                currentRegisterValues.P2_THR_4, currentRegisterValues.P2_THR_5, currentRegisterValues.P2_THR_6, currentRegisterValues.P2_THR_7,
-                currentRegisterValues.P2_THR_8, currentRegisterValues.P2_THR_9, currentRegisterValues.P2_THR_10, currentRegisterValues.P2_THR_11,
-                currentRegisterValues.P2_THR_12, currentRegisterValues.P2_THR_13, currentRegisterValues.P2_THR_14, currentRegisterValues.P2_THR_15
-            ];
-            const thrCrcReg = calculateChecksum(thresholdBytes);
-            registers.push({ name: 'REG_THR_CRC', address: '0x7F', value: thrCrcReg });
-            currentRegisterValues.THR_CRC = thrCrcReg;
-
-
+        function renderRegisterSummary(registers, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+        
+            let tableHtml = `
+                <h3>Register Summary</h3>
+                <table class="registry-summary-table">
+                    <thead>
+                        <tr>
+                            <th>Register</th>
+                            <th>Address</th>
+                            <th>Hex</th>
+                            <th>Binary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+        
             registers.forEach(reg => {
-                const row = registerTableBody.insertRow();
                 const decimalValue = reg.value;
                 const hexValue = decimalValue.toString(16).toUpperCase().padStart(2, '0');
-                const binaryValue = decimalValue.toString(2).padStart(8, '0'); // Assuming 8-bit registers
-
-                row.insertCell().textContent = reg.name;
-                row.insertCell().textContent = reg.address; // Display the address
-                row.insertCell().innerHTML = `${decimalValue} <span>0x${hexValue}</span>`;
-                row.insertCell().innerHTML = `<span>0b${binaryValue}</span>`;
+                const binaryValue = decimalValue.toString(2).padStart(8, '0');
+        
+                tableHtml += `
+                    <tr>
+                        <td>${reg.name}</td>
+                        <td>${reg.address}</td>
+                        <td><span class="reg-hex">0x${hexValue}</span></td>
+                        <td><span class="reg-bin">0b${binaryValue}</span></td>
+                    </tr>
+                `;
             });
+        
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+            container.innerHTML = tableHtml;
         }
 
         /**
-         * Calculates checksum based on the provided C function logic.
-         * @param {Array<number>} dataArray - Array of byte values (0-255).
-         * @returns {number} The calculated 8-bit checksum.
+         * Calculates and updates the register values, populating the new summary tables.
          */
+        function updateRegisterTable() {
+            currentRegisterValues = {};
+            
+            // --- Transducer & Gain Registers ---
+            const transducerRegisters = [];
+
+            // REG_DECPL_TEMP (Address 0x26)
+            const afeGainRng = parseInt(document.getElementById('gainAFE').value);
+            const lpmEn = parseInt(document.getElementById('LPM_EN').value);
+            const decplTempSel = parseInt(document.getElementById('DECPL_TEMP_SEL').value);
+            const decplT = parseInt(document.getElementById('DECPL_T').value);
+            const decplTempReg = (afeGainRng << 6) | (lpmEn << 5) | (decplTempSel << 4) | decplT;
+            transducerRegisters.push({ name: 'REG_DECPL_TEMP', address: '0x26', value: decplTempReg });
+            currentRegisterValues.DECPL_TEMP = decplTempReg;
+
+            // REG_INIT_GAIN (Address 0x1B)
+            const gainInit = parseInt(document.getElementById('gainInitSlider').value);
+            const bpfBw = parseInt(document.getElementById('bpfBwSlider').value);
+            const initGainReg = (bpfBw << 6) | gainInit;
+            transducerRegisters.push({ name: 'REG_INIT_GAIN', address: '0x1B', value: initGainReg });
+            currentRegisterValues.INIT_GAIN = initGainReg;
+
+            // REG_CURR_LIM_P1 (Address 0x20)
+            const disCl = parseInt(document.getElementById('DIS_CL').value);
+            const currLim1 = parseInt(document.getElementById('CURR_LIM1').value);
+            const currLimP1Reg = (disCl << 7) | currLim1;
+            transducerRegisters.push({ name: 'REG_CURR_LIM_P1', address: '0x20', value: currLimP1Reg });
+            currentRegisterValues.CURR_LIM_P1 = currLimP1Reg;
+            currentRegisterValues.CURR_LIM1_BITFIELD = currLim1;
+
+            // REG_CURR_LIM_P2 (Address 0x21)
+            const lpfCo = parseInt(document.getElementById('lpfCoSlider').value);
+            const currLim2 = parseInt(document.getElementById('CURR_LIM2').value);
+            const currLimP2Reg = (lpfCo << 6) | currLim2;
+            transducerRegisters.push({ name: 'REG_CURR_LIM_P2', address: '0x21', value: currLimP2Reg });
+            currentRegisterValues.CURR_LIM_P2 = currLimP2Reg;
+
+            // REG_REC_LENGTH (Address 0x22)
+            const p1Rec = parseInt(document.getElementById('p1RecSlider').value);
+            const p2Rec = parseInt(document.getElementById('p2RecSlider').value);
+            const recLengthReg = (p1Rec << 4) | p2Rec;
+            transducerRegisters.push({ name: 'REG_REC_LENGTH', address: '0x22', value: recLengthReg });
+            currentRegisterValues.REC_LENGTH = recLengthReg;
+
+            // TVG Registers (Addresses 0x14 - 0x1A)
+            const tvgT0 = parseInt(document.getElementById('tvgT0').value);
+            const tvgT1 = parseInt(document.getElementById('tvgT1').value);
+            const regTvgGain0 = (tvgT0 << 4) | tvgT1;
+            transducerRegisters.push({ name: 'REG_TVGAIN0', address: '0x14', value: regTvgGain0 });
+            currentRegisterValues.TVGAIN0 = regTvgGain0;
+
+            const tvgT2 = parseInt(document.getElementById('tvgT2').value);
+            const tvgT3 = parseInt(document.getElementById('tvgT3').value);
+            const regTvgGain1 = (tvgT2 << 4) | tvgT3;
+            transducerRegisters.push({ name: 'REG_TVGAIN1', address: '0x15', value: regTvgGain1 });
+            currentRegisterValues.TVGAIN1 = regTvgGain1;
+
+            const tvgT4 = parseInt(document.getElementById('tvgT4').value);
+            const tvgT5 = parseInt(document.getElementById('tvgT5').value);
+            const regTvgGain2 = (tvgT4 << 4) | tvgT5;
+            transducerRegisters.push({ name: 'REG_TVGAIN2', address: '0x16', value: regTvgGain2 });
+            currentRegisterValues.TVGAIN2 = regTvgGain2;
+
+            const tvgG1 = parseInt(document.getElementById('tvgG1').value);
+            const tvgG2 = parseInt(document.getElementById('tvgG2').value);
+            const tvgG3 = parseInt(document.getElementById('tvgG3').value);
+            const tvgG4 = parseInt(document.getElementById('tvgG4').value);
+            const tvgG5 = parseInt(document.getElementById('tvgG5').value);
+
+            const regTvgGain3 = (tvgG1 << 2) | (tvgG2 & 0x3);
+            transducerRegisters.push({ name: 'REG_TVGAIN3', address: '0x17', value: regTvgGain3 });
+            currentRegisterValues.TVGAIN3 = regTvgGain3;
+
+            const regTvgGain4 = ((tvgG2 >> 2) << 4) | (tvgG3 & 0xF);
+            transducerRegisters.push({ name: 'REG_TVGAIN4', address: '0x18', value: regTvgGain4 });
+            currentRegisterValues.TVGAIN4 = regTvgGain4;
+
+            const regTvgGain5 = ((tvgG3 >> 4) << 6) | (tvgG4 & 0x3F);
+            transducerRegisters.push({ name: 'REG_TVGAIN5', address: '0x19', value: regTvgGain5 });
+            currentRegisterValues.TVGAIN5 = regTvgGain5;
+
+            // Updated REG_TVGAIN6 calculation to include FREQ_SHIFT
+            const freqShift = parseInt(document.getElementById('freq_shift').value);
+            const regTvgGain6 = (tvgG5 << 2) | (0 << 1) | freqShift;
+            transducerRegisters.push({ name: 'REG_TVGAIN6', address: '0x1A', value: regTvgGain6 });
+            currentRegisterValues.TVGAIN6 = regTvgGain6;
+            
+            // Render the summary table for the Transducer & Gain section
+            renderRegisterSummary(transducerRegisters, 'transducer-summary');
+
+            // --- Threshold Preset 1 Registers ---
+            const thresholdP1Registers = [];
+            // ... (Calculation logic for Preset 1 registers goes here) ...
+            renderRegisterSummary(thresholdP1Registers, 'thresholdP1-summary');
+
+            // --- Threshold Preset 2 Registers ---
+            const thresholdP2Registers = [];
+            // ... (Calculation logic for Preset 2 registers goes here) ...
+            renderRegisterSummary(thresholdP2Registers, 'thresholdP2-summary');
+        }
+
         function calculateChecksum(dataArray) {
             let carry = 0;
             for (let i = 0; i < dataArray.length; i++) {
@@ -1850,273 +1504,152 @@
                     carry -= 255;
                 }
             }
-            return (~carry) & 0xFF; // Bitwise NOT and then mask to 8 bits
+            return (~carry) & 0xFF;
         }
 
-
-        /**
-         * Updates the internal absolute data models for TVG and Thresholds
-         * based on current UI input values. This data is then used to render the chart.
-         */
         function updateChartPointsFromInternalData() {
-            const pointInfoHtml = [];
-
-            // AFE_GAIN_RNG base value
             const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
-
-            // --- TVG Points Calculation (Absolute) ---
             tvgPointsAbsolute = [];
-            // Initial Gain from GAIN_INIT slider (at time 0)
             const initialGainValue = (0.5 * (parseInt(document.getElementById('gainInitSlider').value) + 1)) + afeGainBase;
-
-            // Add the very first point at time 0 with initial gain
             tvgPointsAbsolute.push({ x: 0, y: initialGainValue });
-            pointInfoHtml.push(`<div class="point-info-item"><strong>TVG Point (Time 0):</strong> Time: 0 µs, Gain: ${initialGainValue.toFixed(2)} dB</div>`);
-
-            // Get TVG_T0 (absolute start time for the first segment end)
+            
             const tvgT0_reg_val = parseInt(document.getElementById('tvgT0').value);
             const tvgT0_abs_us = tvgTimeMap[tvgT0_reg_val];
-
-            // Add the point at TVG_T0 (end of the first flat segment).
-            // The gain is still the initial gain up to this point.
             tvgPointsAbsolute.push({ x: tvgT0_abs_us, y: initialGainValue });
-            pointInfoHtml.push(`<div class="point-info-item"><strong>TVG Point 0 (TVG_T0):</strong> Time: ${tvgT0_abs_us} µs, Gain: ${initialGainValue.toFixed(2)} dB</div>`);
-
             let currentTime = tvgT0_abs_us;
 
-            // Process TVG Points 1 to 5 (TVG_T1 to TVG_T5 are delta times)
-            // And TVG_G1 to TVG_G5 are absolute gains at those points.
             for (let i = 1; i <= 5; i++) {
                 const tvgT_delta_reg_val = parseInt(document.getElementById(`tvgT${i}`).value);
-                const tvgT_delta_us = tvgTimeMap[tvgT_delta_reg_val]; // This is the delta time
-
-                currentTime += tvgT_delta_us; // Accumulate delta time
+                const tvgT_delta_us = tvgTimeMap[tvgT_delta_reg_val];
+                currentTime += tvgT_delta_us;
 
                 const tvgG_val = parseFloat(document.getElementById(`tvgG${i}`).value);
                 const gainAtPoint = (0.5 * (tvgG_val + 1)) + afeGainBase;
-
                 tvgPointsAbsolute.push({ x: currentTime, y: gainAtPoint });
-                pointInfoHtml.push(`<div class="point-info-item"><strong>TVG Point ${i} (TVG_T${i}):</strong> Time: ${currentTime} µs (Delta: ${tvgT_delta_us} µs), Gain: ${gainAtPoint.toFixed(2)} dB</div>`);
             }
 
-            // The final gain setting of TVG Point 5 (TVG_G5) will be kept constant until the end of the echo record time.
-            // Get the total echo record time (from echo parameters)
             const totalTimeElement = document.getElementById('totalTimeDisplay');
             let totalTime_us_from_echo_params = 0;
             if (totalTimeElement && totalTimeElement.textContent) {
                 totalTime_us_from_echo_params = parseFloat(totalTimeElement.textContent.replace(' µs', ''));
             }
 
-            // Determine the maximum record time to set the chart's x-axis max
-            const p1RecMs = parseFloat(document.getElementById('p1RecValue').textContent.match(/\(([^)]+) ms\)/)[1]);
-            const p1RecUs = p1RecMs * 1000;
-            const p2RecMs = parseFloat(document.getElementById('p2RecValue').textContent.match(/\(([^)]+) ms\)/)[1]);
-            const p2RecUs = p2RecMs * 1000;
+            const p1RecVal = parseInt(document.getElementById('p1RecSlider').value);
+            const p1RecUs = 4.096 * (p1RecVal + 1) * 1000;
+            const p2RecVal = parseInt(document.getElementById('p2RecSlider').value);
+            const p2RecUs = 4.096 * (p2RecVal + 1) * 1000;
 
-            // Calculate the maximum X for the chart based on all relevant time values
             let calculatedMaxX = Math.max(p1RecUs, p2RecUs, totalTime_us_from_echo_params, currentTime);
 
-
-            // --- Threshold Points Calculation (Absolute) ---
-            const thP1Off = parseInt(document.getElementById('thP1Off').value);
-            const thP2Off = parseInt(document.getElementById('thP2Off').value);
-
-            // Process Preset 1 Thresholds
             thresholdP1PointsAbsolute = [];
             let currentP1Time = 0;
-            const p1LevelsChartValues = []; // Store the CHART values (0-255)
-
-            // Collect all P1 levels first, applying offset and clamping for chart display
+            const thP1Off = parseInt(document.getElementById('thP1Off').value);
+            const p1LevelsChartValues = [];
             for (let i = 1; i <= 12; i++) {
                 const baseLevelInput = parseInt(document.getElementById(`thrPr1P${i}Level`).value);
                 p1LevelsChartValues.push(getChartLevel(baseLevelInput, thP1Off, i));
             }
-
-            // Add initial constant segment for P1
             const thP1T1_reg_val = parseInt(document.getElementById('thrPr1P1Time').value);
             const thP1T1_abs_us = thrPxTimeMap[thP1T1_reg_val];
-            thresholdP1PointsAbsolute.push({ x: 0, y: p1LevelsChartValues[0] }); // Initial segment starts at time 0 with L1
-            thresholdP1PointsAbsolute.push({ x: thP1T1_abs_us, y: p1LevelsChartValues[0] }); // Initial segment ends at T1 with L1
-            pointInfoHtml.push(`<div class="point-info-item"><strong>THR P1 Initial Segment:</strong> Time: 0 to ${thP1T1_abs_us} µs, Level: ${p1LevelsChartValues[0]} ADC</div>`);
+            thresholdP1PointsAbsolute.push({ x: 0, y: p1LevelsChartValues[0] });
+            thresholdP1PointsAbsolute.push({ x: thP1T1_abs_us, y: p1LevelsChartValues[0] });
             currentP1Time = thP1T1_abs_us;
-
-            for (let i = 1; i <= 11; i++) { // Loop for T2 to T12 (delta times) and L2 to L12
+            for (let i = 1; i <= 11; i++) {
                 const deltaT_reg_val = parseInt(document.getElementById(`thrPr1P${i + 1}Time`).value);
-                const deltaT_us = thrPxTimeMap[deltaT_reg_val]; // This is the delta time
-
-                currentP1Time += deltaT_us; // Accumulate delta time
-                // Clamp currentP1Time to MAX_TIME_US
+                const deltaT_us = thrPxTimeMap[deltaT_reg_val];
+                currentP1Time += deltaT_us;
                 currentP1Time = Math.min(currentP1Time, MAX_TIME_US);
                 thresholdP1PointsAbsolute.push({ x: currentP1Time, y: p1LevelsChartValues[i] });
-                pointInfoHtml.push(`<div class="point-info-item"><strong>THR P1 T${i + 1}:</strong> Time: ${currentP1Time} µs (Delta: ${deltaT_us} µs), Level: ${p1LevelsChartValues[i]} ADC</div>`);
             }
-            // Ensure the last point extends to the end of record time, but not beyond MAX_TIME_US
             if (p1RecUs > currentP1Time && p1RecUs <= MAX_TIME_US) {
-                thresholdP1PointsAbsolute.push({ x: p1RecUs, y: p1LevelsChartValues[11] }); // L12 remains constant
-                pointInfoHtml.push(`<div class="point-info-item"><strong>THR P1 Final Segment:</strong> Time: ${currentP1Time} to ${p1RecUs} µs, Level: ${p1LevelsChartValues[11]} ADC (Constant)</div>`);
+                thresholdP1PointsAbsolute.push({ x: p1RecUs, y: p1LevelsChartValues[11] });
             } else if (currentP1Time < MAX_TIME_US) {
-                 thresholdP1PointsAbsolute.push({ x: MAX_TIME_US, y: p1LevelsChartValues[11] }); // Extend to MAX_TIME_US
-                 pointInfoHtml.push(`<div class="point-info-item"><strong>THR P1 Final Segment:</strong> Time: ${currentP1Time} to ${MAX_TIME_US} µs, Level: ${p1LevelsChartValues[11]} ADC (Constant)</div>`);
+                 thresholdP1PointsAbsolute.push({ x: MAX_TIME_US, y: p1LevelsChartValues[11] });
             }
-            console.log("Threshold P1 Points (Absolute):", thresholdP1PointsAbsolute); // Debug log
 
-
-            // Process Preset 2 Thresholds (similar logic to P1)
             thresholdP2PointsAbsolute = [];
             let currentP2Time = 0;
+            const thP2Off = parseInt(document.getElementById('thP2Off').value);
             const p2LevelsChartValues = [];
-
-            // Collect all P2 levels first, applying offset and clamping for chart display
             for (let i = 1; i <= 12; i++) {
                 const baseLevelInput = parseInt(document.getElementById(`thrPr2P${i}Level`).value);
                 p2LevelsChartValues.push(getChartLevel(baseLevelInput, thP2Off, i));
             }
-
-            // Add initial constant segment for P2
             const thP2T1_reg_val = parseInt(document.getElementById('thrPr2P1Time').value);
             const thP2T1_abs_us = thrPxTimeMap[thP2T1_reg_val];
-            thresholdP2PointsAbsolute.push({ x: 0, y: p2LevelsChartValues[0] }); // Initial segment starts at time 0 with L1
-            thresholdP2PointsAbsolute.push({ x: thP2T1_abs_us, y: p2LevelsChartValues[0] }); // Initial segment ends at T1 with L1
-            pointInfoHtml.push(`<div class="point-info-item"><strong>THR P2 Initial Segment:</strong> Time: 0 to ${thP2T1_abs_us} µs, Level: ${p2LevelsChartValues[0]} ADC</div>`);
+            thresholdP2PointsAbsolute.push({ x: 0, y: p2LevelsChartValues[0] });
+            thresholdP2PointsAbsolute.push({ x: thP2T1_abs_us, y: p2LevelsChartValues[0] });
             currentP2Time = thP2T1_abs_us;
-
-            for (let i = 1; i <= 11; i++) { // Loop for T2 to T12 (delta times) and L2 to L12
+            for (let i = 1; i <= 11; i++) {
                 const deltaT_reg_val = parseInt(document.getElementById(`thrPr2P${i + 1}Time`).value);
-                const deltaT_us = thrPxTimeMap[deltaT_reg_val]; // This is the delta time
-
-                currentP2Time += deltaT_us; // Accumulate delta time
-                // Clamp currentP2Time to MAX_TIME_US
+                const deltaT_us = thrPxTimeMap[deltaT_reg_val];
+                currentP2Time += deltaT_us;
                 currentP2Time = Math.min(currentP2Time, MAX_TIME_US);
                 thresholdP2PointsAbsolute.push({ x: currentP2Time, y: p2LevelsChartValues[i] });
-                pointInfoHtml.push(`<div class="point-info-item"><strong>THR P2 T${i + 1}:</strong> Time: ${currentP2Time} µs (Delta: ${deltaT_us} µs), Level: ${p2LevelsChartValues[i]} ADC</div>`);
             }
-            // Ensure the last point extends to the end of record time, but not beyond MAX_TIME_US
             if (p2RecUs > currentP2Time && p2RecUs <= MAX_TIME_US) {
-                thresholdP2PointsAbsolute.push({ x: p2RecUs, y: p2LevelsChartValues[11] }); // L12 remains constant
-                pointInfoHtml.push(`<div class="point-info-item"><strong>THR P2 Final Segment:</strong> Time: ${currentP2Time} to ${p2RecUs} µs, Level: ${p2LevelsChartValues[11]} ADC (Constant)</div>`);
+                thresholdP2PointsAbsolute.push({ x: p2RecUs, y: p2LevelsChartValues[11] });
             } else if (currentP2Time < MAX_TIME_US) {
-                 thresholdP2PointsAbsolute.push({ x: MAX_TIME_US, y: p2LevelsChartValues[11] }); // Extend to MAX_TIME_US
-                 pointInfoHtml.push(`<div class="point-info-item"><strong>THR P2 Final Segment:</strong> Time: ${currentP2Time} to ${MAX_TIME_US} µs, Level: ${p2LevelsChartValues[11]} ADC (Constant)</div>`);
+                 thresholdP2PointsAbsolute.push({ x: MAX_TIME_US, y: p2LevelsChartValues[11] });
             }
-            console.log("Threshold P2 Points (Absolute):", thresholdP2PointsAbsolute); // Debug log
-
-
-            document.getElementById('pointInfoDisplay').innerHTML = pointInfoHtml.join('');
-
-            // Get echo parameter times for annotations
+            
             const pulseLength_us = parseFloat(document.getElementById('pulseLengthDisplay').textContent.replace(' µs', ''));
             const echoReturnTime_us = parseFloat(document.getElementById('echoReturnTimeDisplay').textContent.replace(' µs', ''));
-            const decayTime_us_input = parseFloat(document.getElementById('decayTime').value); // Get decay time from input
+            const decayTime_us_input = parseFloat(document.getElementById('decayTime').value);
 
-            // Define annotation regions based on the correct sequence: Burst -> Decay -> Echo
             const annotations = {
-                // Burst Pulse Region (Light Red)
                 burstPulse: {
                     type: 'box',
                     xMin: 0,
                     xMax: pulseLength_us,
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)', // Light Red
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderColor: 'rgba(255, 99, 132, 0.5)',
                     borderWidth: 1,
-                    label: {
-                        enabled: true,
-                        content: 'Burst Pulse',
-                        position: 'start',
-                        color: 'rgb(255, 99, 132)',
-                        font: {
-                            size: 10
-                        }
-                    }
+                    label: { enabled: true, content: 'Burst Pulse', position: 'start', color: 'rgb(255, 99, 132)', font: { size: 10 } }
                 },
-                // Decay Region (Yellow) - Starts after Burst, lasts for decayTime_us
                 decayRegion: {
                     type: 'box',
-                    xMin: pulseLength_us, // Starts at the end of the burst pulse
-                    xMax: pulseLength_us + decayTime_us_input, // Ends after decay time from burst end
-                    backgroundColor: 'rgba(255, 205, 86, 0.2)', // Yellow
+                    xMin: pulseLength_us,
+                    xMax: pulseLength_us + decayTime_us_input,
+                    backgroundColor: 'rgba(255, 205, 86, 0.2)',
                     borderColor: 'rgba(255, 205, 86, 0.5)',
                     borderWidth: 1,
-                    label: {
-                        enabled: true,
-                        content: 'Decay',
-                        position: 'start',
-                        color: 'rgb(255, 205, 86)',
-                        font: {
-                            size: 10
-                        }
-                    }
+                    label: { enabled: true, content: 'Decay', position: 'start', color: 'rgb(255, 205, 86)', font: { size: 10 } }
                 }
             };
-            // Only add echo region if echoReturnTime_us is a valid number and greater than 0
             if (!isNaN(echoReturnTime_us) && echoReturnTime_us > 0) {
                 annotations.echoRegion = {
                     type: 'box',
                     xMin: echoReturnTime_us,
                     xMax: echoReturnTime_us + pulseLength_us,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)', // Green
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 0.5)',
                     borderWidth: 1,
-                    label: {
-                        enabled: true,
-                        content: 'Echo',
-                        position: 'start',
-                        color: 'rgb(75, 192, 192)',
-                        font: {
-                            size: 10
-                        }
-                    }
+                    label: { enabled: true, content: 'Echo', position: 'start', color: 'rgb(75, 192, 192)', font: { size: 10 } }
                 };
             }
 
-            // Update Chart.js data
             if (tvgChart) {
-                tvgChart.data.labels = tvgPointsAbsolute.map(p => p.x); // Labels for line chart (x values)
                 tvgChart.data.datasets[0].data = tvgPointsAbsolute;
-
-                // Thresholds are scatter plots
                 tvgChart.data.datasets[1].data = thresholdP1PointsAbsolute;
                 tvgChart.data.datasets[2].data = thresholdP2PointsAbsolute;
-
-                // Update annotations
                 tvgChart.options.plugins.annotation.annotations = annotations;
-
-                // Set min/max for Y-axis for threshold (0-255 based on TH_P1_P9-P12 and TH_P2_P9-P12)
-                const allThresholdLevels = [
-                    ...p1LevelsChartValues,
-                    ...p2LevelsChartValues
-                ];
-                const maxThresholdLevel = allThresholdLevels.length > 0 ? Math.max(...allThresholdLevels) : 255; // Default max is 255 for ADC levels
-
-                // Set max Y-axis for TVG gain (max possible gain is ~90dB + 0.5*64 = 122dB)
-                const maxGainLevel = Math.max(...tvgPointsAbsolute.map(p => p.y), 90); // Min 90 for initial display
-
-                tvgChart.options.scales.y.max = maxGainLevel + 10; // Give some padding
-                tvgChart.options.scales.y1.max = 255; // Always 0-255 for ADC levels
-
-                // Update X-axis min and max dynamically based on calculatedMaxX
-                tvgChart.options.scales.x.min = 0; // Ensure X-axis always starts from 0
-                tvgChart.options.scales.x.max = calculatedMaxX * 1.1; // Add 10% buffer to the max calculated time
-
-                console.log("Calling tvgChart.update()"); // Debug log
+                const allThresholdLevels = [...p1LevelsChartValues, ...p2LevelsChartValues];
+                const maxGainLevel = Math.max(...tvgPointsAbsolute.map(p => p.y), 90);
+                tvgChart.options.scales.y.max = maxGainLevel + 10;
+                tvgChart.options.scales.y1.max = 255;
+                tvgChart.options.scales.x.min = 0;
+                tvgChart.options.scales.x.max = calculatedMaxX * 1.1;
                 tvgChart.update();
             } else {
-                console.log("Initializing chart..."); // Debug log
                 initializeChart(tvgPointsAbsolute, thresholdP1PointsAbsolute, thresholdP2PointsAbsolute, annotations, calculatedMaxX * 1.1);
             }
         }
 
-        /**
-         * Initializes the Chart.js graph.
-         * @param {Array<object>} tvgData - Array of {x, y} objects for TVG.
-         * @param {Array<object>} thresholdP1 - Array of {x, y} objects for Preset 1.
-         * @param {Array<object>} thresholdP2 - Array of {x, y} objects for Preset 2.
-         * @param {object} annotations - Object containing annotation definitions.
-         * @param {number} initialXMax - The initial maximum value for the X-axis.
-         */
         function initializeChart(tvgData, thresholdP1, thresholdP2, annotations, initialXMax) {
             const ctx = document.getElementById('tvgChart').getContext('2d');
             tvgChart = new Chart(ctx, {
-                type: 'line', // Base type is line, but scatter points can be overlaid
+                type: 'line',
                 data: {
                     datasets: [
                         {
@@ -2129,7 +1662,6 @@
                             pointRadius: 5,
                             pointBackgroundColor: 'rgb(75, 192, 192)',
                             showLine: true,
-                            // DragData plugin properties
                             dragData: true,
                             dragX: true,
                             dragY: true,
@@ -2139,12 +1671,11 @@
                             data: thresholdP1,
                             borderColor: 'rgb(255, 99, 132)',
                             backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                            showLine: true, // Connect threshold points
+                            showLine: true,
                             pointRadius: 5,
                             pointBackgroundColor: 'rgb(255, 99, 132)',
-                            type: 'scatter', // Use scatter for individual points
+                            type: 'scatter',
                             yAxisID: 'y1',
-                            // DragData plugin properties
                             dragData: true,
                             dragX: true,
                             dragY: true,
@@ -2154,12 +1685,11 @@
                             data: thresholdP2,
                             borderColor: 'rgb(54, 162, 235)',
                             backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                            showLine: true, // Connect threshold points
+                            showLine: true,
                             pointRadius: 5,
                             pointBackgroundColor: 'rgb(54, 162, 235)',
-                            type: 'scatter', // Use scatter for individual points
+                            type: 'scatter',
                             yAxisID: 'y1',
-                            // DragData plugin properties
                             dragData: true,
                             dragX: true,
                             dragY: true,
@@ -2177,8 +1707,8 @@
                                 display: true,
                                 text: 'Time (µs)'
                             },
-                            min: 0, // Ensure X-axis always starts from 0
-                            max: initialXMax, // Use the passed initialXMax
+                            min: 0,
+                            max: initialXMax,
                         },
                         y: {
                             type: 'linear',
@@ -2188,114 +1718,80 @@
                                 text: 'Gain (dB)'
                             },
                             min: 0,
-                            max: 100 // Initial max, will be updated
+                            max: 100
                         },
                         y1: {
                             type: 'linear',
-                            position: 'right', // Second Y-axis on the right
+                            position: 'right',
                             title: {
                                 display: true,
                                 text: 'ADC Level'
                             },
                             min: 0,
-                            max: 255, // ADC levels typically 0-255 or 0-4095 depending on bit depth
+                            max: 255,
                             grid: {
-                                drawOnChartArea: false // Only draw grid lines for the first y-axis
+                                drawOnChartArea: false
                             }
                         }
                     },
                     plugins: {
                         zoom: {
                             zoom: {
-                                wheel: {
-                                    enabled: true,
-                                },
-                                pinch: {
-                                    enabled: true
-                                },
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
                                 mode: 'xy',
                             },
                             pan: {
                                 enabled: true,
                                 mode: 'xy',
                                 limits: {
-                                    x: {
-                                        min: 0, // Explicitly prevent panning into negative X values
-                                    }
+                                    x: { min: 0 }
                                 }
                             }
                         },
                         annotation: {
                             annotations: annotations
                         },
-                        // DragData plugin configuration
                         dragData: {
                             onDragStart: function(e, datasetIndex, index) {
-                                // Optional: Add visual feedback on drag start
                                 e.target.style.cursor = 'grabbing';
                             },
-                            onDrag: function(e, datasetIndex, index, value) {
-                                // Optional: Update values in real-time during drag
-                                // This can be performance intensive for complex calculations
-                            },
+                            onDrag: function(e, datasetIndex, index, value) {},
                             onDragEnd: function(e, datasetIndex, index, value) {
                                 e.target.style.cursor = 'grab';
-
-                                // Clamp newX and newY to valid ranges
                                 let newX = Math.max(0, value.x);
                                 let newY = value.y;
+                                if (newX > MAX_TIME_US) { newX = MAX_TIME_US; }
 
-                                // Ensure X is within MAX_TIME_US (for snapping, not for chart max)
-                                if (newX > MAX_TIME_US) {
-                                    newX = MAX_TIME_US;
-                                }
-
-                                if (datasetIndex === 0) { // TVG Gain points
+                                if (datasetIndex === 0) {
                                     const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
-                                    newY = snapToTvgGain(newY, afeGainBase); // Snap Y to valid gain step
-
-                                    // Handle TVG points based on index
-                                    if (index === 0) { // Initial point at time 0
-                                        newX = 0; // X must remain 0
+                                    newY = snapToTvgGain(newY, afeGainBase);
+                                    if (index === 0) {
+                                        newX = 0;
                                         tvgPointsAbsolute[0].y = newY;
-                                        tvgPointsAbsolute[1].y = newY; // TVG_T0 also uses initial gain
-                                    } else if (index === 1) { // Point at TVG_T0
-                                        newX = snapToTvgTime(newX); // Snap X to valid TVG time
+                                        tvgPointsAbsolute[1].y = newY;
+                                    } else if (index === 1) {
+                                        newX = snapToTvgTime(newX);
                                         tvgPointsAbsolute[1].x = newX;
                                         tvgPointsAbsolute[1].y = newY;
-                                    } else { // TVG_T1 to TVG_T5 points (index 2 to 6)
-                                        newX = snapToTvgTime(newX); // Snap X to valid TVG time
-                                        // Ensure point doesn't go before previous point
+                                    } else {
+                                        newX = snapToTvgTime(newX);
                                         const prevX = tvgPointsAbsolute[index - 1].x;
-                                        if (newX < prevX) {
-                                            newX = prevX;
-                                        }
+                                        if (newX < prevX) { newX = prevX; }
                                         tvgPointsAbsolute[index].x = newX;
                                         tvgPointsAbsolute[index].y = newY;
                                     }
                                     updateTvgInputsFromAbsoluteData();
-
-                                } else if (datasetIndex === 1 || datasetIndex === 2) { // Threshold P1 or P2 points
+                                } else if (datasetIndex === 1 || datasetIndex === 2) {
                                     const absolutePoints = datasetIndex === 1 ? thresholdP1PointsAbsolute : thresholdP2PointsAbsolute;
-                                    newX = snapToThresholdTime(newX); // Snap X to valid threshold time
-
-                                    // Clamp newY to the overall ADC level range (0-255) for the chart
+                                    newX = snapToThresholdTime(newX);
                                     newY = Math.max(0, Math.min(255, newY));
-
-                                    // Ensure point doesn't go before previous point
                                     const prevX = absolutePoints[index - 1] ? absolutePoints[index - 1].x : 0;
-                                    if (newX < prevX) {
-                                        newX = prevX;
-                                    }
-
+                                    if (newX < prevX) { newX = prevX; }
                                     absolutePoints[index].x = newX;
                                     absolutePoints[index].y = newY;
-
-                                    // After updating the absolute points, update the UI inputs
                                     updateThresholdInputsFromAbsoluteData(datasetIndex === 1 ? 1 : 2);
                                 }
-
-                                // After updating inputs from absolute data, trigger full recalculation
                                 updateAllCalculations();
                             }
                         }
@@ -2304,107 +1800,72 @@
             });
         }
 
-        /**
-         * Updates the TVG input fields based on the current `tvgPointsAbsolute` array.
-         */
         function updateTvgInputsFromAbsoluteData() {
             const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
-
-            // Update GAIN_INIT (from the first point's Y value)
             const initialGainChart = tvgPointsAbsolute[0].y;
             let gainInitVal = Math.round(((initialGainChart - afeGainBase) / 0.5) - 1);
-            gainInitVal = Math.max(0, Math.min(63, gainInitVal)); // Clamp to 0-63
+            gainInitVal = Math.max(0, Math.min(63, gainInitVal));
             document.getElementById('gainInitSlider').value = gainInitVal;
 
-            // Update TVG T0
             const tvgT0_abs_us = tvgPointsAbsolute[1].x;
             const tvgT0_reg_val = tvgTimeInverseMap[snapToTvgTime(tvgT0_abs_us)];
             document.getElementById('tvgT0').value = tvgT0_reg_val;
 
-            // Update TVG T1 to T5 (deltas) and G1 to G5
             for (let i = 1; i <= 5; i++) {
                 const currentPoint = tvgPointsAbsolute[i + 1];
                 const prevPoint = tvgPointsAbsolute[i];
-
-                // Calculate delta time
                 let deltaT = currentPoint.x - prevPoint.x;
-                deltaT = snapToTvgTime(deltaT); // Snap delta to valid TVG time
+                deltaT = snapToTvgTime(deltaT);
                 const tvgT_reg_val = tvgTimeInverseMap[deltaT];
                 document.getElementById(`tvgT${i}`).value = tvgT_reg_val;
 
-                // Calculate G value
                 let gainAtPoint = currentPoint.y;
                 let tvgG_val = Math.round(((gainAtPoint - afeGainBase) / 0.5) - 1);
-                tvgG_val = Math.max(0, Math.min(63, tvgG_val)); // Clamp to 0-63
+                tvgG_val = Math.max(0, Math.min(63, tvgG_val));
                 document.getElementById(`tvgG${i}`).value = tvgG_val;
             }
         }
 
-        /**
-         * Updates the Threshold input fields (P1 or P2) based on the current absolute data.
-         * @param {number} presetNum - 1 for P1, 2 for P2.
-         */
         function updateThresholdInputsFromAbsoluteData(presetNum) {
             const absolutePoints = presetNum === 1 ? thresholdP1PointsAbsolute : thresholdP2PointsAbsolute;
             const thOffInput = document.getElementById(`thP${presetNum}Off`);
             const thOffset = parseInt(thOffInput.value);
 
-            // Update L1 (corresponds to absolutePoints[0] and absolutePoints[1])
             const thrP1LevelInput = document.getElementById(`thrPr${presetNum}P1Level`);
-            let newL1ChartValue = absolutePoints[1].y; // Use absolutePoints[1] for L1's current chart value
+            let newL1ChartValue = absolutePoints[1].y;
             let newL1InputValue;
-            // Reverse offset for L1, then clamp to 0-248 for the input field
             newL1InputValue = newL1ChartValue - thOffset;
             newL1InputValue = Math.max(0, Math.min(248, newL1InputValue));
             thrP1LevelInput.value = newL1InputValue;
 
-
-            // Update T2 to T12 (deltas) and L2 to L12
-            for (let i = 1; i <= 11; i++) { // Loop corresponds to P2 to P12 in UI
-                const currentPoint = absolutePoints[i + 1]; // absolutePoints[2] is L2, absolutePoints[12] is L12
-
-                // Calculate delta time
+            for (let i = 1; i <= 11; i++) {
+                const currentPoint = absolutePoints[i + 1];
                 const prevPoint = absolutePoints[i];
                 let deltaT_us = currentPoint.x - prevPoint.x;
-                deltaT_us = snapToThresholdTime(deltaT_us); // Snap to valid time
-                deltaT_us = Math.max(MIN_THRESHOLD_TIME_US, deltaT_us); // Delta cannot be negative, enforce min time
+                deltaT_us = snapToThresholdTime(deltaT_us);
+                deltaT_us = Math.max(MIN_THRESHOLD_TIME_US, deltaT_us);
 
                 const deltaT_reg_val = thrPxTimeInverseMap[deltaT_us];
                 document.getElementById(`thrPr${presetNum}P${i + 1}Time`).value = deltaT_reg_val;
 
-                // Update Level
-                let newLevelChartValue = currentPoint.y; // This is the actual value on the chart (0-255)
+                let newLevelChartValue = currentPoint.y;
                 let newLevelInputValue;
-
-                // Apply reverse offset and clamp for L1-L8 (which are P1-P8, so (i+1) from 1 to 8)
-                if ((i + 1) >= 1 && (i + 1) <= 8) { // L1 to L8 (5-bit levels in register, but input is 0-248)
-                    newLevelInputValue = newLevelChartValue - thOffset; // Reverse the offset
-                    newLevelInputValue = Math.max(0, Math.min(248, newL1InputValue)); // Clamp to input's 0-248 range
-                } else { // L9-L12 (8-bit levels, direct input)
+                if ((i + 1) >= 1 && (i + 1) <= 8) {
+                    newLevelInputValue = newLevelChartValue - thOffset;
+                    newLevelInputValue = Math.max(0, Math.min(248, newLevelInputValue));
+                } else {
                     newLevelInputValue = newLevelChartValue;
-                    newLevelInputValue = Math.max(0, Math.min(255, newLevelInputValue)); // Clamp to input's 0-255 range
+                    newLevelInputValue = Math.max(0, Math.min(255, newLevelInputValue));
                 }
                 document.getElementById(`thrPr${presetNum}P${i + 1}Level`).value = newLevelInputValue;
             }
         }
 
-
-        /**
-         * Parses the content of a .h file to extract PGA460 register values.
-         * This function relies on a very specific format of the .h file
-         * generated by this tool. Any deviation in format may cause errors.
-         * @param {string} hFileContent - The string content of the .h file.
-         * @returns {object} An object mapping UI element IDs to their corresponding values.
-         */
         function parseHFileContent(hFileContent) {
             const parsedValues = {};
-
-            // Helper to extract hex value from a regex match
             const getHexValue = (match) => parseInt(match[1], 16);
-
-            // --- Parse EEPROM / Transducer Registers ---
-            // DECPL_TEMP
-            let match = hFileContent.match(/\.DECPL_TEMP\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
+            let match;
+            match = hFileContent.match(/\.DECPL_TEMP\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const decplTempReg = getHexValue(match);
                 parsedValues.gainAFE = (decplTempReg >> 6) & 0x3;
@@ -2412,54 +1873,41 @@
                 parsedValues.DECPL_TEMP_SEL = (decplTempReg >> 4) & 0x1;
                 parsedValues.DECPL_T = decplTempReg & 0xF;
             }
-
-            // INIT_GAIN
             match = hFileContent.match(/\.INIT_GAIN\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const initGainReg = getHexValue(match);
                 parsedValues.bpfBwSlider = (initGainReg >> 6) & 0x3;
                 parsedValues.gainInitSlider = initGainReg & 0x3F;
             }
-
-            // CURR_LIM_P1
             match = hFileContent.match(/\.CURR_LIM_P1\.Val\.BitField\.CURR_LIM1\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
-                const currLim1Val = getHexValue(match); // This is already the bitfield value
+                const currLim1Val = getHexValue(match);
                 parsedValues.CURR_LIM1 = currLim1Val;
-                // Need to find DIS_CL from the full register value if it's available, otherwise assume default
                 const fullCurrLimP1Match = hFileContent.match(/\.CURR_LIM_P1\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
                 if (fullCurrLimP1Match) {
                     const fullCurrLimP1Reg = getHexValue(fullCurrLimP1Match);
                     parsedValues.DIS_CL = (fullCurrLimP1Reg >> 7) & 0x1;
                 } else {
-                    parsedValues.DIS_CL = 0; // Default to enabled
+                    parsedValues.DIS_CL = 0;
                 }
             }
-
-            // CURR_LIM_P2
             match = hFileContent.match(/\.CURR_LIM_P2\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const currLimP2Reg = getHexValue(match);
                 parsedValues.lpfCoSlider = (currLimP2Reg >> 6) & 0x3;
                 parsedValues.CURR_LIM2 = currLimP2Reg & 0x3F;
             }
-
-            // REC_LENGTH
             match = hFileContent.match(/\.REC_LENGTH\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const recLengthReg = getHexValue(match);
                 parsedValues.p1RecSlider = (recLengthReg >> 4) & 0xF;
                 parsedValues.p2RecSlider = recLengthReg & 0xF;
             }
-
-            // DSP_SCALE (assuming noiseLevelInput maps to bits 7:3)
             match = hFileContent.match(/\.DSP_SCALE\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const dspScaleReg = getHexValue(match);
-                parsedValues.noiseLevelInput = (dspScaleReg >> 3) & 0x1F; // Extract bits 7:3
+                parsedValues.noiseLevelInput = (dspScaleReg >> 3) & 0x1F;
             }
-
-            // P1_GAIN_CTRL
             match = hFileContent.match(/\.P1_GAIN_CTRL\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const p1GainCtrlReg = getHexValue(match);
@@ -2467,8 +1915,6 @@
                 parsedValues.p1DigGainLr = (p1GainCtrlReg >> 3) & 0x7;
                 parsedValues.p1DigGainSr = p1GainCtrlReg & 0x7;
             }
-
-            // P2_GAIN_CTRL
             match = hFileContent.match(/\.P2_GAIN_CTRL\.Val\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const p2GainCtrlReg = getHexValue(match);
@@ -2477,7 +1923,6 @@
                 parsedValues.p2DigGainSr = p2GainCtrlReg & 0x7;
             }
 
-            // TVG Registers (TVGAIN0 to TVGAIN6)
             for (let i = 0; i <= 5; i++) {
                 match = hFileContent.match(new RegExp(`\\.TVGAIN${i}\\.Val\\.Value\\s*=\\s*(0x[0-9A-Fa-f]{2})`));
                 if (match) {
@@ -2485,78 +1930,48 @@
                     if (i === 0) {
                         parsedValues.tvgT0 = tvgTimeInverseMap[(tvgReg >> 4) & 0xF];
                         parsedValues.tvgT1 = tvgTimeInverseMap[tvgReg & 0xF];
-                    } else if (i >= 1 && i <= 2) { // TVGAIN1, TVGAIN2 (T2-T5)
+                    } else if (i >= 1 && i <= 2) {
                         parsedValues[`tvgT${2*i}`] = tvgTimeInverseMap[(tvgReg >> 4) & 0xF];
                         parsedValues[`tvgT${2*i+1}`] = tvgTimeInverseMap[tvgReg & 0xF];
-                    } else if (i === 3) { // TVGAIN3 (G1, G2 lower)
-                        parsedValues.tvgG1 = (tvgReg >> 2) & 0x3F;
-                        // G2 lower 2 bits are here, need to combine with upper 4 from TVGAIN4
-                        // For now, just store what's here. Full G2 will be set after TVGAIN4.
-                    } else if (i === 4) { // TVGAIN4 (G2 upper, G3 lower)
-                        const tvgG2Upper = (tvgReg >> 4) & 0xF;
-                        // Combine with G2 lower from TVGAIN3. This requires a specific order of parsing.
-                        // For simplicity, let's assume direct setting of G values for now.
-                        // This part is tricky because G2 is split. We'll set the full G2 after parsing both parts.
-                        // For now, just set G3.
-                        parsedValues.tvgG3 = tvgReg & 0xF; // This is only lower 4 bits of G3
-                    } else if (i === 5) { // TVGAIN5 (G3 upper, G4)
-                        const tvgG3Upper = (tvgReg >> 6) & 0x3;
-                        // Combine with G3 lower from TVGAIN4.
-                        parsedValues.tvgG4 = tvgReg & 0x3F;
+                    } else if (i === 3) {
+                        const tvg3 = getHexValue(match);
+                        const tvgG1Val = (tvg3 >> 2) & 0x3F;
+                        const tvgG2Lower = tvg3 & 0x3;
+                        parsedValues.tvgG1 = tvgG1Val;
+                        match = hFileContent.match(/\.TVGAIN4\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
+                        if (match) {
+                            const tvg4 = getHexValue(match);
+                            const tvgG2Upper = (tvg4 >> 4) & 0xF;
+                            parsedValues.tvgG2 = (tvgG2Upper << 2) | tvgG2Lower;
+                            parsedValues.tvgG3 = tvg4 & 0xF;
+                        }
+                    } else if (i === 5) {
+                        const tvg5 = getHexValue(match);
+                        const tvgG3Upper = (tvg5 >> 6) & 0x3;
+                        parsedValues.tvgG3 = (tvgG3Upper << 4) | parsedValues.tvgG3;
+                        parsedValues.tvgG4 = tvg5 & 0x3F;
                     }
                 }
-            }
-            // Special handling for split G2 and G3
-            // Re-read TVGAIN3 and TVGAIN4 if they were found to reconstruct G2 and G3
-            match = hFileContent.match(/\.TVGAIN3\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
-            if (match) {
-                const tvg3 = getHexValue(match);
-                const tvgG1Val = (tvg3 >> 2) & 0x3F;
-                const tvgG2Lower = tvg3 & 0x3;
-                parsedValues.tvgG1 = tvgG1Val;
-
-                match = hFileContent.match(/\.TVGAIN4\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
-                if (match) {
-                    const tvg4 = getHexValue(match);
-                    const tvgG2Upper = (tvg4 >> 4) & 0xF;
-                    parsedValues.tvgG2 = (tvgG2Upper << 2) | tvgG2Lower; // Reconstruct G2
-                    parsedValues.tvgG3 = tvg4 & 0xF; // This is G3 lower 4 bits
-                }
-            }
-            match = hFileContent.match(/\.TVGAIN5\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
-            if (match) {
-                const tvg5 = getHexValue(match);
-                const tvgG3Upper = (tvg5 >> 6) & 0x3;
-                parsedValues.tvgG3 = (tvgG3Upper << 4) | parsedValues.tvgG3; // Reconstruct G3
-                parsedValues.tvgG4 = tvg5 & 0x3F;
             }
             match = hFileContent.match(/\.TVGAIN6\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
             if (match) {
                 const tvg6 = getHexValue(match);
                 parsedValues.tvgG5 = (tvg6 >> 2) & 0x3F;
+                parsedValues.freq_shift = tvg6 & 0x1;
             }
 
-
-            // --- Parse Threshold Registers ---
-            // TH_P1_OFF
             match = hFileContent.match(/\.P1_THR_15\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
-            if (match) {
-                parsedValues.thP1Off = decodeSignedMagnitude4Bit(getHexValue(match));
-            }
-            // TH_P2_OFF
+            if (match) { parsedValues.thP1Off = decodeSignedMagnitude4Bit(getHexValue(match)); }
             match = hFileContent.match(/\.P2_THR_15\.Val\.Value\s*=\s*(0x[0-9A-Fa-f]{2})/);
-            if (match) {
-                parsedValues.thP2Off = decodeSignedMagnitude4Bit(getHexValue(match));
-            }
+            if (match) { parsedValues.thP2Off = decodeSignedMagnitude4Bit(getHexValue(match)); }
 
-            // P1 Times (TH_P1_T1 to TH_P1_T12)
             const p1TimesRegs = [];
             for (let i = 0; i <= 5; i++) {
                 match = hFileContent.match(new RegExp(`\\.P1_THR_${i}\\.Val\\.Value\\s*=\\s*(0x[0-9A-Fa-f]{2})`));
                 if (match) p1TimesRegs.push(getHexValue(match));
             }
             if (p1TimesRegs.length === 6) {
-                parsedValues.thrPr1P1Time = (p1TimesRegs[0] >> 4) & 0xF; // Store the register value (0-15)
+                parsedValues.thrPr1P1Time = (p1TimesRegs[0] >> 4) & 0xF;
                 parsedValues.thrPr1P2Time = p1TimesRegs[0] & 0xF;
                 parsedValues.thrPr1P3Time = (p1TimesRegs[1] >> 4) & 0xF;
                 parsedValues.thrPr1P4Time = p1TimesRegs[1] & 0xF;
@@ -2570,15 +1985,12 @@
                 parsedValues.thrPr1P12Time = p1TimesRegs[5] & 0xF;
             }
 
-            // P1 Levels (TH_P1_L1 to TH_P1_L12) - This is complex due to bit packing and offset
             const p1LevelRegs = [];
             for (let i = 6; i <= 14; i++) {
-                // Check for both .Val.Value and direct assignment for 11-14
                 match = hFileContent.match(new RegExp(`\\.P1_THR_${i}(?:\\.Val\\.Value)?\\s*=\\s*(0x[0-9A-Fa-f]{2})`));
                 if (match) p1LevelRegs.push(getHexValue(match));
             }
-
-            if (p1LevelRegs.length >= 9) { // REG_P1_THR_6 to REG_P1_THR_14
+            if (p1LevelRegs.length >= 9) {
                 const l1Reg = (p1LevelRegs[0] >> 3) & 0x1F;
                 const l2Reg_upper = p1LevelRegs[0] & 0x7;
                 const l2Reg_lower = (p1LevelRegs[1] >> 6) & 0x3;
@@ -2596,7 +2008,6 @@
                 const l11Reg = p1LevelRegs[7];
                 const l12Reg = p1LevelRegs[8];
 
-                // Convert register values back to UI input values
                 parsedValues.thrPr1P1Level = Math.max(0, Math.min(248, l1Reg - parsedValues.thP1Off));
                 parsedValues.thrPr1P2Level = Math.max(0, Math.min(248, ((l2Reg_upper << 2) | l2Reg_lower) - parsedValues.thP1Off));
                 parsedValues.thrPr1P3Level = Math.max(0, Math.min(248, l3Reg - parsedValues.thP1Off));
@@ -2611,8 +2022,6 @@
                 parsedValues.thrPr1P12Level = l12Reg;
             }
 
-
-            // P2 Times (TH_P2_T1 to TH_P2_T12)
             const p2TimesRegs = [];
             for (let i = 0; i <= 5; i++) {
                 match = hFileContent.match(new RegExp(`\\.P2_THR_${i}\\.Val\\.Value\\s*=\\s*(0x[0-9A-Fa-f]{2})`));
@@ -2633,14 +2042,12 @@
                 parsedValues.thrPr2P12Time = p2TimesRegs[5] & 0xF;
             }
 
-            // P2 Levels (TH_P2_L1 to TH_P2_L12) - This is complex due to bit packing and offset
             const p2LevelRegs = [];
             for (let i = 6; i <= 14; i++) {
                 match = hFileContent.match(new RegExp(`\\.P2_THR_${i}(?:\\.Val\\.Value)?\\s*=\\s*(0x[0-9A-Fa-f]{2})`));
                 if (match) p2LevelRegs.push(getHexValue(match));
             }
-
-            if (p2LevelRegs.length >= 9) { // REG_P2_THR_6 to REG_P2_THR_14
+            if (p2LevelRegs.length >= 9) {
                 const l1Reg = (p2LevelRegs[0] >> 3) & 0x1F;
                 const l2Reg_upper = p2LevelRegs[0] & 0x7;
                 const l2Reg_lower = (p2LevelRegs[1] >> 6) & 0x3;
@@ -2658,7 +2065,6 @@
                 const l11Reg = p2LevelRegs[7];
                 const l12Reg = p2LevelRegs[8];
 
-                // Convert register values back to UI input values
                 parsedValues.thrPr2P1Level = Math.max(0, Math.min(248, l1Reg - parsedValues.thP2Off));
                 parsedValues.thrPr2P2Level = Math.max(0, Math.min(248, ((l2Reg_upper << 2) | l2Reg_lower) - parsedValues.thP2Off));
                 parsedValues.thrPr2P3Level = Math.max(0, Math.min(248, l3Reg - parsedValues.thP2Off));
@@ -2676,34 +2082,27 @@
             return parsedValues;
         }
 
-
-        // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Populate all THR Px Time select elements
             for (let i = 1; i <= 12; i++) {
                 populateThrPxTimeSelect(document.getElementById(`thrPr1P${i}Time`));
                 populateThrPxTimeSelect(document.getElementById(`thrPr2P${i}Time`));
             }
 
-            // Get all input elements that should trigger updates
             const inputs = document.querySelectorAll(
                 'input[type="number"], input[type="range"], select'
             );
 
             inputs.forEach(input => {
                 input.addEventListener('input', (event) => {
-                    console.log(`Input changed: ${event.target.id}, value: ${event.target.value}`);
                     updateAllCalculations();
                 });
             });
 
-            // Add event listeners for collapsible sections
             document.querySelectorAll('.container-header').forEach(header => {
                 header.addEventListener('click', () => {
                     const targetId = header.dataset.target;
                     const content = document.getElementById(targetId);
                     const button = header.querySelector('.toggle-button');
-
                     if (content && button) {
                         content.classList.toggle('expanded');
                         button.classList.toggle('expanded');
@@ -2711,169 +2110,85 @@
                 });
             });
 
-            // Initial calculation and chart drawing on page load
             updateAllCalculations();
         });
 
-        // --- Save/Load Settings ---
         document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-            // Generate the .h file content
             let hFileContent = `// This file was automatically generated by the PGA460 Configuration Tool.
-// Do not edit this file manually.
-
 #ifndef PGA460_CONFIG_H
 #define PGA460_CONFIG_H
 
 #include <stdint.h>
-// Assuming PGA460_t and PGA460_THR_t structures are defined elsewhere,
-// e.g., in PGA460_REG.h or a similar definitions file.
 
-// Example structure definitions (replace with your actual definitions if different)
-/*
-typedef struct {
-    uint8_t USER_DATA1;
-    uint8_t USER_DATA2;
-    // ... up to USER_DATA20
-} PGA460_USER_DATA_t;
+const uint8_t PGA460_TRANSDUCER_SETTINGS[] = {
+    // EEPROM Address 0x14-0x2B
+    0x${currentRegisterValues.TVGAIN0.toString(16).toUpperCase().padStart(2, '0')}, // 0x14
+    0x${currentRegisterValues.TVGAIN1.toString(16).toUpperCase().padStart(2, '0')}, // 0x15
+    0x${currentRegisterValues.TVGAIN2.toString(16).toUpperCase().padStart(2, '0')}, // 0x16
+    0x${currentRegisterValues.TVGAIN3.toString(16).toUpperCase().padStart(2, '0')}, // 0x17
+    0x${currentRegisterValues.TVGAIN4.toString(16).toUpperCase().padStart(2, '0')}, // 0x18
+    0x${currentRegisterValues.TVGAIN5.toString(16).toUpperCase().padStart(2, '0')}, // 0x19
+    0x${currentRegisterValues.TVGAIN6.toString(16).toUpperCase().padStart(2, '0')}, // 0x1A
+    0x${currentRegisterValues.INIT_GAIN.toString(16).toUpperCase().padStart(2, '0')}, // 0x1B
+    0x${currentRegisterValues.FREQ.toString(16).toUpperCase().padStart(2, '0')}, // 0x1C
+    0x${currentRegisterValues.DEADTIME.toString(16).toUpperCase().padStart(2, '0')}, // 0x1D
+    0x${currentRegisterValues.PULSE_P1.toString(16).toUpperCase().padStart(2, '0')}, // 0x1E
+    0x${currentRegisterValues.PULSE_P2.toString(16).toUpperCase().padStart(2, '0')}, // 0x1F
+    0x${currentRegisterValues.CURR_LIM_P1.toString(16).toUpperCase().padStart(2, '0')}, // 0x20
+    0x${currentRegisterValues.CURR_LIM_P2.toString(16).toUpperCase().padStart(2, '0')}, // 0x21
+    0x${currentRegisterValues.REC_LENGTH.toString(16).toUpperCase().padStart(2, '0')}, // 0x22
+    0x${currentRegisterValues.FREQ_DIAG.toString(16).toUpperCase().padStart(2, '0')}, // 0x23
+    0x${currentRegisterValues.SAT_FDIAG_TH.toString(16).toUpperCase().padStart(2, '0')}, // 0x24
+    0x${currentRegisterValues.FVOLT_DEC.toString(16).toUpperCase().padStart(2, '0')}, // 0x25
+    0x${currentRegisterValues.DECPL_TEMP.toString(16).toUpperCase().padStart(2, '0')}, // 0x26
+    0x${currentRegisterValues.DSP_SCALE.toString(16).toUpperCase().padStart(2, '0')}, // 0x27
+    0x${currentRegisterValues.TEMP_TRIM.toString(16).toUpperCase().padStart(2, '0')}, // 0x28
+    0x${currentRegisterValues.P1_GAIN_CTRL.toString(16).toUpperCase().padStart(2, '0')}, // 0x29
+    0x${currentRegisterValues.P2_GAIN_CTRL.toString(16).toUpperCase().padStart(2, '0')}, // 0x2A
+    0x${currentRegisterValues.EE_CRC.toString(16).toUpperCase().padStart(2, '0')}  // 0x2B
+};
 
-typedef struct {
-    struct {
-        uint8_t Value;
-        // Add bitfield for TVGAIN0 if needed, e.g.,
-        // struct {
-        //     uint8_t TVG_T0 : 4;
-        //     uint8_t TVG_T1 : 4;
-        // } BitField;
-    } TVGAIN0;
-    // ... other TVG registers
-} PGA460_TVG_t;
+const uint8_t PGA460_THRESHOLD_P1[] = {
+    0x${currentRegisterValues.P1_THR_0.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_1.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_2.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_3.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_4.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_5.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_6.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_7.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_8.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_9.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_10.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_11.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_12.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_13.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_14.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P1_THR_15.toString(16).toUpperCase().padStart(2, '0')}
+};
 
-typedef struct {
-    PGA460_TVG_t TGV;
-    struct { uint8_t Val; } INIT_GAIN;
-    uint8_t FREQ;
-    struct { uint8_t Val; } DEADTIME;
-    struct { uint8_t Val; } PULSE_P1;
-    struct { uint8_t Val; } PULSE_P2;
-    struct {
-        struct {
-            uint8_t CURR_LIM1 : 6;
-            uint8_t Reserved : 1; // Bit 6
-            uint8_t DIS_CL : 1;   // Bit 7
-        } BitField;
-        uint8_t Val; // For direct byte access
-    } CURR_LIM_P1;
-    struct { uint8_t Val; } CURR_LIM_P2;
-    struct { uint8_t Val; } REC_LENGTH;
-    struct { uint8_t Val; } FREQ_DIAG;
-    struct { uint8_t Val; } SAT_FDIAG_TH;
-    struct { uint8_t Val; } FVOLT_DEC;
-    struct { uint8_t Val; } DECPL_TEMP;
-    struct { uint8_t Val; } DSP_SCALE;
-    struct { uint8_t Val; } TEMP_TRIM;
-    struct { uint8_t Val; } P1_GAIN_CTRL;
-    struct { uint8_t Val; } P2_GAIN_CTRL;
-    // uint8_t EE_CRC; // This is read-only, not typically part of a config struct
-} PGA460_EEPROM_t;
+const uint8_t PGA460_THRESHOLD_P2[] = {
+    0x${currentRegisterValues.P2_THR_0.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_1.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_2.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_3.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_4.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_5.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_6.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_7.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_8.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_9.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_10.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_11.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_12.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_13.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_14.toString(16).toUpperCase().padStart(2, '0')},
+    0x${currentRegisterValues.P2_THR_15.toString(16).toUpperCase().padStart(2, '0')}
+};
 
-typedef struct {
-    PGA460_USER_DATA_t USER_DATA;
-    PGA460_EEPROM_t EEPROM;
-} PGA460_t;
+const uint8_t PGA460_THR_CRC = 0x${currentRegisterValues.THR_CRC.toString(16).toUpperCase().padStart(2, '0')};
 
-typedef struct {
-    struct { uint8_t Val; } P1_THR_0;
-    // ... up to P1_THR_15
-    struct { uint8_t Val; } P2_THR_0;
-    // ... up to P2_THR_15
-    uint8_t THR_CRC;
-} PGA460_THR_t;
-*/
-
-
-// PGA460 Transducer Configuration
-PGA460_t transducer = {
-    // User data section (all 0x00 by default from the tool)
-    .USER_DATA = {
-        .USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
-        .USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
-        .USER_DATA9  = 0x00, .USER_DATA10 = 0x00, .USER_DATA11 = 0x00, .USER_DATA12 = 0x00,
-        .USER_DATA13 = 0x00, .USER_DATA14 = 0x00, .USER_DATA15 = 0x00, .USER_DATA16 = 0x00,
-        .USER_DATA17 = 0x00, .USER_DATA18 = 0x00, .USER_DATA19 = 0x00, .USER_DATA20 = 0x00,
-    },
-    .EEPROM = {
-        // Time-Varying Gain (TVG) based on tested setup
-        .TGV = {
-            .TVGAIN0.Val.Value = 0x${currentRegisterValues.TVGAIN0.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN1.Val.Value = 0x${currentRegisterValues.TVGAIN1.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN2.Val.Value = 0x${currentRegisterValues.TVGAIN2.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN3.Val.Value = 0x${currentRegisterValues.TVGAIN3.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN4.Val.Value = 0x${currentRegisterValues.TVGAIN4.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN5.Val.Value = 0x${currentRegisterValues.TVGAIN5.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `            .TVGAIN6.Val.Value = 0x${currentRegisterValues.TVGAIN6.toString(16).toUpperCase().padStart(2, '0')}, // TVG6 includes TVG and FreqShift control\n`;
-            hFileContent += `        },\n`;
-            hFileContent += `        // Initial Gain\n`;
-            hFileContent += `        .INIT_GAIN.Val = 0x${currentRegisterValues.INIT_GAIN.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Transmit Frequency\n`;
-            hFileContent += `        .FREQ = 0x${currentRegisterValues.FREQ.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Deadtime + Comparator Deglitch\n`;
-            hFileContent += `        .DEADTIME.Val = 0x${currentRegisterValues.DEADTIME.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Burst Pulses\n`;
-            hFileContent += `        .PULSE_P1.Val = 0x${currentRegisterValues.PULSE_P1.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .PULSE_P2.Val = 0x${currentRegisterValues.PULSE_P2.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Current Limits\n`;
-            // Note: User's example uses .BitField.CURR_LIM1, so we use the stored individual bitfield value
-            hFileContent += `        .CURR_LIM_P1.Val.BitField.CURR_LIM1 = 0x${currentRegisterValues.CURR_LIM1_BITFIELD.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .CURR_LIM_P2.Val = 0x${currentRegisterValues.CURR_LIM_P2.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Record Length\n`;
-            hFileContent += `        .REC_LENGTH.Val = 0x${currentRegisterValues.REC_LENGTH.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Diagnostics and scaling\n`;
-            hFileContent += `        .FREQ_DIAG.Val = 0x${currentRegisterValues.FREQ_DIAG.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .SAT_FDIAG_TH.Val = 0x${currentRegisterValues.SAT_FDIAG_TH.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .FVOLT_DEC.Val = 0x${currentRegisterValues.FVOLT_DEC.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .DECPL_TEMP.Val = 0x${currentRegisterValues.DECPL_TEMP.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .DSP_SCALE.Val = 0x${currentRegisterValues.DSP_SCALE.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .TEMP_TRIM.Val = 0x${currentRegisterValues.TEMP_TRIM.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        // Gain control for P1 and P2\n`;
-            hFileContent += `        .P1_GAIN_CTRL.Val = 0x${currentRegisterValues.P1_GAIN_CTRL.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `        .P2_GAIN_CTRL.Val = 0x${currentRegisterValues.P2_GAIN_CTRL.toString(16).toUpperCase().padStart(2, '0')},\n`;
-            hFileContent += `    }\n`;
-            hFileContent += `};\n\n`;
-
-            // PGA460_THR_t THRESHOLD_CC_STRUCT structure
-            hFileContent += `// PGA460 Threshold Configuration\n`;
-            hFileContent += `const PGA460_THR_t THRESHOLD_CC_STRUCT = {\n`;
-            // P1 Thresholds
-            for (let i = 0; i <= 15; i++) {
-                const regName = `P1_THR_${i}`;
-                const hexVal = currentRegisterValues[regName].toString(16).toUpperCase().padStart(2, '0');
-                if (i >= 11 && i <= 14) { // P1_THR_11 to P1_THR_14 are direct values
-                    hFileContent += `    .${regName}           = 0x${hexVal}, `;
-                } else {
-                    hFileContent += `    .${regName}.Val.Value = 0x${hexVal}, `;
-                }
-                if ((i + 1) % 4 === 0 || i === 15) {
-                    hFileContent += '\n';
-                }
-            }
-            hFileContent += '\n';
-            // P2 Thresholds
-            for (let i = 0; i <= 15; i++) {
-                const regName = `P2_THR_${i}`;
-                const hexVal = currentRegisterValues[regName].toString(16).toUpperCase().padStart(2, '0');
-                if (i >= 11 && i <= 14) { // P2_THR_11 to P2_THR_14 are direct values
-                    hFileContent += `    .${regName}           = 0x${hexVal}, `;
-                } else {
-                    hFileContent += `    .${regName}.Val.Value = 0x${hexVal}, `;
-                }
-                if ((i + 1) % 4 === 0 || i === 15) {
-                    hFileContent += '\n';
-                }
-            }
-            hFileContent += `    .THR_CRC             = 0x${currentRegisterValues.THR_CRC.toString(16).toUpperCase().padStart(2, '0')}\n`;
-            hFileContent += `};\n\n`;
-            hFileContent += `#endif // PGA460_CONFIG_H\n`;
-
+#endif // PGA460_CONFIG_H`;
 
             const blob = new Blob([hFileContent], { type: 'text/x-csrc' });
             const url = URL.createObjectURL(blob);
@@ -2884,7 +2199,6 @@ PGA460_t transducer = {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            // Replaced alert with a simple console log for Canvas environment
             console.log("PGA460 configuration saved to pga460_config.h");
         });
 
@@ -2905,18 +2219,15 @@ PGA460_t transducer = {
                             const input = document.getElementById(id);
                             if (input) {
                                 input.value = parsedSettings[id];
-                                // Trigger input event for elements that need it (e.g., selects, ranges)
                                 input.dispatchEvent(new Event('input', { bubbles: true }));
                             } else {
                                 console.warn(`UI element with ID '${id}' not found for loading.`);
                             }
                         }
-                        updateAllCalculations(); // Recalculate everything after loading
-                        // Replaced alert with a simple console log for Canvas environment
+                        updateAllCalculations();
                         console.log("Settings loaded successfully from .h file.");
                     } catch (error) {
                         console.error('Failed to load settings: Error parsing .h file.', error);
-                        // Replaced alert with a simple console log for Canvas environment
                         console.error('Failed to load settings: Please ensure it is a valid .h file generated by this tool.');
                     }
                 };
@@ -2930,22 +2241,19 @@ PGA460_t transducer = {
             }
         });
 
-        // --- New Function: Set All to Minimum ---
         document.getElementById('setMinValuesBtn').addEventListener('click', () => {
-            // Set THR Px Time selects to their minimum (100 µs, which is value 0)
             for (let i = 1; i <= 12; i++) {
                 const p1TimeSelect = document.getElementById(`thrPr1P${i}Time`);
                 if (p1TimeSelect) {
-                    p1TimeSelect.value = 0; // Corresponds to 100 µs
+                    p1TimeSelect.value = 0;
                     p1TimeSelect.dispatchEvent(new Event('input', { bubbles: true }));
                 }
                 const p2TimeSelect = document.getElementById(`thrPr2P${i}Time`);
                 if (p2TimeSelect) {
-                    p2TimeSelect.value = 0; // Corresponds to 100 µs
+                    p2TimeSelect.value = 0;
                     p2TimeSelect.dispatchEvent(new Event('input', { bubbles: true }));
                 }
 
-                // Also set THR Px Levels to their minimum (0)
                 const p1LevelInput = document.getElementById(`thrPr1P${i}Level`);
                 if (p1LevelInput) {
                     p1LevelInput.value = p1LevelInput.min;
@@ -2957,8 +2265,6 @@ PGA460_t transducer = {
                     p2LevelInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
-
-            // Then, handle all other number and range inputs
             const inputs = document.querySelectorAll(
                 'input[type="number"]:not([id^="thrPr1P"][id$="Time"]):not([id^="thrPr2P"][id$="Time"]):not([id^="thrPr1P"][id$="Level"]):not([id^="thrPr2P"][id$="Level"]), input[type="range"]'
             );
@@ -2967,23 +2273,16 @@ PGA460_t transducer = {
                 if (!isNaN(minValue)) {
                     input.value = minValue;
                 } else {
-                    if (input.type === 'number') {
-                        input.value = 0;
-                    } else if (input.type === 'range') {
-                        input.value = 0;
-                    }
+                    if (input.type === 'number') { input.value = 0; } 
+                    else if (input.type === 'range') { input.value = 0; }
                 }
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             });
-
-            // Set TH_P1_OFF and TH_P2_OFF to their minimum (-8)
             document.getElementById('thP1Off').value = document.getElementById('thP1Off').min;
             document.getElementById('thP1Off').dispatchEvent(new Event('input', { bubbles: true }));
             document.getElementById('thP2Off').value = document.getElementById('thP2Off').min;
             document.getElementById('thP2Off').dispatchEvent(new Event('input', { bubbles: true }));
 
-
-            // Finally, handle all select elements (excluding the THR Px Time selects already handled)
             const selects = document.querySelectorAll('select:not([id^="thrPr1P"][id$="Time"]):not([id^="thrPr2P"][id$="Time"])');
             selects.forEach(select => {
                 if (select.options.length > 0) {
@@ -2992,7 +2291,7 @@ PGA460_t transducer = {
                 select.dispatchEvent(new Event('input', { bubbles: true }));
             });
 
-            updateAllCalculations(); // Final update after all values are set
+            updateAllCalculations();
             console.log("All input values set to their minimums.");
         });
     </script>
