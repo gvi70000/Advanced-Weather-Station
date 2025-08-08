@@ -452,7 +452,6 @@
             </div>
         </div>
     </div>
-
     <div class="collapsible-container">
         <div class="container-header" data-target="transducerGainContent">
             <h2>Transducer & Gain Settings</h2>
@@ -461,79 +460,10 @@
         <div id="transducerGainContent" class="collapsible-content">
             <div class="echo-parameters-grid">
                 <div class="threshold-inputs-row">
+					<!-- TVGAIN0 Register (Address = 14h)
+					TVG_T0 Bits 7:4 Time varying gain Start time parameter. -->
                     <div class="input-group">
-                        <label for="gainAFE">AFE_GAIN_RNG</label>
-                        <select id="gainAFE">
-                            <option value="0">58 to 90 dB</option>
-                            <option value="1">52 to 84 dB</option>
-                            <option value="2">46 to 78 dB</option>
-                            <option value="3">32 to 64 dB</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="LPM_EN">LPM_EN</label>
-                        <select id="LPM_EN">
-                            <option value="0">Low power OFF</option>
-                            <option value="1">Low power ON</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="DECPL_TEMP_SEL">DECPL_TEMP_SEL</label>
-                        <select id="DECPL_TEMP_SEL">
-                            <option value="0">Time Decouple</option>
-                            <option value="1">Temperature Decouple</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="DECPL_T">DECPL_T</label>
-                        <input type="number" id="DECPL_T" value="0" min="0" max="15" step="1">
-                    </div>
-                    <div class="control-group">
-                        <label for="gainInitSlider">GAIN_INIT</label>
-                        <input type="range" id="gainInitSlider" min="0" max="63" step="1" value="0">
-                        <div class="control-value" id="gainInitValue">0</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="bpfBwSlider">BPF Bandwidth (kHz)</label>
-                        <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
-                        <div class="control-value" id="bpfBwValue">2 kHz</div>
-                    </div>
-                    <div class="input-group">
-                        <label for="DIS_CL">DIS_CL</label>
-                        <select id="DIS_CL">
-                            <option value="0">Enable current limit</option>
-                            <option value="1">Disable current limit</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="threshold-inputs-row">
-                    <div class="control-group">
-                        <label for="CURR_LIM1">CURR_LIM1</label>
-                        <input type="range" id="CURR_LIM1" min="0" max="63" step="1" value="0">
-                        <div class="control-value" id="CURR_LIM1Value">0</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="lpfCoSlider">LPF Cutoff (kHz)</label>
-                        <input type="range" id="lpfCoSlider" min="0" max="3" step="1" value="0">
-                        <div class="control-value" id="lpfCoValue">1 kHz</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="CURR_LIM2">CURR_LIM2</label>
-                        <input type="range" id="CURR_LIM2" min="0" max="63" step="1" value="0">
-                        <div class="control-value" id="CURR_LIM2Value">0</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="p1RecSlider">P1 Record Time</label>
-                        <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
-                        <div class="control-value" id="p1RecValue">0 (0 µs)</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="p2RecSlider">P2 Record Time</label>
-                        <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
-                        <div class="control-value" id="p2RecValue">0 (0 µs)</div>
-                    </div>
-                    <div class="input-group">
-                        <label for="tvgT0">TVG T0</label>
+                        <label for="tvgT0" style="color: blue;">TVG T0 7:4</label>
                         <select id="tvgT0">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -553,8 +483,10 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+					<!-- TVGAIN0 Register (Address = 14h)
+					TVG_T1 Bits 3:0 Time Varying Gain T0/T1 Delta Time. -->
                     <div class="input-group">
-                        <label for="tvgT1">TVG T1</label>
+                        <label for="tvgT1" style="color: blue;">TVG T1 3:0</label>
                         <select id="tvgT1">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -574,10 +506,10 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
-                </div>
-                <div class="threshold-inputs-row">
+					<!-- TVGAIN1 Register (Address = 15h)
+					TVG_T2 Bits 7:4 Time Varying Gain T1/T2 Delta Time. -->
                     <div class="input-group">
-                        <label for="tvgT2">TVG T2</label>
+                        <label for="tvgT2" style="color: red;">TVG T2 7:4</label>
                         <select id="tvgT2">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -597,8 +529,10 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+					<!-- TVGAIN1 Register (Address = 15h)
+					TVG_T3 Bits 3:0 Time Varying Gain T2/T3 Delta Time. -->
                     <div class="input-group">
-                        <label for="tvgT3">TVG T3</label>
+                        <label for="tvgT3" style="color: red;">TVG T3 3:0</label>
                         <select id="tvgT3">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -618,8 +552,10 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+					<!-- TVGAIN2 Register (Address = 16h)
+					TVG_T4 Bits 7:4 Time Varying Gain T3/T4 Delta Time. -->
                     <div class="input-group">
-                        <label for="tvgT4">TVG T4</label>
+                        <label for="tvgT4" style="color: blue;">TVG T4 7:4</label>
                         <select id="tvgT4">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -639,8 +575,10 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+					<!-- TVGAIN2 Register (Address = 16h)
+					TVG_T5 Bits 3:0 Time Varying Gain T4/T5 Delta Time. -->
                     <div class="input-group">
-                        <label for="tvgT5">TVG T5</label>
+                        <label for="tvgT5" style="color: blue;">TVG T5 3:0</label>
                         <select id="tvgT5">
                             <option value="0">100 µs</option>
                             <option value="1">200 µs</option>
@@ -660,151 +598,341 @@
                             <option value="15">8000 µs</option>
                         </select>
                     </div>
+					<!-- TVGAIN3 Register (Address = 17h)
+					TVG_G1 Bits 7:2 TVG Point 1 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G2 Bits 1:0 TVG Point 2 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVGAIN4 Register (Address = 18h)
+					TVG_G2 Bits 7:4 TVG Point 2 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G3 Bits 3:0 TVG Point 3 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVGAIN5 Register (Address = 19h)
+					TVG_G3 Bits 7:6 TVG Point 3 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G4 Bits 5:0 TVG Point 4 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]	
+					TVGAIN6 Register (Address = 1Ah)
+					TVG_G5 Bits 7:2 TVG Point 5 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					Where value(AFE_GAIN_RNG) is the corresponding value in dB for bits set for AFE_GAIN_RNG in DECPL_TEMP register
+					RESERVED Bits 1
+					FREQ_SHIFT Bits 0 Burst Frequency Range Shift: 0b = Disabled 1b = Enabled, active frequency = 6 × frequency result from
+					calculation using equation given in the FREQUENCY register -->
                     <div class="input-group">
-                        <label for="tvgG1">TVG G1</label>
+                        <label for="tvgG1" style="color: red;">TVG G1 7:2</label>
                         <input type="number" id="tvgG1" value="0" min="0" max="63" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="tvgG2">TVG G2</label>
-                        <input type="number" id="tvgG2" value="0" min="0" max="63" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="tvgG3">TVG G3</label>
-                        <input type="number" id="tvgG3" value="0" min="0" max="63" step="1">
                     </div>
                 </div>
                 <div class="threshold-inputs-row">
                     <div class="input-group">
-                        <label for="tvgG4">TVG G4</label>
+                        <label for="tvgG2" style="color: blue;">TVG G2 1:0/7:4</label>
+                        <input type="number" id="tvgG2" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="tvgG3" style="color: red;">TVG G3 3:0/7:6</label>
+                        <input type="number" id="tvgG3" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="tvgG4" style="color: blue;">TVG G4 5:0</label>
                         <input type="number" id="tvgG4" value="0" min="0" max="63" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="tvgG5">TVG G5</label>
+                        <label for="tvgG5" style="color: red;">TVG G5 7:2</label>
                         <input type="number" id="tvgG5" value="0" min="0" max="63" step="1">
                     </div>
                     <div class="input-group">
-                        <label for="freq_shift">FREQ SHIFT</label>
+                        <label for="freq_shift" style="color: red;">FREQ SHIFT 0</label>
                         <select id="freq_shift">
                             <option value="0">Disabled</option>
                             <option value="1">Enabled</option>
                         </select>
                     </div>
+					<!-- INIT_GAIN Register (Address = 1Bh)
+					BPF_BW Bits 7:6 Digital bandpass filter bandwidth: BandWidth = 2 × (BPF_BW + 1) [kHz]
+					GAIN_INIT Bits 5:0 Initial AFE Gain: Init_Gain = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
+					Where value(AFE_GAIN_RNG) is the corresponding value in dB for bits set for AFE_GAIN_RNG in DECPL_TEMP register -->
                     <div class="control-group">
-                        <label for="frequencySlider">Frequency</label>
+                        <label for="bpfBwSlider" style="color: blue;">BPF Bandwidth (kHz) 7:6</label>
+                        <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
+                        <div class="control-value" id="bpfBwValue">2 kHz</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="gainInitSlider" style="color: blue;">GAIN_INIT 5:0</label>
+                        <input type="range" id="gainInitSlider" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="gainInitValue">0</div>
+                    </div>
+                </div>
+					<!-- FREQUENCY Register (Address = 1Ch)
+					FREQ Bits 7:0 Burst frequency equation parameter: Frequency = 0.2 × FREQ + 30 [kHz]
+					The valid FREQ parameter value range is from 0 to 250 (00h to FAh) -->
+                <div class="threshold-inputs-row">
+                    <div class="control-group">
+                        <label for="frequencySlider" style="color: blue;">Frequency 7:0</label>
                         <input type="range" id="frequencySlider" min="0" max="250" step="1" value="0">
                         <div class="control-value" id="frequencyValue">0 (30 kHz)</div>
                     </div>
+					<!-- DEADTIME Register (Address = 1Dh)
+					THR_CMP_DEGLTCH Bits 7:4 Threshold level comparator deglitch period: deglitch period = (THR_CMP_DEGLITCH × 8) [μs]
+					PULSE_DT Bits 3:0 Burst Pulse Dead-Time: DeadTime = 0.0625 × PULSE_DT[μs] -->
                     <div class="control-group">
-                        <label for="deglitchPeriodSlider">Deglitch period</label>
+                        <label for="deglitchPeriodSlider" style="color: red;">Deglitch period 7:4</label>
                         <input type="range" id="deglitchPeriodSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="deglitchPeriodValue">0 (0 µs)</div>
                     </div>
                     <div class="control-group">
-                        <label for="pulseDeadTimeSlider">Pulse dead Time</label>
+                        <label for="pulseDeadTimeSlider" style="color: red;">Pulse dead Time 3:0</label>
                         <input type="range" id="pulseDeadTimeSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="pulseDeadTimeValue">0 (0 µs)</div>
                     </div>
+					<!-- PULSE_P1 Register (Address = 1Eh)
+					IO_IF_SEL Bits 7 Interface Selection on IO pin: 0b = Time-Based Interface 1b = One-Wire UART Interface
+					UART_DIAG Bits 6 UART Diagnostic Page Selection: 0b = Diagnostic bits related to UART interface 1b = Diagnostic bits related to System Diagnostics
+					IO_DIS Bits 5 Disable IO pin transceiver: 0b = IO transceiver enabled 1b = IO transceiver disabled Note: Available only if IO_IF_SEL = 0
+					P1_PULSE Bits 4:0 Number of burst pulses for Preset1 Note: 0h means one pulse is generated on OUTA only -->
                     <div class="input-group">
-                        <label for="interface">Interface</label>
+                        <label for="interface" style="color: blue;">Interface 7</label>
                         <select id="interface">
                             <option value="0">Time-Based</option>
                             <option value="1">UART/OneWire</option>
                         </select>
                     </div>
-                </div>
-                <div class="threshold-inputs-row">
                     <div class="input-group">
-                        <label for="diagnostic">Diagnostic</label>
+                        <label for="diagnostic" style="color: blue;">Diagnostic 6</label>
                         <select id="diagnostic">
                             <option value="0">UART</option>
                             <option value="1">System</option>
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="transceiver">Transceiver</label>
+                        <label for="transceiver" style="color: blue;">Transceiver 5</label>
                         <select id="transceiver">
                             <option value="0">Enabled</option>
                             <option value="1">Disabled</option>
                         </select>
                     </div>
                     <div class="control-group">
-                        <label for="p1nSlider">P1 PULSE</label>
+                        <label for="p1nSlider" style="color: blue;">P1 PULSE 4:0</label>
                         <input type="range" id="p1nSlider" min="0" max="15" step="1" value="0">
                     </div>
+                </div>
+					<!-- PULSE_P2 Register (Address = 1Fh)
+					UART_ADDR Bits 7:5 UART interface address
+					P2_PULSE Bits 4:0 Number of burst pulses for Preset2 Note: 0h means one pulse is generated on OUTA only -->
+                <div class="threshold-inputs-row">
                     <div class="control-group">
-                        <label for="uartAddrSlider">UART Addr</label>
+                        <label for="uartAddrSlider" style="color: red;">UART Addr 7:5</label>
                         <input type="range" id="uartAddrSlider" min="0" max="7" step="1" value="0">
                         <div class="control-value" id="uartAddrValue">0</div>
                     </div>
                     <div class="control-group">
-                        <label for="p2nSlider">P2 PULSE</label>
+                        <label for="p2nSlider" style="color: red;">P2 PULSE 4:0</label>
                         <input type="range" id="p2nSlider" min="0" max="15" step="1" value="0">
                     </div>
+					<!-- CURR_LIM_P1 Register (Address = 20h)
+					DIS_CL Bits 7 Disable Current Limit for Preset1 and Preset2 0b = current limit enabled 1b = current limit disabled
+					CURR_LIM1 Bits 5:0 Driver Current Limit for Preset1 Current_Limit = 7 × CURR_LIM1 + 50 [mA] -->
                     <div class="input-group">
-                        <label for="currentLim">Current Limit</label>
-                        <select id="currentLim">
-                            <option value="0">Enabled</option>
-                            <option value="1">Disabled</option>
+                        <label for="DIS_CL" style="color: blue;">DIS_CL 7</label>
+                        <select id="DIS_CL">
+                            <option value="0">Enable current limit</option>
+                            <option value="1">Disable current limit</option>
                         </select>
                     </div>
                     <div class="control-group">
-                        <label for="currentP1Slider">P1 Current</label>
-                        <input type="range" id="currentP1Slider" min="0" max="63" step="1" value="0">
-                        <div class="control-value" id="currentP1Value">0 (50mA)</div>
+                        <label for="CURR_LIM1" style="color: blue;">CURR_LIM1 5:0</label>
+                        <input type="range" id="CURR_LIM1" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="CURR_LIM1Value">0</div>
+                    </div>
+					<!-- CURR_LIM_P2 Register (Address = 21h)
+					LPF_CO Bits 7:6 Lowpass filter cutoff frequency: Cut off frequency = LPF_CO + 1 [kHz]
+					CURR_LIM1 Bits 5:0 Driver Current Limit for Preset2 Current_Limit = 7 × CURR_LIM2 + 50 [mA] -->
+                    <div class="control-group">
+                        <label for="lpfCoSlider" style="color: red;">LPF Cutoff (kHz) 7:6</label>
+                        <input type="range" id="lpfCoSlider" min="0" max="3" step="1" value="0">
+                        <div class="control-value" id="lpfCoValue">1 kHz</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="CURR_LIM2" style="color: red;">CURR_LIM2 5:0</label>
+                        <input type="range" id="CURR_LIM2" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="CURR_LIM2Value">0</div>
+                    </div>
+					<!-- REC_LENGTH Register (Address = 22h)
+					P1_REC Bits 7:4 Preset1 record time length: Record time = 4.096 × (P1_REC + 1) [ms]
+					P2_REC Bits 3:0 Preset2 record time length: Record time = 4.096 × (P1_REC + 1) [ms] -->
+                    <div class="control-group">
+                        <label for="p1RecSlider" style="color: blue;">P1 Record Time 7:4</label>
+                        <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p1RecValue">0 (0 µs)</div>
                     </div>
                 </div>
-                <div class="threshold-inputs-row">
+				<div class="threshold-inputs-row">
                     <div class="control-group">
-                        <label for="lpfSlider">LowPass CutOff</label>
-                        <input type="range" id="lpfSlider" min="0" max="3" step="1" value="0">
-                        <div class="control-value" id="lpfValue">0 (1kHz)</div>
+                        <label for="p2RecSlider" style="color: blue;">P2 Record Time 3:0</label>
+                        <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p2RecValue">0 (0 µs)</div>
                     </div>
+					<!-- FREQ_DIAG Register (Address = 23h)
+					FDIAG_LEN Bits 7:4 Frequency diagnostic window length: For value 0h, the diagnostic is disabled.
+					For values 0 to Fh, the window length is given by 3 × FDIAG_LEN [Signal Periods]
+					FDIAG_START Bits 3:0 Frequency diagnostic start time: Start time = 100 × FDIAG_START [μs]
+					Note: this time is relative to the end-of-burst time -->
                     <div class="control-group">
-                        <label for="currentP2Slider">P2 Current</label>
-                        <input type="range" id="currentP2Slider" min="0" max="63" step="1" value="0">
-                        <div class="control-value" id="currentP2Value">0 (50mA)</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="p1LenSlider">P1 Rec Len</label>
-                        <input type="range" id="p1LenSlider" min="0" max="15" step="1" value="0">
-                        <div class="control-value" id="p1LenValue">0 (4096 µs)</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="p2LenSlider">P2 Rec Len</label>
-                        <input type="range" id="p2LenSlider" min="0" max="15" step="1" value="0">
-                        <div class="control-value" id="p2LenValue">0 (4096 µs)</div>
-                    </div>
-                    <div class="control-group">
-                        <label for="fDiagWinSlider">f Diag Window</label>
+                        <label for="fDiagWinSlider" style="color: red;">Window Len 7:4</label>
                         <input type="range" id="fDiagWinSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="fDiagWinValue">0 (0 T)</div>
                     </div>
                     <div class="control-group">
-                        <label for="fDiagLenSlider">f Diag Len</label>
+                        <label for="fDiagLenSlider" style="color: red;">StartTime 3:0</label>
                         <input type="range" id="fDiagLenSlider" min="0" max="15" step="1" value="0">
                         <div class="control-value" id="fDiagLenValue">0 (0 µs)</div>
                     </div>
-                </div>
-            </div>
-            <div class="registry-summary" id="transducer-summary">
-            </div>
-        </div>
-    </div>
-
-    <div class="collapsible-container">
-        <div class="container-header" data-target="thresholdP1Content">
-            <h2>Threshold & Digital Gain Settings (Preset 1)</h2>
-            <button class="toggle-button">▼</button>
-        </div>
-        <div id="thresholdP1Content" class="collapsible-content">
-            <div class="echo-parameters-grid">
-                <div class="threshold-inputs-row">
-                    <div class="input-group">
-                        <label for="thP1Off">TH_P1_OFF</label>
-                        <input type="number" id="thP1Off" value="-8" min="-8" max="7" step="1">
+					<!-- SAT_FDIAG_TH Register (Address = 24h)
+					FDIAG_ERR_TH Bits 7:5 Frequency diagnostic absolute error time threshold: threshold = (FDIAG_ERR_TH + 1) [μs]
+					SAT_TH Bits 4:1 Saturation diagnostic threshold level.
+					P1_NLS_EN Bits 0 Set high to enable Preset1 non-linear scaling -->
+                    <div class="control-group">
+                        <label for="fDiagThrSlider" style="color: blue;">f Diagnostic THR 7:5</label>
+                        <input type="range" id="fDiagThrSlider" min="0" max="7" step="1" value="0">
+                        <div class="control-value" id="fDiagThrSlider">0 (1 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="satThrSlider" style="color: blue;">Saturation THR 4:1</label>
+                        <input type="range" id="satThrSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="satThrSlider">0</div>
                     </div>
                     <div class="input-group">
-                        <label for="p1DigGainLrSt">P1_DIG_GAIN_LR_ST</label>
+                        <label for="nlP1Scaling" style="color: blue;">P1 NL Scaling 0</label>
+                        <select id="nlP1Scaling">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>
+					<!-- FVOLT_DEC Register (Address = 25h)
+					P2_NLS_EN Bits 7 Set high to enable Preset2 non-linear scaling
+					VPWR_OV_TH Bits 6:5 VPWR over voltage threshold select: 00b = 12.3V 01b = 17.7V 10b = 22.8V 11b = 28.3V
+					LPM_TMR Bits 4:3 Low power mode enter time:00b = 250 ms 01b = 500 ms 10b = 1 s11b = 4s
+					FVOLT_ERR_TH Bits 2:0 See section on System Diagnostics for Voltage diagnostic measurement: 1 to 8 -->
+                    <div class="input-group">
+                        <label for="nlP2Scaling" style="color: red;">P2 NL Scaling 7</label>
+                        <select id="nlP2Scaling">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>	
+            </div>
+				<div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="ovThr" style="color: red;">Over Voltage 6:5</label>
+                        <select id="ovThr">
+                            <option value="0">12.3V</option>
+                            <option value="1">17.7V</option>
+                            <option value="2">22.8V</option>
+                            <option value="1">28.3V</option>
+                        </select>
+                    </div>	
+                    <div class="input-group">
+                        <label for="lpTimer" style="color: red;">LP Timer 4:3</label>
+                        <select id="lpTimer">
+                            <option value="0">250ms</option>
+                            <option value="1">500ms</option>
+                            <option value="2">1s</option>
+                            <option value="3">4s</option>
+                        </select>
+                    </div>	
+                    <div class="input-group">
+                        <label for="voltageDiagnostic" style="color: red;">V Diagnostic 2:0</label>
+                        <select id="voltageDiagnostic">
+                            <option value="0">1</option>
+                            <option value="1">2</option>
+                            <option value="2">3</option>
+                            <option value="3">4</option>
+                            <option value="4">5</option>
+                            <option value="5">6</option>
+                            <option value="6">7</option>
+                            <option value="7">8</option>
+                        </select>
+                    </div>	
+					<!-- DECPL_TEMP Register (Address = 26h)
+					AFE_GAIN_RNG Bits 7:6 AFE gain range selection codes: 00b = 58 to 90dB 01b = 52 to 84dB 10b = 46 to 78dB 11b = 32 to 64dB
+					LPM_EN Bits 5 PGA460 Low Power Mode Enable: 0b = Low power mode is disabled 1b = Low power mode is enabled
+					DECPL_TEMP_SEL Bits 4 Decouple Time / Temperature Select: 0b = Time Decouple 1b = Temperature Decouple
+					DECPL_T Bits 3:0 Secondary decouple time / temperature decouple If DECPL_TEMP_SEL = 0 (Time Decouple) Time = 4096 × (DECPL_T + 1) [μs]
+					If DECPL_TEMP_SEL = 1 (Temperature Decouple) Temperature = 10 × DECPL_T - 40 [degC] -->
+                    <div class="input-group">
+                        <label for="gainAFE" style="color: blue;">Gain Range 7:6</label>
+                        <select id="gainAFE">
+                            <option value="0">58 to 90 dB</option>
+                            <option value="1">52 to 84 dB</option>
+                            <option value="2">46 to 78 dB</option>
+                            <option value="3">32 to 64 dB</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="LPM_EN" style="color: blue;">Low Power 5</label>
+                        <select id="LPM_EN">
+                            <option value="0">Low power OFF</option>
+                            <option value="1">Low power ON</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="DECPL_TEMP_SEL" style="color: blue;">Decouple Mode 4</label>
+                        <select id="DECPL_TEMP_SEL">
+                            <option value="0">Time</option>
+                            <option value="1">Temperature</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="DECPL_T" style="color: blue;">Decouple Time 3:0</label>
+                        <input type="number" id="DECPL_T" value="0" min="0" max="15" step="1">
+                    </div>
+			</div>
+			<div class="threshold-inputs-row">	
+					<!-- DSP_SCALE Register (Address = 27h) [reset = 0h]
+					NOISE_LVL Bits 7:3 Value ranges from 0 to 31 with 1 LSB steps for digital gain values (Px_DIG_GAIN_LR) less than 8
+					If digital gain (Px_DIG_GAIN_LR) is larger than 8, then multiply the NOISE_LVL by Px_DIG_GAIN_LR/8
+					SCALE_K Bits 2 Non-Linear scaling exponent selection: 0b = 1.50 1b = 2.00
+					SCALE_N Bits 1:0 Selects the starting threshold level point from which the non-linear
+					gain (if enabled) is applied: 00b = TH9 01b = TH10 10b = TH11 11b = TH12 -->			
+                    <div class="control-group">
+                        <label for="noiseLvlSlider" style="color: red;">Noise Level 7:3</label>
+                        <input type="range" id="noiseLvlSlider" min="0" max="31" step="1" value="0">
+                        <div class="control-value" id="noiseLvlSlider">0 (1 µs)</div>
+                    </div>
+					<div class="input-group">
+                        <label for="SCALE_K" style="color: red;">Scale K 2</label>
+                        <select id="SCALE_K">
+                            <option value="0">1.5</option>
+                            <option value="1">2.0</option>
+                        </select>
+                    </div>
+					<div class="input-group">
+                        <label for="SCALE_N" style="color: red;">Scale N 1:0</label>
+                        <select id="SCALE_N">
+                            <option value="0">TH9</option>
+                            <option value="1">TH10</option>
+							<option value="1">TH11</option>
+							<option value="1">TH12</option>
+                        </select>
+                    </div>
+					<!-- TEMP_TRIM Register (Address = 28h)
+					TEMP_GAIN Bits 7:4 Temperature scaling gain: signed value can range from -8 (1000b) to 7 (0111b) used for
+					measured temperature value compensation
+					TEMP_OFF Bits 3:0 Temperature Scaling Offset: signed value can range from -8 (1000b) to 7 (0111b) used for
+					measured temperature value compensation -->
+					<div class="input-group">
+                        <label for="temperatureGain" style="color: blue;">Temp Gain</label>
+                        <input type="number" id="temperatureGain" value="-8" min="-8" max="7" step="1">
+                    </div>
+
+					<div class="input-group">
+                        <label for="temperatureOffset" style="color: blue;">Temp Offset</label>
+                        <input type="number" id="temperatureOffset" value="-8" min="-8" max="7" step="1">
+                    </div>
+					<!-- P1_GAIN_CTRL Register (Address = 29h)
+					P1_DIG_GAIN_LR_ST Bits 7:6 Selects the starting Preset1 threshold level point from which the long range (LR) digital gain
+					P1_DIG_GAIN_LR, is applied 00b = TH9 01b = TH10 10b = TH11 11b = TH12
+					P1_DIG_GAIN_LR Bits 5:3 Preset1 Digital long range (LR) gain applied from the selected long
+					range threshold level point to the end of the record period Applied to the thresholds set by P1_DIG_GAIN_LR_ST: 000b = multiplied by 1
+					001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid
+					P1_DIG_GAIN_SR Bits 2:0 Preset1 Digital short range (SR) gain applied from time zero to the start of the selected long range (LR) threshold level point:
+					000b = multiplied by 1 001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid -->
+                    <div class="input-group">
+                        <label for="p1DigGainLrSt" style="color: red;">P1_DIG_GAIN_LR_ST</label>
                         <select id="p1DigGainLrSt">
                             <option value="0">TH9</option>
                             <option value="1">TH10</option>
@@ -813,7 +941,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="p1DigGainLr">P1_DIG_GAIN_LR</label>
+                        <label for="p1DigGainLr" style="color: red;">P1_DIG_GAIN_LR</label>
                         <select id="p1DigGainLr">
                             <option value="0">x1</option>
                             <option value="1">x2</option>
@@ -824,7 +952,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="p1DigGainSr">P1_DIG_GAIN_SR</label>
+                        <label for="p1DigGainSr" style="color: red;">P1_DIG_GAIN_SR</label>
                         <select id="p1DigGainSr">
                             <option value="0">x1</option>
                             <option value="1">x2</option>
@@ -834,7 +962,112 @@
                             <option value="5">x32</option>
                         </select>
                     </div>
-                </div>
+					<!-- P2_GAIN_CTRL Register (Address = 2Ah)
+					P2_DIG_GAIN_LR_ST Bits 7:6 Selects the starting Preset1 threshold level point from which the long range (LR) digital gain
+					P2_DIG_GAIN_LR, is applied 00b = TH9 01b = TH10 10b = TH11 11b = TH12
+					P2_DIG_GAIN_LR Bits 5:3 Preset2 Digital long range (LR) gain applied from the selected long
+					range threshold level point to the end of the record period Applied to the thresholds set by P2_DIG_GAIN_LR_ST: 000b = multiplied by 1
+					001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid
+					P2_DIG_GAIN_SR Bits 2:0 Preset2 Digital short range (SR) gain applied from time zero to the start of the selected long range (LR) threshold level point:
+					000b = multiplied by 1 001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid -->
+                    <div class="input-group">
+                        <label for="p2DigGainLrSt" style="color: blue;">P2_DIG_GAIN_LR_ST</label>
+                        <select id="p2DigGainLrSt">
+                            <option value="0">TH9</option>
+                            <option value="1">TH10</option>
+                            <option value="2">TH11</option>
+                            <option value="3">TH12</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p2DigGainLr" style="color: blue;">P2_DIG_GAIN_LR</label>
+                        <select id="p2DigGainLr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p2DigGainSr" style="color: blue;">P2_DIG_GAIN_SR</label>
+                        <select id="p2DigGainSr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+					<!-- TEST_MUX Register (Address = 4Bh)
+					TEST_MUX Bits 7:5 Multiplexer output on the TEST Pin: 000b = GND ("Mux Off") 001b = Analog Front End output 010b = Reserved 011b = Reserved 100b = 8MHz clock
+					101b = ADC sample output clock 110b = Reserved 111b = Reserved
+					Note 1 000b through 011b are analog output signals
+					Note 2 100b through 111b are digital output signals
+					RESERVED Bits 4
+					SAMPLE_SEL Bits 3 Data path sample select: 0b = 8 bit sample output at 1 μs per sample 1b = 12 bit sample output at 2 μs per sample
+					Note: For use with DP_MUX parameter values 001b to 100b
+					DP_MUX Bits 2:0 Data path multiplexer source select codes: 000b = Disabled 001b = LPF output 010b = Rectifier output 011b = BPF output 100b = ADC output
+					101b = Not used 110b = Not used 111b = Not used -->
+                    <div class="input-group">
+                        <label for="testMUX" style="color: red;">TEST MUX</label>
+                        <select id="testMUX">
+                            <option value="0">GND-MUX Off</option>
+                            <option value="1">Analog Front End</option>
+                            <option value="4">8MHz clock</option>
+                            <option value="5">ADC sample output clock</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="sampleSel" style="color: red;">Sample Select</label>
+                        <select id="sampleSel">
+                            <option value="0">8bit @ 1μs</option>
+                            <option value="1">12bit @ 2μs</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataPathMux" style="color: red;">Data path multiplexer</label>
+                        <select id="dataPathMux">
+							<option value="0">Disabled</option>
+                            <option value="1">LPF output</option>
+                            <option value="2">Rectifier output</option>
+							<option value="3">BPF output</option>
+							<option value="3">ADC output</option>
+                        </select>
+                    </div>
+			</div>			
+			<div class="registry-summary" id="transducer-summary">
+			</div>
+            </div>
+        </div>
+    </div>
+    <div class="collapsible-container">
+        <div class="container-header" data-target="bandPassContent">
+            <h2>Band Pass Filter Calculated Coefficients</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+		<!-- 
+		BPF_A2_LSB Register (Address = 42h)
+		BPF_A3_MSB Register (Address = 43h)
+		BPF_A3_LSB Register (Address = 44h)
+		BPF_B1_MSB Register (Address = 45h)
+		BPF_B1_LSB Register (Address = 46h)
+		LPF_A2_MSB Register (Address = 47h)
+		LPF_A2_LSB Register (Address = 48h)
+		LPF_B1_MSB Register (Address = 49h)
+		LPF_B1_LSB Register (Address = 4Ah)
+		 -->
+	</div>	
+	
+    <div class="collapsible-container">
+        <div class="container-header" data-target="thresholdP1Content">
+            <h2>Threshold & Digital Gain Settings (Preset 1)</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+        <div id="thresholdP1Content" class="collapsible-content">
+            <div class="echo-parameters-grid">
                 <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="thrPr1P1Time">THR P1 T1</label>
@@ -944,13 +1177,16 @@
                         <label for="thrPr1P12Level">THR P1 L12</label>
                         <input type="number" id="thrPr1P12Level" value="5" min="0" max="255" step="1">
                     </div>
+                    <div class="input-group">
+                        <label for="thP1Off">TH_P1_OFF</label>
+                        <input type="number" id="thP1Off" value="-8" min="-8" max="7" step="1">
+                    </div>
                 </div>
             </div>
             <div class="registry-summary" id="thresholdP1-summary">
             </div>
         </div>
     </div>
-
     <div class="collapsible-container">
         <div class="container-header" data-target="thresholdP2Content">
             <h2>Threshold & Digital Gain Settings (Preset 2)</h2>
@@ -958,43 +1194,6 @@
         </div>
         <div id="thresholdP2Content" class="collapsible-content">
             <div class="echo-parameters-grid">
-                <div class="threshold-inputs-row">
-                    <div class="input-group">
-                        <label for="thP2Off">TH_P2_OFF</label>
-                        <input type="number" id="thP2Off" value="7" min="-8" max="7" step="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="p2DigGainLrSt">P2_DIG_GAIN_LR_ST</label>
-                        <select id="p2DigGainLrSt">
-                            <option value="0">TH9</option>
-                            <option value="1">TH10</option>
-                            <option value="2">TH11</option>
-                            <option value="3">TH12</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="p2DigGainLr">P2_DIG_GAIN_LR</label>
-                        <select id="p2DigGainLr">
-                            <option value="0">x1</option>
-                            <option value="1">x2</option>
-                            <option value="2">x4</option>
-                            <option value="3">x8</option>
-                            <option value="4">x16</option>
-                            <option value="5">x32</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="p2DigGainSr">P2_DIG_GAIN_SR</label>
-                        <select id="p2DigGainSr">
-                            <option value="0">x1</option>
-                            <option value="1">x2</option>
-                            <option value="2">x4</option>
-                            <option value="3">x8</option>
-                            <option value="4">x16</option>
-                            <option value="5">x32</option>
-                        </select>
-                    </div>
-                </div>
                 <div class="threshold-inputs-row">
                     <div class="input-group">
                         <label for="thrPr2P1Time">THR P2 T1</label>
@@ -1103,6 +1302,10 @@
                     <div class="input-group">
                         <label for="thrPr2P12Level">THR P2 L12</label>
                         <input type="number" id="thrPr2P12Level" value="5" min="0" max="255" step="1">
+                    </div>
+                   <div class="input-group">
+                        <label for="thP2Off">TH_P2_OFF</label>
+                        <input type="number" id="thP2Off" value="7" min="-8" max="7" step="1">
                     </div>
                 </div>
             </div>
@@ -1348,51 +1551,6 @@
         }
         
         /**
-         * Renders a summary table for a given set of registers.
-         * @param {Array<object>} registers - Array of register objects to display.
-         * @param {string} containerId - The ID of the HTML element to render the table in.
-         */
-        function renderRegisterSummary(registers, containerId) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-        
-            let tableHtml = `
-                <h3>Register Summary</h3>
-                <table class="registry-summary-table">
-                    <thead>
-                        <tr>
-                            <th>Register</th>
-                            <th>Address</th>
-                            <th>Hex</th>
-                            <th>Binary</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-        
-            registers.forEach(reg => {
-                const decimalValue = reg.value;
-                const hexValue = decimalValue.toString(16).toUpperCase().padStart(2, '0');
-                const binaryValue = decimalValue.toString(2).padStart(8, '0');
-        
-                tableHtml += `
-                    <tr>
-                        <td>${reg.name}</td>
-                        <td>${reg.address}</td>
-                        <td><span class="reg-hex">0x${hexValue}</span></td>
-                        <td><span class="reg-bin">0b${binaryValue}</span></td>
-                    </tr>
-                `;
-            });
-        
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = tableHtml;
-        }
-
-        /**
          * Calculates and updates the register values, populating the new summary tables.
          */
         function updateRegisterTable() {
@@ -1483,17 +1641,14 @@
             currentRegisterValues.TVGAIN6 = regTvgGain6;
             
             // Render the summary table for the Transducer & Gain section
-            renderRegisterSummary(transducerRegisters, 'transducer-summary');
 
             // --- Threshold Preset 1 Registers ---
             const thresholdP1Registers = [];
             // ... (Calculation logic for Preset 1 registers goes here) ...
-            renderRegisterSummary(thresholdP1Registers, 'thresholdP1-summary');
 
             // --- Threshold Preset 2 Registers ---
             const thresholdP2Registers = [];
             // ... (Calculation logic for Preset 2 registers goes here) ...
-            renderRegisterSummary(thresholdP2Registers, 'thresholdP2-summary');
         }
 
         function calculateChecksum(dataArray) {
