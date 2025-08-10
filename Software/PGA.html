@@ -2470,6 +2470,9 @@
                         x: {
                             type: 'linear',
                             position: 'bottom',
+							min: 0,              // hard lock T=0 at the left
+							beginAtZero: true,   // belt-and-suspenders
+							offset: false,       // keep 0 exactly at the edge
                             title: {
                                 display: true,
                                 text: 'Time (µs)'
@@ -2511,6 +2514,11 @@
 											x: { min: 0, minRange: 50 },   // Lock x-axis at 0
 											y: { min: 0, minRange: 5 },    // Lock left y-axis at 0
 											y1: { min: 0, minRange: 5 }    // Lock right y-axis at 0
+										},
+										onZoomComplete({ chart }) {
+											// Hard lock: T=0 must stay at the left edge
+											chart.options.scales.x.min = 0;
+											chart.update('none');
 										}
 									},
 									pan: {
@@ -2520,6 +2528,10 @@
 											x: { min: 0 },  // Prevent panning below x=0
 											y: { min: 0 },
 											y1: { min: 0 }
+										},
+										onPanComplete({ chart }) {
+											chart.options.scales.x.min = 0; // re‑assert the lock
+											chart.update('none');
 										}
 									}
 								},
