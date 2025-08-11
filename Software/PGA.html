@@ -361,21 +361,11 @@
 			}
 		}
 
-		.registry-summary-container {
-			width: 90%;
-            max-width: 1200px;
-			margin-top: 20px;
-			padding: 15px;
-			background-color: white;
-			border-radius: 8px;
-			box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-		}
-
 		.registry-summary-header {
 			margin-top: 0;
 			margin-bottom: 15px;
 			color: #34495e;
-			font-size: 1.3em;
+			font-size: 1em;
 			text-align: center;
 		}
 
@@ -390,7 +380,7 @@
 			width: 100%;
 			border-collapse: collapse;
 			text-align: left;
-			font-size: 0.9em;
+			font-size: 0.5em;
 		}
 
 		.registry-summary-table th, .registry-summary-table td {
@@ -414,6 +404,65 @@
 			padding: 2px 6px;
 			border-radius: 4px;
 			border: 1px solid #cce0f0;
+		}
+		
+		/* Wider container so 4 columns fit */
+		.registry-summary-container {
+		  width: 95%;
+		  max-width: 1800px; /* was 1200px */
+		}
+
+		/* 4 columns side by side */
+		.registry-summary-grid--four {
+		  display: grid;
+		  grid-template-columns: repeat(4, minmax(0, 1fr));
+		  gap: 6px;
+		}
+
+		/* Keep each panel styled & clipped */
+		.registry-summary-grid--four .registry-summary {
+		  background-color: #f0f4f7;
+		  border-radius: 8px;
+		  border: 1px solid #e0e7ed;
+		  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+		  overflow: hidden;
+		}
+
+		/* Tighten table to fit 4-up comfortably */
+		.registry-summary-table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  text-align: left;
+		  font-size: 0.6em;
+		  table-layout: fixed; /* ensures columns share width evenly */
+		}
+
+		.registry-summary-table th, .registry-summary-table td {
+		  padding: 6px 8px; /* slightly tighter */
+		  border-bottom: 1px solid #dcdcdc;
+		}
+
+		/* Suggested column widths */
+		.registry-summary-table th:nth-child(1),
+		.registry-summary-table td:nth-child(1) { width: 20%; font-weight: bold;}
+		.registry-summary-table th:nth-child(2),
+		.registry-summary-table td:nth-child(2) { width: 10%; }
+		.registry-summary-table th:nth-child(3),
+		.registry-summary-table td:nth-child(3) { width: 10%; }
+		.registry-summary-table th:nth-child(4),
+		.registry-summary-table td:nth-child(4) { width: 10%; }
+		.registry-summary-table th:nth-child(5),
+		.registry-summary-table td:nth-child(5) { width: 18%; }
+
+		/* Responsive collapse */
+		@media (max-width: 1500px) {
+		  .registry-summary-grid--four { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+		}
+		@media (max-width: 1100px) {
+		  .registry-summary-grid--four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		}
+		@media (max-width: 700px) {
+		  .registry-summary-grid--four { grid-template-columns: 1fr; }
 		}
     </style>
 </head>
@@ -1694,53 +1743,66 @@
 		}
         
 		function generateRegisterSummaryTable(registers, title) {
-			// Parse address safely (supports number, "0x1C", "1C", "1Ch")
-			const addrToInt = (addr) => {
-				if (typeof addr === 'number') return addr;
-				const s = String(addr).trim().toUpperCase();
-				// Strip optional "0x" prefix and optional trailing 'H'
-				const hexish = s.replace(/^0X/, '').replace(/H$/, '');
-				// Prefer hex parse; if NaN, fall back to decimal
-				let n = parseInt(hexish, 16);
-				if (Number.isNaN(n)) n = parseInt(s, 10);
-				return Number.isNaN(n) ? 0 : n;
-			};
+		  // Parse address safely (supports number, "0x1C", "1C", "1Ch")
+		  const addrToInt = (addr) => {
+			if (typeof addr === 'number') return addr;
+			const s = String(addr).trim().toUpperCase();
+			const hexish = s.replace(/^0X/, '').replace(/H$/, '');
+			let n = parseInt(hexish, 16);
+			if (Number.isNaN(n)) n = parseInt(s, 10);
+			return Number.isNaN(n) ? 0 : n;
+		  };
 
-			// Do not mutate caller's array
-			const sorted = [...registers].sort((a, b) => addrToInt(a.address) - addrToInt(b.address));
+		  // Sort without mutating input
+		  const sorted = [...registers].sort((a, b) => addrToInt(a.address) - addrToInt(b.address));
 
+		  // Split into 4 roughly equal chunks
+		  const COLS = 4;
+		  const chunkSize = Math.ceil(sorted.length / COLS);
+		  const chunks = Array.from({ length: COLS }, (_, i) =>
+			sorted.slice(i * chunkSize, (i + 1) * chunkSize)
+		  );
+
+		  const makeTable = (arr) => {
 			let tableHtml = `
-				<h3>${title}</h3>
-				<table class="registry-summary-table">
-					<thead>
-						<tr>
-							<th>Name</th>
-							<th>Address</th>
-							<th>Dec</th>
-							<th>Hex</th>
-							<th>Binary</th>
-						</tr>
-					</thead>
-					<tbody>
+			  <table class="registry-summary-table">
+				<thead>
+				  <tr>
+					<th>Name</th>
+					<th>Address</th>
+					<th>Dec</th>
+					<th>Hex</th>
+					<th>Binary</th>
+				  </tr>
+				</thead>
+				<tbody>
 			`;
-
-			sorted.forEach(reg => {
-				const hexValue = reg.value.toString(16).toUpperCase().padStart(2, '0');
-				const binValue = reg.value.toString(2).padStart(8, '0');
-				tableHtml += `
-					<tr>
-						<td>${reg.name}</td>
-						<td>${reg.address}</td>
-						<td>${reg.value}</td>
-						<td>0x<span class="reg-hex">${hexValue}</span></td>
-						<td>0b<span class="reg-bin">${binValue}</span></td>
-					</tr>
-				`;
+			arr.forEach(reg => {
+			  const v = Number(reg.value) & 0xFF;
+			  const hexValue = v.toString(16).toUpperCase().padStart(2, '0');
+			  const binValue = v.toString(2).padStart(8, '0');
+			  tableHtml += `
+				<tr>
+				  <td>${reg.name}</td>
+				  <td>${reg.address}</td>
+				  <td>${v}</td>
+				  <td>0x<span class="reg-hex">${hexValue}</span></td>
+				  <td>0b<span class="reg-bin">${binValue}</span></td>
+				</tr>
+			  `;
 			});
-
 			tableHtml += '</tbody></table>';
 			return tableHtml;
+		  };
+
+		  return `
+			<h3>${title}</h3>
+			<div class="registry-summary-grid registry-summary-grid--four">
+			  ${chunks.map(col => `<div class="registry-summary">${makeTable(col)}</div>`).join('')}
+			</div>
+		  `;
 		}
+
 
         /**
          * Calculates and updates the register values, populating the new summary tables.
