@@ -164,8 +164,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TVG_T0 : 4; // Time-varying gain start time (bits 7:4)
 							GainTime_t TVG_T1 : 4; // Time-varying gain T0/T1 delta time (bits 3:0)
+							GainTime_t TVG_T0 : 4; // Time-varying gain start time (bits 7:4)
 					} BitField;
 			} Val;
 	} TVGAIN0_t;
@@ -175,8 +175,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TVG_T2 : 4; // Time-varying gain T1/T2 delta time (bits 7:4)
 							GainTime_t TVG_T3 : 4; // Time-varying gain T2/T3 delta time (bits 3:0)
+							GainTime_t TVG_T2 : 4; // Time-varying gain T1/T2 delta time (bits 7:4)
 					} BitField;
 			} Val;
 	} TVGAIN1_t;
@@ -186,8 +186,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TVG_T4 : 4; // Time-varying gain T3/T4 delta time (bits 7:4)
 							GainTime_t TVG_T5 : 4; // Time-varying gain T4/T5 delta time (bits 3:0)
+							GainTime_t TVG_T4 : 4; // Time-varying gain T3/T4 delta time (bits 7:4)
 					} BitField;
 			} Val;
 	} TVGAIN2_t;
@@ -197,8 +197,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
+							uint8_t TVG_G2 : 2; // TVG Point 2 Gain Value bits (bits 1:0)
 							uint8_t TVG_G1 : 6; // Gain value at point 1 (bits 7:2) Gain = 0.5 × (TVG_G1 + 1) + value(AFE_GAIN_RNG) [dB]
-							uint8_t RESERVED : 2; // Reserved bits (bits 1:0)
 					} BitField;
 			} Val;
 	} TVGAIN3_t;
@@ -208,8 +208,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TVG_G2 : 4; // Gain value at point 2 (bits 7:4) Gain = 0.5 × (TVG_G2 +1) + value(AFE_GAIN_RNG) [dB]
 							uint8_t TVG_G3 : 4; // Gain value at point 3 (bits 3:0) Gain = 0.5 × (TVG_G3 + 1) + value(AFE_GAIN_RNG) [dB]
+							uint8_t TVG_G2 : 4; // Gain value at point 2 (bits 7:4) Gain = 0.5 × (TVG_G2 +1) + value(AFE_GAIN_RNG) [dB]
 					} BitField;
 			} Val;
 	} TVGAIN4_t;
@@ -219,8 +219,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TVG_G3 : 2; // Gain value at point 3 (bits 7:6) Gain = 0.5 × (TVG_G3 +1) + value(AFE_GAIN_RNG) [dB]
 							uint8_t TVG_G4 : 6; // Gain value at point 4 (bits 5:0) Gain = 0.5 × (TVG_G4 + 1) + value(AFE_GAIN_RNG) [dB]
+							uint8_t TVG_G3 : 2; // Gain value at point 3 (bits 7:6) Gain = 0.5 × (TVG_G3 +1) + value(AFE_GAIN_RNG) [dB]
 					} BitField;
 			} Val;
 	} TVGAIN5_t;
@@ -230,9 +230,9 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TVG_G5    : 6; // Gain value at point 5 (bits 7:2) Gain = 0.5 × (TVG_G5 +1) + value(AFE_GAIN_RNG) [dB]
-							uint8_t RESERVED  : 1; // Reserved bit (bit 1)
 							uint8_t FREQ_SHIFT: 1; // Burst frequency range shift (bit 0) 0b = Disabled 1b = Enabled
+							uint8_t RESERVED  : 1; // Reserved bit (bit 1)
+							uint8_t TVG_G5    : 6; // Gain value at point 5 (bits 7:2) Gain = 0.5 × (TVG_G5 +1) + value(AFE_GAIN_RNG) [dB]
 					} BitField;
 			} Val;
 	} TVGAIN6_t;
@@ -421,13 +421,13 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t NOISE_LVL : 5; // Non-linear scaling noise level (bits 4:0)
-																		 // Value ranges from 0 to 31 with 1 LSB steps for digital gain values (Px_DIG_GAIN_LR) less than 8
-																		 // If digital gain (Px_DIG_GAIN_LR) is larger than 8, then multiply the NOISE_LVL by Px_DIG_GAIN_LR/8
-							uint8_t SCALE_K   : 1; // Non-linear scaling exponent (bit 5)
+							SCALE_N_t SCALE_N : 2; // Non-linear scaling time offset (bits 1:0)
+							uint8_t SCALE_K   : 1; // Non-linear scaling exponent (bit 2)
 																		 // 0b = 1.50
 																		 // 1b = 2.00
-							SCALE_N_t SCALE_N : 2; // Non-linear scaling time offset (bits 7:6)
+							uint8_t NOISE_LVL : 5; // Non-linear scaling noise level (bits 7:3)
+																		 // Value ranges from 0 to 31 with 1 LSB steps for digital gain values (Px_DIG_GAIN_LR) less than 8
+																		 // If digital gain (Px_DIG_GAIN_LR) is larger than 8, then multiply the NOISE_LVL by Px_DIG_GAIN_LR/8
 					} BitField;
 			} Val;
 	} DSP_SCALE_t;
@@ -463,8 +463,6 @@
 		DIG_GAIN_VAL_MULT_8		= 0x3,	// Multiplied by 8
 		DIG_GAIN_VAL_MULT_16	= 0x4,	// Multiplied by 16
 		DIG_GAIN_VAL_MULT_32	= 0x5,	// Multiplied by 32
-		DIG_GAIN_VAL_INVALID	= 0x6,	// Invalid
-		DIG_GAIN_VAL_INVALID2 = 0x7		// Invalid
 	} DIG_GAIN_VAL_t;
 
 	// Structure for P1_GAIN_CTRL register (Address 0x29)
@@ -613,8 +611,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T1 : 4; // Preset1 Threshold T1 absolute time (bits 7:4)
 							GainTime_t TH_P1_T2 : 4; // Preset1 Threshold T2 delta time (bits 3:0)
+							GainTime_t TH_P1_T1 : 4; // Preset1 Threshold T1 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_0_t;
@@ -624,8 +622,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T3 : 4; // Preset1 Threshold T3 absolute time (bits 7:4)
 							GainTime_t TH_P1_T4 : 4; // Preset1 Threshold T4 delta time (bits 3:0)
+							GainTime_t TH_P1_T3 : 4; // Preset1 Threshold T3 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_1_t;
@@ -635,8 +633,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T5 : 4; // Preset1 Threshold T5 absolute time (bits 7:4)
 							GainTime_t TH_P1_T6 : 4; // Preset1 Threshold T6 delta time (bits 3:0)
+							GainTime_t TH_P1_T5 : 4; // Preset1 Threshold T5 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_2_t;
@@ -646,8 +644,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T7 : 4; // Preset1 Threshold T7 absolute time (bits 7:4)
 							GainTime_t TH_P1_T8 : 4; // Preset1 Threshold T8 delta time (bits 3:0)
+							GainTime_t TH_P1_T7 : 4; // Preset1 Threshold T7 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_3_t;
@@ -657,8 +655,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T9  : 4; // Preset1 Threshold T9 absolute time (bits 7:4)
 							GainTime_t TH_P1_T10 : 4; // Preset1 Threshold T10 delta time (bits 3:0)
+							GainTime_t TH_P1_T9  : 4; // Preset1 Threshold T9 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_4_t;
@@ -668,8 +666,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P1_T11 : 4; // Preset1 Threshold T11 absolute time (bits 7:4)
 							GainTime_t TH_P1_T12 : 4; // Preset1 Threshold T12 delta time (bits 3:0)
+							GainTime_t TH_P1_T11 : 4; // Preset1 Threshold T11 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_5_t;
@@ -679,8 +677,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P1_L1 : 5; // Preset1 Threshold L1 level (bits 7:3)
 							uint8_t TH_P1_L2 : 3; // Preset1 Threshold L2 level bits [Bit4 to Bit2]. (bits 2:0)
+							uint8_t TH_P1_L1 : 5; // Preset1 Threshold L1 level (bits 7:3)
 					} BitField;
 			} Val;
 	} P1_THR_6_t;
@@ -690,9 +688,9 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P1_L2 : 2; // Preset1 Threshold L2 level [Bit1 to Bit0]. (bits 7:6)
-							uint8_t TH_P1_L3 : 5; // Preset1 Threshold L3 level (bits 5:1)
 							uint8_t TH_P1_L4 : 1; // Preset1 Threshold L4 level [Bit4]. (bit 0)
+							uint8_t TH_P1_L3 : 5; // Preset1 Threshold L3 level (bits 5:1)
+							uint8_t TH_P1_L2 : 2; // Preset1 Threshold L2 level [Bit1 to Bit0]. (bits 7:6)
 					} BitField;
 			} Val;
 	} P1_THR_7_t;
@@ -702,8 +700,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P1_L4 : 4; // Preset1 Threshold L4 level [Bits3 to Bit0]. (bits 7:4)
 							uint8_t TH_P1_L5 : 4; // Preset1 Threshold L5 level [Bit4 to Bit1]. (bits 3:0)
+							uint8_t TH_P1_L4 : 4; // Preset1 Threshold L4 level [Bits3 to Bit0]. (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_8_t;
@@ -713,9 +711,9 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P1_L5 : 1; // Preset1 Threshold L5 level [Bit0]. (bit 7)
-							uint8_t TH_P1_L6 : 5; // Preset1 Threshold L6 level (bits 6:2)
 							uint8_t TH_P1_L7 : 2; // Preset1 Threshold L7 level [Bits4 to Bit3] (bits 1:0)
+							uint8_t TH_P1_L6 : 5; // Preset1 Threshold L6 level (bits 6:2)
+							uint8_t TH_P1_L5 : 1; // Preset1 Threshold L5 level [Bit0]. (bit 7)
 					} BitField;
 			} Val;
 	} P1_THR_9_t;
@@ -725,8 +723,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P1_L7 : 3; // Preset1 Threshold L7 Level [Bit2 to Bit0]. (bits 7:5)
 							uint8_t TH_P1_L8 : 5; // Preset1 Threshold L8 level (bits 4:0)
+							uint8_t TH_P1_L7 : 3; // Preset1 Threshold L7 Level [Bit2 to Bit0]. (bits 7:5)
 					} BitField;
 			} Val;
 	} P1_THR_10_t;
@@ -736,8 +734,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t Reserved : 4;  // (bits 7:4)
 							uint8_t TH_P1_OFF : 4; // Preset1 Threshold level Offset with values from 7 to -8 using signed magnitude representation with MSB as the sign bit (bits 3:0)
+							uint8_t Reserved : 4;  // (bits 7:4)
 					} BitField;
 			} Val;
 	} P1_THR_15_t;
@@ -747,8 +745,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T1 : 4; // Preset2 Threshold T1 absolute time (bits 7:4)
 							GainTime_t TH_P2_T2 : 4; // Preset2 Threshold T2 delta time (bits 3:0)
+							GainTime_t TH_P2_T1 : 4; // Preset2 Threshold T1 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_0_t;
@@ -758,8 +756,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T3 : 4; // Preset2 Threshold T3 absolute time (bits 7:4)
 							GainTime_t TH_P2_T4 : 4; // Preset2 Threshold T4 delta time (bits 3:0)
+							GainTime_t TH_P2_T3 : 4; // Preset2 Threshold T3 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_1_t;
@@ -769,8 +767,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T5 : 4; // Preset2 Threshold T5 absolute time (bits 7:4)
 							GainTime_t TH_P2_T6 : 4; // Preset2 Threshold T6 delta time (bits 3:0)
+							GainTime_t TH_P2_T5 : 4; // Preset2 Threshold T5 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_2_t;
@@ -781,8 +779,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T7 : 4; // Preset2 Threshold T7 absolute time (bits 7:4)
 							GainTime_t TH_P2_T8 : 4; // Preset2 Threshold T8 delta time (bits 3:0)
+							GainTime_t TH_P2_T7 : 4; // Preset2 Threshold T7 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_3_t;
@@ -792,8 +790,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T9  : 4; // Preset2 Threshold T9 absolute time (bits 7:4)
 							GainTime_t TH_P2_T10 : 4; // Preset2 Threshold T10 delta time (bits 3:0)
+							GainTime_t TH_P2_T9  : 4; // Preset2 Threshold T9 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_4_t;
@@ -803,8 +801,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							GainTime_t TH_P2_T11 : 4; // Preset2 Threshold T11 absolute time (bits 7:4)
 							GainTime_t TH_P2_T12 : 4; // Preset2 Threshold T12 delta time (bits 3:0)
+							GainTime_t TH_P2_T11 : 4; // Preset2 Threshold T11 absolute time (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_5_t;
@@ -814,8 +812,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P2_L1 : 5; // Preset2 Threshold L1 level (bits 7:3)
 							uint8_t TH_P2_L2 : 3; // Preset2 Threshold L2 level [Bit4 to Bit2]. (bits 2:0)
+							uint8_t TH_P2_L1 : 5; // Preset2 Threshold L1 level (bits 7:3)
 					} BitField;
 			} Val;
 	} P2_THR_6_t;
@@ -825,9 +823,9 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P2_L2 : 2; // Preset2 Threshold L2 level [Bit1 to Bit0]. (bits 7:6)
-							uint8_t TH_P2_L3 : 5; // Preset2 Threshold L3 level (bits 5:1)
 							uint8_t TH_P2_L4 : 1; // Preset2 Threshold L4 level [Bit4]. (bit 0)
+							uint8_t TH_P2_L3 : 5; // Preset2 Threshold L3 level (bits 5:1)
+							uint8_t TH_P2_L2 : 2; // Preset2 Threshold L2 level [Bit1 to Bit0]. (bits 7:6)
 					} BitField;
 			} Val;
 	} P2_THR_7_t;
@@ -837,8 +835,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P2_L4 : 4; // Preset2 Threshold L4 level [Bit3 to Bit0]. (bits 7:4)
 							uint8_t TH_P2_L5 : 4; // Preset2 Threshold L5 level [Bit4 to Bit1]. (bits 3:0)
+							uint8_t TH_P2_L4 : 4; // Preset2 Threshold L4 level [Bit3 to Bit0]. (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_8_t;
@@ -848,9 +846,9 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P2_L5 : 1; // Preset2 Threshold L5 level [Bit0]. (bit 7)
-							uint8_t TH_P2_L6 : 5; // Preset2 Threshold L6 level (bits 6:2)
 							uint8_t TH_P2_L7 : 2; // Preset2 Threshold L7 level [Bit4 to Bit3]. (bits 1:0)
+							uint8_t TH_P2_L6 : 5; // Preset2 Threshold L6 level (bits 6:2)
+							uint8_t TH_P2_L5 : 1; // Preset2 Threshold L5 level [Bit0]. (bit 7)
 					} BitField;
 			} Val;
 	} P2_THR_9_t;
@@ -860,8 +858,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t TH_P2_L7 : 3; // Preset2 Threshold L7 level [Bit2 to Bit0]. (bits 7:5)
 							uint8_t TH_P2_L8 : 5; // Preset2 Threshold L8 level (bits 4:0)
+							uint8_t TH_P2_L7 : 3; // Preset2 Threshold L7 level [Bit2 to Bit0]. (bits 7:5)
 					} BitField;
 			} Val;
 	} P2_THR_10_t;
@@ -871,8 +869,8 @@
 			union {
 					uint8_t Value;
 					struct __attribute__((packed)) {
-							uint8_t Reserved : 4; // Reserved bits (bits 7:4)
 							uint8_t TH_P2_OFF : 4; // Preset2 Threshold level Offset (bits 3:0)
+							uint8_t Reserved : 4; // Reserved bits (bits 7:4)
 					} BitField;
 			} Val;
 	} P2_THR_15_t;

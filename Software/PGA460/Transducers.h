@@ -136,7 +136,7 @@ const PGA460_t transducer = (PGA460_t){
         .INIT_GAIN.Val       = 0x03,
         .FREQ                = 0x32,
         .DEADTIME.Val        = 0x80,
-        .PULSE_P1.Val        = (comm == 2) ? (0x80 | 0x08) : 0x08,
+        .PULSE_P1.Val        = 0x08,
         .PULSE_P2.Val        = 0x12,
         .CURR_LIM_P1.Val     = 0x72,
         .CURR_LIM_P2.Val     = 0x32,
@@ -153,7 +153,7 @@ const PGA460_t transducer = (PGA460_t){
 };
 #else // User Custom XDCR Configuration
 const PGA460_t transducer = {
-    // User data section
+    // User data section (all 0x00 by default from the tool)
     .USER_DATA = {
         .USER_DATA1  = 0x00, .USER_DATA2  = 0x00, .USER_DATA3  = 0x00, .USER_DATA4  = 0x00,
         .USER_DATA5  = 0x00, .USER_DATA6  = 0x00, .USER_DATA7  = 0x00, .USER_DATA8  = 0x00,
@@ -164,41 +164,38 @@ const PGA460_t transducer = {
     .EEPROM = {
         // Time-Varying Gain (TVG) based on tested setup
         .TGV = {
-            .TVGAIN0.Val.Value = 0x9D,
-            .TVGAIN1.Val.Value = 0xEE,
-            .TVGAIN2.Val.Value = 0xEF,
-            .TVGAIN3.Val.Value = 0x2D,
-            .TVGAIN4.Val.Value = 0xB9,
-            .TVGAIN5.Val.Value = 0xEF,
-            .TVGAIN6.Val.Value = 0xDC, // TVG6 includes TVG and FreqShift control
+            .TVGAIN0.Val.Value = 17,
+            .TVGAIN1.Val.Value = 21,
+            .TVGAIN2.Val.Value = 85,
+            .TVGAIN3.Val.Value = 0,
+            .TVGAIN4.Val.Value = 15,
+            .TVGAIN5.Val.Value = 252,
+            .TVGAIN6.Val.Value = 252, // TVG6 includes TVG and FreqShift control
         },
-        // Initial Gain — reduced for short distances
-        .INIT_GAIN.Val = 0x10,  // ~17 dB
-        // Transmit Frequency (0.2 × 50 + 30 = 40 kHz)
-        .FREQ = 0x32,
+        // Initial Gain
+        .INIT_GAIN.Val = 127,
+        // Transmit Frequency
+        .FREQ = 54,
         // Deadtime + Comparator Deglitch
-        // THR_CMP_DEGLITCH = 0x01 (8 µs), PULSE_DT = 0x00 (0 µs)
-        .DEADTIME.Val = 0x10,
-        // Burst Pulses — minimal for quick decay
-        .PULSE_P1.Val = 0x02,  // 2 pulses
-        .PULSE_P2.Val = 0x04,  // 4 pulses
-        // Current Limits (moderate drive strength)
-        // 7×0x28 + 50 = 246 mA
-        .CURR_LIM_P1.Val.BitField.CURR_LIM1 = 0x08, //98mA
-        .CURR_LIM_P2.Val = 0x16,  // 204mA if needed for farther range
-        // Record Length — maximize resolution
-        // 4096 µs total ? 32 µs per bin
-        .REC_LENGTH.Val = 0x00,
+        .DEADTIME.Val = 128,
+        // Burst Pulses
+        .PULSE_P1.Val = 4,
+        .PULSE_P2.Val = 4,
+        // Current Limits
+        .CURR_LIM_P1.Val = 50,
+        .CURR_LIM_P2.Val = 50,
+        // Record Length
+        .REC_LENGTH.Val = 17,
         // Diagnostics and scaling
-        .FREQ_DIAG.Val     = 0x33,
-        .SAT_FDIAG_TH.Val  = 0xFF,
-        .FVOLT_DEC.Val     = 0x02,
-        .DECPL_TEMP.Val    = 0x00,
-        .DSP_SCALE.Val     = 0x00,
-        .TEMP_TRIM.Val     = 0x00,
+        .FREQ_DIAG.Val = 51,
+        .SAT_FDIAG_TH.Val = 14,
+        .FVOLT_DEC.Val = 28,
+        .DECPL_TEMP.Val = 15,
+        .DSP_SCALE.Val = 0,
+        .TEMP_TRIM.Val = 0,
         // Gain control for P1 and P2
-        .P1_GAIN_CTRL.Val = 0x05,
-        .P2_GAIN_CTRL.Val = 0x05,
+        .P1_GAIN_CTRL.Val = 0,
+        .P2_GAIN_CTRL.Val = 0,
     }
 };
 #endif
@@ -243,41 +240,16 @@ const PGA460_THR_t THRESHOLD_75_STRUCT = {
 };
 
 PGA460_THR_t THRESHOLD_CC_STRUCT = {
-    .P1_THR_0.Val.Value  = 0xF0,  // bin 0
-    .P1_THR_1.Val.Value  = 0xF0,  // bin 1
-    .P1_THR_2.Val.Value  = 0xC0,  // bin 2
-    .P1_THR_3.Val.Value  = 0xA0,  // bin 3
-    .P1_THR_4.Val.Value  = 0x80,  // bin 4
-    .P1_THR_5.Val.Value  = 0x60,  // bin 5
-    .P1_THR_6.Val.Value  = 0x50,  // bin 6 — usable echo edge starts here
-    .P1_THR_7.Val.Value  = 0x40,  // bin 7
-    .P1_THR_8.Val.Value  = 0x30,  // bin 8
-    .P1_THR_9.Val.Value  = 0x28,
-    .P1_THR_10.Val.Value = 0x20,
-    .P1_THR_11           = 0x18,
-    .P1_THR_12           = 0x18,
-    .P1_THR_13           = 0x10,
-    .P1_THR_14           = 0x08,
-    .P1_THR_15.Val.Value = 0x08,
+    .P1_THR_0.Val.Value = 0,     .P1_THR_1.Val.Value = 0,     .P1_THR_2.Val.Value = 0,     .P1_THR_3.Val.Value = 0, 
+    .P1_THR_4.Val.Value = 0,     .P1_THR_5.Val.Value = 0,     .P1_THR_6.Val.Value = 255,     .P1_THR_7.Val.Value = 255, 
+    .P1_THR_8.Val.Value = 255,     .P1_THR_9.Val.Value = 188,     .P1_THR_10.Val.Value = 224,     .P1_THR_11           = 0, 
+    .P1_THR_12           = 0,     .P1_THR_13           = 0,     .P1_THR_14           = 0,     .P1_THR_15.Val.Value = 0, 
 
-    .P2_THR_0.Val.Value  = 0xFF,
-    .P2_THR_1.Val.Value  = 0xFF,
-    .P2_THR_2.Val.Value  = 0xF0,
-    .P2_THR_3.Val.Value  = 0xD0,
-    .P2_THR_4.Val.Value  = 0xA0,
-    .P2_THR_5.Val.Value  = 0x70,
-    .P2_THR_6.Val.Value  = 0x50,
-    .P2_THR_7.Val.Value  = 0x30,
-    .P2_THR_8.Val.Value  = 0x20,
-    .P2_THR_9.Val.Value  = 0x18,
-    .P2_THR_10.Val.Value = 0x10,
-    .P2_THR_11           = 0x10,
-    .P2_THR_12           = 0x10,
-    .P2_THR_13           = 0x08,
-    .P2_THR_14           = 0x08,
-    .P2_THR_15.Val.Value = 0x00,
-
-    .THR_CRC = 0x00  // to be recalculated
+    .P2_THR_0.Val.Value = 0,     .P2_THR_1.Val.Value = 0,     .P2_THR_2.Val.Value = 0,     .P2_THR_3.Val.Value = 0, 
+    .P2_THR_4.Val.Value = 0,     .P2_THR_5.Val.Value = 0,     .P2_THR_6.Val.Value = 255,     .P2_THR_7.Val.Value = 255, 
+    .P2_THR_8.Val.Value = 255,     .P2_THR_9.Val.Value = 217,     .P2_THR_10.Val.Value = 199,     .P2_THR_11           = 0, 
+    .P2_THR_12           = 0,     .P2_THR_13           = 0,     .P2_THR_14           = 0,     .P2_THR_15.Val.Value = 7, 
+    .THR_CRC             = 0x49
 };
 
 const PGA460_TVG_t TGV_25_STRUCT = {
@@ -311,12 +283,12 @@ const PGA460_TVG_t TGV_75_STRUCT = {
 };
 
 PGA460_TVG_t TGV_CUSTOM_STRUCT = {
-    .TVGAIN0.Val.Value = 0x12,  // Start: 200 µs, Duration: 200 µs
-    .TVGAIN1.Val.Value = 0x22,  // Start: 400 µs, Duration: 200 µs
-    .TVGAIN2.Val.Value = 0x43,  // Start: 600 µs, Duration: 400 µs
-    .TVGAIN3.Val.Value = 0x03,  // G1=0, G2=3 ? 24.5–26 dB
-    .TVGAIN4.Val.Value = 0x73,  // G2=7, G3=3 ? 28–26 dB
-    .TVGAIN5.Val.Value = 0x77,  // G3=7, G4=7 ? flat at 28 dB
-    .TVGAIN6.Val.Value = 0x60   // G5=6 ? 27.5 dB, fixed gain, no freq shift
+    .TVGAIN0.Val.Value = 17,  // Start: 200 µs, Duration: 200 µs
+    .TVGAIN1.Val.Value = 21,  // Start: 400 µs, Duration: 200 µs
+    .TVGAIN2.Val.Value = 85,  // Start: 600 µs, Duration: 400 µs
+    .TVGAIN3.Val.Value = 0,  // G1=0, G2=3 ? 24.5–26 dB
+    .TVGAIN4.Val.Value = 15,  // G2=7, G3=3 ? 28–26 dB
+    .TVGAIN5.Val.Value = 255,  // G3=7, G4=7 ? flat at 28 dB
+    .TVGAIN6.Val.Value = 252   // G5=6 ? 27.5 dB, fixed gain, no freq shift
 };
 #endif /* __Transducers_H */

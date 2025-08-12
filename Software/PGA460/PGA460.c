@@ -197,7 +197,7 @@ void calculateWind(uint32_t ToF_up[3], uint32_t ToF_down[3], float speed_of_soun
 
 // Function to initialize 3x PGA460 sensors
 PGA460_Error_t PGA460_Init(void) {
-    static const UART_HandleTypeDef *const uartPorts[ULTRASONIC_SENSOR_COUNT] = {&huart1, &huart4, &huart5};
+    static const UART_HandleTypeDef *const uartPorts[ULTRASONIC_SENSOR_COUNT] = {&huart1, &huart4, &huart5};//, };
     for (uint8_t i = 0; i < ULTRASONIC_SENSOR_COUNT; i++) {
         // Step 1: Assign UART and transducer config
         myUltraSonicArray[i].uartPort = (UART_HandleTypeDef *)uartPorts[i];
@@ -240,10 +240,10 @@ PGA460_Error_t PGA460_Init(void) {
         if (PGA460_GetSystemDiagnostics(i, 0, 3, &diagValue) == HAL_OK)
             DEBUG("Sensor %d: Noise Level = %.0f\n", i, diagValue);
         // Step 6: Optional EEPROM Burn
-        // if (PGA460_BurnEEPROM(i) != HAL_OK) {
-        //     DEBUG("Sensor %d: EEPROM Burn Failed!\n", i);
-        //     return PGA460_ERR_GEN;
-        // }
+//         if (PGA460_BurnEEPROM(i) != HAL_OK) {
+//             DEBUG("Sensor %d: EEPROM Burn Failed!\n", i);
+//             return PGA460_ERR_GEN;
+//         }
 
         // Step 7: Optional Echo Data Dump (commented out for normal operation)
 				uint8_t echoBuf[128];
@@ -386,7 +386,7 @@ PGA460_Error_t PGA460_EEPROMBulkWrite(uint8_t sensorID) {
         DEBUG("Sensor %d: EEPROM Bulk Write Failed!\n", sensorID);
         return PGA460_ERR_UART_TX;
     }
-    HAL_Delay(70);  // Wait for EEPROM write
+    HAL_Delay(100);  // Wait for EEPROM write
 		PGA460_CheckStatus(sensorID);
     return PGA460_ERR_NONE;
 }
@@ -482,7 +482,7 @@ PGA460_Error_t PGA460_SetTVG(const uint8_t sensorID, const PGA460_GainRange_t ga
         return PGA460_ERR_UART_TX;
     }
     HAL_Delay(70);  // Let PGA460 apply new TVG settings
-		PGA460_CheckStatus(sensorID);
+		//PGA460_CheckStatus(sensorID);
     return PGA460_ERR_NONE;
 }
 
@@ -549,7 +549,7 @@ PGA460_Error_t PGA460_SetThresholds(const uint8_t sensorID, PGA460_TRH_Level_t t
         return PGA460_ERR_UART_TX;
     }
     HAL_Delay(70);  // Wait for EEPROM to update
-    PGA460_CheckStatus(sensorID);  // Optionally check THR_CRC_ERR
+    //PGA460_CheckStatus(sensorID);  // Optionally check THR_CRC_ERR
     return PGA460_ERR_NONE;
 }
 
@@ -892,7 +892,6 @@ PGA460_Error_t PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint8_t
             DEBUG("Sensor %d: Invalid Diagnostic Type (%d)!\n", sensorID, diag);
             return PGA460_ERR_GEN;
     }
-
     DEBUG("Sensor %d: Diagnostic [%d] Result: %.2f\n", sensorID, diag, *diagResult);
     return PGA460_ERR_NONE;
 }
