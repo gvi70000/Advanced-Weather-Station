@@ -1,0 +1,3128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time-Varying Gain (TVG) & Threshold Plot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.0/dist/chartjs-plugin-dragdata.min.js"></script>
+    <style>
+		body {
+			font-family: 'Inter', sans-serif;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			margin-top: 20px;
+			background-color: #f0f2f5;
+			color: #333;
+		}
+		h1 {
+			color: #2c3e50;
+			margin-bottom: 10px;
+		}
+		.instruction {
+			margin-bottom: 25px;
+			color: #555;
+			text-align: center;
+			max-width: 800px;
+		}
+		.controls-container {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 10px;
+			margin-bottom: 30px;
+			width: 90%;
+			max-width: 1200px;
+			background-color: white;
+			padding: 20px;
+			border-radius: 12px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+		}
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			min-width: 150px;
+		}
+		.control-group label {
+			font-weight: bold;
+			margin-bottom: 8px;
+			color: #34495e;
+			font-size: 0.75em;
+		}
+		.control-group input[type="range"] {
+			width: 100%;
+			-webkit-appearance: none;
+			height: 8px;
+			border-radius: 5px;
+			background: #d3d3d3;
+			outline: none;
+			opacity: 0.7;
+			-webkit-transition: .2s;
+			transition: opacity .2s;
+		}
+		.control-group input[type="range"]::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: #3498db;
+			cursor: pointer;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+		}
+		.control-group input[type="range"]::-moz-range-thumb {
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: #3498db;
+			cursor: pointer;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+		}
+		.control-value {
+			margin-top: 5px;
+			margin-bottom: 10px;
+			font-size: 0.75em;
+			color: #555;
+			background-color: #f0f4f7;
+			padding: 5px 10px;
+			border-radius: 6px;
+			border: 1px solid #e0e7ed;
+		}
+
+		.collapsible-container {
+			width: 90%;
+			max-width: 1200px;
+			background-color: white;
+			padding: 10px 20px;
+			border-radius: 12px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+			margin-bottom: 20px;
+		}
+
+		.container-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 10px 0;
+			cursor: pointer;
+			border-bottom: 1px solid #eee;
+			margin-bottom: 10px;
+		}
+
+		.container-header h2 {
+			margin: 0;
+			color: #34495e;
+			font-size: 1.3em;
+		}
+
+		.toggle-button {
+			background: none;
+			border: none;
+			font-size: 1.5em;
+			cursor: pointer;
+			color: #3498db;
+			transition: transform 0.3s ease-out;
+			padding: 0;
+			line-height: 1;
+		}
+
+		.toggle-button.expanded {
+			transform: rotate(180deg);
+		}
+
+		.collapsible-content {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+			padding-top: 0;
+			padding-bottom: 0;
+		}
+
+		.collapsible-content.expanded {
+			max-height: 1000px;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+
+		.echo-parameters-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+			gap: 15px;
+		}
+
+		.echo-parameters-grid .input-group {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.echo-parameters-grid .input-group label {
+			font-weight: bold;
+			margin-bottom: 5px;
+			color: #34495e;
+			font-size: 0.75em;
+		}
+
+		.echo-parameters-grid .input-group input[type="number"],
+		.echo-parameters-grid .input-group select,
+		.echo-parameters-grid .input-group textarea {
+			padding: 8px;
+			border: 1px solid #ccc;
+			border-radius: 6px;
+			font-size: 0.8em;
+			background-color: #fff;
+		}
+
+		.echo-results {
+			margin-top: 20px;
+			padding: 15px;
+			background-color: #e8f0f7;
+			border-radius: 8px;
+			border: 1px solid #cce0f0;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+			font-size: 1em;
+			grid-column: 1 / -1;
+		}
+
+		.echo-results div {
+			margin-bottom: 5px;
+		}
+
+		.echo-results span {
+			font-family: 'Courier New', Courier, monospace;
+			background-color: #f0f4f7;
+			padding: 2px 6px;
+			border-radius: 4px;
+			border: 1px solid #cce0f0;
+		}
+
+		.echo-results .note {
+			font-size: 0.85em;
+			color: #777;
+			margin-top: 5px;
+		}
+
+		.threshold-inputs-row {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: space-around;
+			gap: 15px;
+			grid-column: 1 / -1;
+		}
+
+		.threshold-inputs-row .input-group {
+			flex: 1 1 calc(8% - 10px);
+			min-width: 50px;
+			margin-bottom: 0;
+			padding: 0px 20px;
+		}
+
+		.threshold-inputs-row .input-group input,
+		.threshold-inputs-row .input-group select {
+			width: 100%;
+		}
+
+		@media (max-width: 768px) {
+			.threshold-inputs-row .input-group {
+				flex: 1 1 calc(25% - 15px);
+			}
+		}
+
+		@media (max-width: 480px) {
+			.threshold-inputs-row .input-group {
+				flex: 1 1 100%;
+			}
+		}
+
+		.threshold-input-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+			gap: 5px;
+			padding: 5px;
+			border: 1px solid #e0e0e0;
+			border-radius: 8px;
+			background-color: #fcfcfc;
+		}
+
+		.threshold-input-grid input[type="number"] {
+			width: 70%;
+			text-align: center;
+			padding: 5px;
+			font-size: 0.9em;
+			border-radius: 4px;
+		}
+
+		#tvgChartContainer {
+			position: relative;
+			width: 90%;
+			max-width: 1200px;
+			height: 500px;
+			background-color: white;
+			border: 1px solid #e0e0e0;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+			padding: 25px;
+			border-radius: 12px;
+			margin-bottom: 30px;
+		}
+
+		#tvgChart {
+			width: 100% !important;
+			height: 100% !important;
+		}
+
+		.action-buttons {
+			margin-top: 20px;
+			margin-bottom: 20px;
+			display: flex;
+			gap: 15px;
+		}
+
+		.action-buttons button {
+			padding: 12px 25px;
+			font-size: 1.1em;
+			font-weight: bold;
+			color: white;
+			background-color: #3498db;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: background-color 0.3s ease, transform 0.2s ease;
+			box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+		}
+
+		.action-buttons button:hover {
+			background-color: #2980b9;
+			transform: translateY(-2px);
+		}
+
+		.action-buttons button:active {
+			transform: translateY(0);
+			box-shadow: 2px 4px rgba(0,0,0,0.1);
+		}
+
+		#resetZoomBtn {
+			position: absolute;
+			top: 15px;
+			right: 15px;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			background-color: #3498db;
+			color: white;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			padding: 0;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+			transition: background-color 0.3s ease, transform 0.2s ease;
+			z-index: 10;
+		}
+
+		#resetZoomBtn:hover {
+			background-color: #2980b9;
+			transform: scale(1.05);
+		}
+
+		#resetZoomBtn svg {
+			fill: currentColor;
+			width: 24px;
+			height: 24px;
+		}
+
+		@media (max-width: 768px) {
+			.collapsible-container, #tvgChartContainer, .point-info-grid, .register-display {
+				width: 95%;
+				padding: 15px;
+			}
+			.point-info-grid {
+				grid-template-columns: 1fr;
+			}
+			.register-table th, .register-table td {
+				padding: 8px 10px;
+				font-size: 0.9em;
+			}
+			h1 {
+				font-size: 1.8em;
+			}
+			.instruction {
+				font-size: 0.9em;
+			}
+			.control-group {
+				min-width: unset;
+				width: 100%;
+			}
+			.echo-parameters-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		.registry-summary-header {
+			margin-top: 0;
+			margin-bottom: 15px;
+			color: #34495e;
+			font-size: 1em;
+			text-align: center;
+		}
+
+		.registry-summary {
+			background-color: #f0f4f7;
+			border-radius: 8px;
+			border: 1px solid #e0e7ed;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+		}
+
+		.registry-summary-table {
+			width: 100%;
+			border-collapse: collapse;
+			text-align: left;
+			font-size: 0.5em;
+		}
+
+		.registry-summary-table th, .registry-summary-table td {
+			padding: 8px 12px;
+			border-bottom: 1px solid #dcdcdc;
+		}
+
+		.registry-summary-table th {
+			background-color: #dbe9f5;
+			font-weight: bold;
+			color: #34495e;
+		}
+
+		.registry-summary-table tr:last-child td {
+			border-bottom: none;
+		}
+
+		.reg-hex, .reg-bin {
+			font-family: 'Courier New', Courier, monospace;
+			background-color: #e8f0f7;
+			padding: 2px 6px;
+			border-radius: 4px;
+			border: 1px solid #cce0f0;
+		}
+		
+		/* Wider container so 4 columns fit */
+		.registry-summary-container {
+		  width: 95%;
+		  max-width: 1800px; /* was 1200px */
+		}
+
+		/* 4 columns side by side */
+		.registry-summary-grid--four {
+		  display: grid;
+		  grid-template-columns: repeat(4, minmax(0, 1fr));
+		  gap: 6px;
+		}
+
+		/* Keep each panel styled & clipped */
+		.registry-summary-grid--four .registry-summary {
+		  background-color: #f0f4f7;
+		  border-radius: 8px;
+		  border: 1px solid #e0e7ed;
+		  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+		  overflow: hidden;
+		}
+
+		/* Tighten table to fit 4-up comfortably */
+		.registry-summary-table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  text-align: left;
+		  font-size: 0.6em;
+		  table-layout: fixed; /* ensures columns share width evenly */
+		}
+
+		.registry-summary-table th, .registry-summary-table td {
+		  padding: 6px 8px; /* slightly tighter */
+		  border-bottom: 1px solid #dcdcdc;
+		}
+
+		/* Suggested column widths */
+		.registry-summary-table th:nth-child(1),
+		.registry-summary-table td:nth-child(1) { width: 20%; font-weight: bold;}
+		.registry-summary-table th:nth-child(2),
+		.registry-summary-table td:nth-child(2) { width: 10%; }
+		.registry-summary-table th:nth-child(3),
+		.registry-summary-table td:nth-child(3) { width: 10%; }
+		.registry-summary-table th:nth-child(4),
+		.registry-summary-table td:nth-child(4) { width: 10%; }
+		.registry-summary-table th:nth-child(5),
+		.registry-summary-table td:nth-child(5) { width: 18%; }
+
+		/* Responsive collapse */
+		@media (max-width: 1500px) {
+		  .registry-summary-grid--four { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+		}
+		@media (max-width: 1100px) {
+		  .registry-summary-grid--four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		}
+		@media (max-width: 700px) {
+		  .registry-summary-grid--four { grid-template-columns: 1fr; }
+		}
+    </style>
+</head>
+<body>
+    <h1>PGA460 Configuration Tool</h1>
+    <div class="collapsible-container">
+        <div class="container-header" data-target="echoParamsContent">
+            <h2>Echo Parameters</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+        <div id="echoParamsContent" class="collapsible-content">
+            <div class="echo-parameters-grid">
+                <div class="input-group">
+                    <label for="noiseLevelInput">Noise Level (ADC)</label>
+                    <input type="number" id="noiseLevelInput" value="5" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="transducerFreq">Transducer (Hz)</label>
+                    <input type="number" id="transducerFreq" value="58000" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="numPulses">N Pulses</label>
+                    <input type="number" id="numPulses" value="2" min="1">
+                </div>
+                <div class="input-group">
+                    <label for="distanceTarget">Dist. to Target (mm)</label>
+                    <input type="number" id="distanceTarget" value="250" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="temperatureC">Temperature (°C)</label>
+                    <input type="number" id="temperatureC" value="25" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="pressurePa">Pressure (Pa)</label>
+                    <input type="number" id="pressurePa" value="101325" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="heightM">Height (m)</label>
+                    <input type="number" id="heightM" value="58" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="relativeHumidity">RH (%)</label>
+                    <input type="number" id="relativeHumidity" value="50" min="0" max="100" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label for="decayTime">Decay Time (µs)</label>
+                    <input type="number" id="decayTime" value="1000" min="0">
+                </div>
+                <div class="echo-results">
+                    <div>
+                        Speed of Sound: <span id="soundSpeedDisplay">0 m/s</span> |
+                        Echo Return Time: <span id="echoReturnTimeDisplay">0 µs</span> |
+                        Pulse Length: <span id="pulseLengthDisplay">0 µs</span> |
+                        Total Time (Echo + Pulse + Decay): <span id="totalTimeDisplay">0 µs</span> |
+                        Theoretical REC_LENGTH: <span id="theoreticalRecLengthDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="collapsible-container">
+        <div class="container-header" data-target="transducerGainContent">
+            <h2>Transducer & Gain Settings</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+        <div id="transducerGainContent" class="collapsible-content">
+            <div class="echo-parameters-grid">
+                <div class="threshold-inputs-row">
+					<!-- TVGAIN0 Register (Address = 14h)
+					TVG_T0 Bits 7:4 Time varying gain Start time parameter.
+					TVG_T1 Bits 3:0 Time Varying Gain T0/T1 Delta Time. -->										  
+					<div class="input-group">
+                        <label for="tvgT0" style="color: blue;">TVG T0 7:4</label>
+                        <select id="tvgT0">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<div class="input-group">
+                        <label for="tvgT1" style="color: blue;">TVG T1 3:0</label>
+                        <select id="tvgT1">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<!-- TVGAIN1 Register (Address = 15h)
+					TVG_T2 Bits 7:4 Time Varying Gain T1/T2 Delta Time.
+					TVG_T3 Bits 3:0 Time Varying Gain T2/T3 Delta Time. -->										  
+					<div class="input-group">
+                        <label for="tvgT2" style="color: red;">TVG T2 7:4</label>
+                        <select id="tvgT2">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<div class="input-group">
+                        <label for="tvgT3" style="color: red;">TVG T3 3:0</label>
+                        <select id="tvgT3">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<!-- TVGAIN2 Register (Address = 16h)
+					TVG_T4 Bits 7:4 Time Varying Gain T3/T4 Delta Time.
+					TVG_T5 Bits 3:0 Time Varying Gain T4/T5 Delta Time. -->										  
+					<div class="input-group">
+                        <label for="tvgT4" style="color: blue;">TVG T4 7:4</label>
+                        <select id="tvgT4">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<div class="input-group">
+                        <label for="tvgT5" style="color: blue;">TVG T5 3:0</label>
+                        <select id="tvgT5">
+                            <option value="0">100 µs</option>
+                            <option value="1">200 µs</option>
+                            <option value="2">300 µs</option>
+                            <option value="3">400 µs</option>
+                            <option value="4">600 µs</option>
+                            <option value="5">800 µs</option>
+                            <option value="6">1000 µs</option>
+                            <option value="7">1200 µs</option>
+                            <option value="8">1400 µs</option>
+                            <option value="9">2000 µs</option>
+                            <option value="10">2400 µs</option>
+                            <option value="11">3200 µs</option>
+                            <option value="12">4000 µs</option>
+                            <option value="13">5200 µs</option>
+                            <option value="14">6400 µs</option>
+                            <option value="15">8000 µs</option>
+                        </select>
+                    </div>
+					<!-- TVGAIN3 Register (Address = 17h)
+					TVG_G1 Bits 7:2 TVG Point 1 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G2 Bits 1:0 TVG Point 2 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVGAIN4 Register (Address = 18h)
+					TVG_G2 Bits 7:4 TVG Point 2 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G3 Bits 3:0 TVG Point 3 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVGAIN5 Register (Address = 19h)
+					TVG_G3 Bits 7:6 TVG Point 3 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					TVG_G4 Bits 5:0 TVG Point 4 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]	
+					TVGAIN6 Register (Address = 1Ah)
+					TVG_G5 Bits 7:2 TVG Point 5 Gain Value: Gain = 0.5 × (TVG_G1 +1) + value(AFE_GAIN_RNG) [dB]
+					Where value(AFE_GAIN_RNG) is the corresponding value in dB for bits set for AFE_GAIN_RNG in DECPL_TEMP register
+					RESERVED Bits 1
+					FREQ_SHIFT Bits 0 Burst Frequency Range Shift: 0b = Disabled 1b = Enabled, active frequency = 6 × frequency result from
+					calculation using equation given in the FREQUENCY register -->										  
+					<div class="input-group">
+                        <label for="tvgG1" style="color: red;">TVG G1 7:2</label>
+                        <input type="number" id="tvgG1" value="0" min="0" max="63" step="1">
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="tvgG2" style="color: blue;">TVG G2 1:0/7:4</label>
+                        <input type="number" id="tvgG2" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="tvgG3" style="color: red;">TVG G3 3:0/7:6</label>
+                        <input type="number" id="tvgG3" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="tvgG4" style="color: blue;">TVG G4 5:0</label>
+                        <input type="number" id="tvgG4" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="tvgG5" style="color: red;">TVG G5 7:2</label>
+                        <input type="number" id="tvgG5" value="0" min="0" max="63" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="freq_shift" style="color: red;">FREQ SHIFT 0</label>
+                        <select id="freq_shift">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>
+					<!-- INIT_GAIN Register (Address = 1Bh)
+					BPF_BW Bits 7:6 Digital bandpass filter bandwidth: BandWidth = 2 × (BPF_BW + 1) [kHz]
+					GAIN_INIT Bits 5:0 Initial AFE Gain: Init_Gain = 0.5 × (GAIN_INIT+1) + value(AFE_GAIN_RNG) [dB]
+					Where value(AFE_GAIN_RNG) is the corresponding value in dB for bits set for AFE_GAIN_RNG in DECPL_TEMP register -->
+					<div class="control-group">
+                        <label for="bpfBwSlider" style="color: blue;">BPF Bandwidth (kHz) 7:6</label>
+                        <input type="range" id="bpfBwSlider" min="0" max="3" step="1" value="0">
+                        <div class="control-value" id="bpfBwValue">2 kHz</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="gainInitSlider" style="color: blue;">GAIN_INIT 5:0</label>
+                        <input type="range" id="gainInitSlider" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="gainInitValue">0</div>
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+					<!-- FREQUENCY Register (Address = 1Ch)
+					FREQ Bits 7:0 Burst frequency equation parameter: Frequency = 0.2 × FREQ + 30 [kHz]
+					The valid FREQ parameter value range is from 0 to 250 (00h to FAh) -->
+					<div class="control-group">
+                        <label for="frequencySlider" style="color: blue;">Frequency 7:0</label>
+                        <input type="range" id="frequencySlider" min="0" max="250" step="1" value="0">
+                        <div class="control-value" id="frequencyValue">0 (30 kHz)</div>
+                    </div>
+					<!-- DEADTIME Register (Address = 1Dh)
+					THR_CMP_DEGLTCH Bits 7:4 Threshold level comparator deglitch period: deglitch period = (THR_CMP_DEGLITCH × 8) [μs]
+					PULSE_DT Bits 3:0 Burst Pulse Dead-Time: DeadTime = 0.0625 × PULSE_DT[μs] -->
+					<div class="control-group">
+                        <label for="deglitchPeriodSlider" style="color: red;">Deglitch period 7:4</label>
+                        <input type="range" id="deglitchPeriodSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="deglitchPeriodValue">0 (0 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="pulseDeadTimeSlider" style="color: red;">Pulse dead Time 3:0</label>
+                        <input type="range" id="pulseDeadTimeSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="pulseDeadTimeValue">0 (0 µs)</div>
+                    </div>
+					<!-- PULSE_P1 Register (Address = 1Eh)
+					IO_IF_SEL Bits 7 Interface Selection on IO pin: 0b = Time-Based Interface 1b = One-Wire UART Interface
+					UART_DIAG Bits 6 UART Diagnostic Page Selection: 0b = Diagnostic bits related to UART interface 1b = Diagnostic bits related to System Diagnostics
+					IO_DIS Bits 5 Disable IO pin transceiver: 0b = IO transceiver enabled 1b = IO transceiver disabled Note: Available only if IO_IF_SEL = 0
+					P1_PULSE Bits 4:0 Number of burst pulses for Preset1 Note: 0h means one pulse is generated on OUTA only -->
+					<div class="input-group">
+                        <label for="interface" style="color: blue;">Interface 7</label>
+                        <select id="interface">
+                            <option value="0">Time-Based</option>
+                            <option value="1">UART/OneWire</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="diagnostic" style="color: blue;">Diagnostic 6</label>
+                        <select id="diagnostic">
+                            <option value="0">UART</option>
+                            <option value="1">System</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="transceiver" style="color: blue;">Transceiver 5</label>
+                        <select id="transceiver">
+                            <option value="0">Enabled</option>
+                            <option value="1">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="p1nSlider" style="color: blue;">P1 PULSE 4:0</label>
+                        <input type="range" id="p1nSlider" min="0" max="31" step="1" value="0">
+                        <div class="control-value" id="p1nValue">0 (1 OutA)</div>
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+					<!-- PULSE_P2 Register (Address = 1Fh)
+					UART_ADDR Bits 7:5 UART interface address
+					P2_PULSE Bits 4:0 Number of burst pulses for Preset2 Note: 0h means one pulse is generated on OUTA only -->
+					<div class="control-group">
+                        <label for="uartAddrSlider" style="color: red;">UART Addr 7:5</label>
+                        <input type="range" id="uartAddrSlider" min="0" max="7" step="1" value="0">
+                        <div class="control-value" id="uartAddrValue">0</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="p2nSlider" style="color: red;">P2 PULSE 4:0</label>
+                        <input type="range" id="p2nSlider" min="0" max="31" step="1" value="0">
+                        <div class="control-value" id="p2nValue">0 (1 OutA)</div>
+                    </div>
+					<!-- CURR_LIM_P1 Register (Address = 20h)
+					DIS_CL Bits 7 Disable Current Limit for Preset1 and Preset2 0b = current limit enabled 1b = current limit disabled
+					CURR_LIM1 Bits 5:0 Driver Current Limit for Preset1 Current_Limit = 7 × CURR_LIM1 + 50 [mA] -->
+					<div class="input-group">
+                        <label for="DIS_CL" style="color: blue;">DIS_CL 7</label>
+                        <select id="DIS_CL">
+                            <option value="0">Enable current limit</option>
+                            <option value="1">Disable current limit</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="CURR_LIM1" style="color: blue;">CURR_LIM1 5:0</label>
+                        <input type="range" id="CURR_LIM1" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="CURR_LIM1Value">0</div>
+                    </div>
+					<!-- CURR_LIM_P2 Register (Address = 21h)
+					LPF_CO Bits 7:6 Lowpass filter cutoff frequency: Cut off frequency = LPF_CO + 1 [kHz]
+					CURR_LIM1 Bits 5:0 Driver Current Limit for Preset2 Current_Limit = 7 × CURR_LIM2 + 50 [mA] -->
+					<div class="control-group">
+                        <label for="lpfCoSlider" style="color: red;">LPF Cutoff (kHz) 7:6</label>
+                        <input type="range" id="lpfCoSlider" min="0" max="3" step="1" value="0">
+                        <div class="control-value" id="lpfCoValue">1 kHz</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="CURR_LIM2" style="color: red;">CURR_LIM2 5:0</label>
+                        <input type="range" id="CURR_LIM2" min="0" max="63" step="1" value="0">
+                        <div class="control-value" id="CURR_LIM2Value">0</div>
+                    </div>
+					<!-- REC_LENGTH Register (Address = 22h)
+					P1_REC Bits 7:4 Preset1 record time length: Record time = 4.096 × (P1_REC + 1) [ms]
+					P2_REC Bits 3:0 Preset2 record time length: Record time = 4.096 × (P1_REC + 1) [ms] -->
+					<div class="control-group">
+                        <label for="p1RecSlider" style="color: blue;">P1 Record Time 7:4</label>
+                        <input type="range" id="p1RecSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p1RecValue">0 (0 µs)</div>
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+                    <div class="control-group">
+                        <label for="p2RecSlider" style="color: blue;">P2 Record Time 3:0</label>
+                        <input type="range" id="p2RecSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="p2RecValue">0 (0 µs)</div>
+                    </div>
+					<!-- FREQ_DIAG Register (Address = 23h)
+					FDIAG_LEN Bits 7:4 Frequency diagnostic window length: For value 0h, the diagnostic is disabled.
+					For values 0 to Fh, the window length is given by 3 × FDIAG_LEN [Signal Periods]
+					FDIAG_START Bits 3:0 Frequency diagnostic start time: Start time = 100 × FDIAG_START [μs]
+					Note: this time is relative to the end-of-burst time -->
+					<div class="control-group">
+                        <label for="fDiagWinSlider" style="color: red;">Window Len 7:4</label>
+                        <input type="range" id="fDiagWinSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="fDiagWinValue">0 (0 T)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="fDiagLenSlider" style="color: red;">StartTime 3:0</label>
+                        <input type="range" id="fDiagLenSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="fDiagLenValue">0 (0 µs)</div>
+                    </div>
+					<!-- SAT_FDIAG_TH Register (Address = 24h)
+					FDIAG_ERR_TH Bits 7:5 Frequency diagnostic absolute error time threshold: threshold = (FDIAG_ERR_TH + 1) [μs]
+					SAT_TH Bits 4:1 Saturation diagnostic threshold level.
+					P1_NLS_EN Bits 0 Set high to enable Preset1 non-linear scaling -->
+					<div class="control-group">
+                        <label for="fDiagThrSlider" style="color: blue;">f Diagnostic THR 7:5</label>
+                        <input type="range" id="fDiagThrSlider" min="0" max="7" step="1" value="0">
+                        <div class="control-value" id="fDiagThrValue">0 (1 µs)</div>
+                    </div>
+                    <div class="control-group">
+                        <label for="satThrSlider" style="color: blue;">Saturation THR 4:1</label>
+                        <input type="range" id="satThrSlider" min="0" max="15" step="1" value="0">
+                        <div class="control-value" id="satThrValue">0</div>
+                    </div>
+                    <div class="input-group">
+                        <label for="nlP1Scaling" style="color: blue;">P1 NL Scaling 0</label>
+                        <select id="nlP1Scaling">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>
+					<!-- FVOLT_DEC Register (Address = 25h)
+					P2_NLS_EN Bits 7 Set high to enable Preset2 non-linear scaling
+					VPWR_OV_TH Bits 6:5 VPWR over voltage threshold select: 00b = 12.3V 01b = 17.7V 10b = 22.8V 11b = 28.3V
+					LPM_TMR Bits 4:3 Low power mode enter time:00b = 250 ms 01b = 500 ms 10b = 1 s11b = 4s
+					FVOLT_ERR_TH Bits 2:0 See section on System Diagnostics for Voltage diagnostic measurement: 1 to 8 -->
+					<div class="input-group">
+                        <label for="nlP2Scaling" style="color: red;">P2 NL Scaling 7</label>
+                        <select id="nlP2Scaling">
+                            <option value="0">Disabled</option>
+                            <option value="1">Enabled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="ovThr" style="color: red;">Over Voltage 6:5</label>
+                        <select id="ovThr">
+                            <option value="0">12.3V</option>
+                            <option value="1">17.7V</option>
+                            <option value="2">22.8V</option>
+                            <option value="3">28.3V</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="lpTimer" style="color: red;">LP Timer 4:3</label>
+                        <select id="lpTimer">
+                            <option value="0">250ms</option>
+                            <option value="1">500ms</option>
+                            <option value="2">1s</option>
+                            <option value="3">4s</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="voltageDiagnostic" style="color: red;">V Diagnostic 2:0</label>
+                        <select id="voltageDiagnostic">
+                            <option value="0">1</option>
+                            <option value="1">2</option>
+                            <option value="2">3</option>
+                            <option value="3">4</option>
+                            <option value="4">5</option>
+                            <option value="5">6</option>
+                            <option value="6">7</option>
+                            <option value="7">8</option>
+                        </select>
+                    </div>
+					<!-- DECPL_TEMP Register (Address = 26h)
+					AFE_GAIN_RNG Bits 7:6 AFE gain range selection codes: 00b = 58 to 90dB 01b = 52 to 84dB 10b = 46 to 78dB 11b = 32 to 64dB
+					LPM_EN Bits 5 PGA460 Low Power Mode Enable: 0b = Low power mode is disabled 1b = Low power mode is enabled
+					DECPL_TEMP_SEL Bits 4 Decouple Time / Temperature Select: 0b = Time Decouple 1b = Temperature Decouple
+					DECPL_T Bits 3:0 Secondary decouple time / temperature decouple If DECPL_TEMP_SEL = 0 (Time Decouple) Time = 4096 × (DECPL_T + 1) [μs]
+					If DECPL_TEMP_SEL = 1 (Temperature Decouple) Temperature = 10 × DECPL_T - 40 [degC] -->
+					<div class="input-group">
+                        <label for="gainAFE" style="color: blue;">Gain Range 7:6</label>
+                        <select id="gainAFE">
+                            <option value="0">58 to 90 dB</option>
+                            <option value="1">52 to 84 dB</option>
+                            <option value="2">46 to 78 dB</option>
+                            <option value="3">32 to 64 dB</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="LPM_EN" style="color: blue;">Low Power 5</label>
+                        <select id="LPM_EN">
+                            <option value="0">Low power OFF</option>
+                            <option value="1">Low power ON</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="DECPL_TEMP_SEL" style="color: blue;">Decouple Mode 4</label>
+                        <select id="DECPL_TEMP_SEL">
+                            <option value="0">Time</option>
+                            <option value="1">Temperature</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="DECPL_T" style="color: blue;">Decouple Time 3:0</label>
+                        <input type="number" id="DECPL_T" value="0" min="0" max="15" step="1">
+                    </div>
+                </div>
+                <div class="threshold-inputs-row">
+					<!-- DSP_SCALE Register (Address = 27h) [reset = 0h]
+					NOISE_LVL Bits 7:3 Value ranges from 0 to 31 with 1 LSB steps for digital gain values (Px_DIG_GAIN_LR) less than 8
+					If digital gain (Px_DIG_GAIN_LR) is larger than 8, then multiply the NOISE_LVL by Px_DIG_GAIN_LR/8
+					SCALE_K Bits 2 Non-Linear scaling exponent selection: 0b = 1.50 1b = 2.00
+					SCALE_N Bits 1:0 Selects the starting threshold level point from which the non-linear
+					gain (if enabled) is applied: 00b = TH9 01b = TH10 10b = TH11 11b = TH12 -->
+					<div class="control-group">
+                        <label for="noiseLvlSlider" style="color: red;">Noise Level 7:3</label>
+                        <input type="range" id="noiseLvlSlider" min="0" max="31" step="1" value="0">
+                        <div class="control-value" id="noiseLvlValue">0</div>
+                    </div>
+					<div class="input-group">
+                        <label for="SCALE_K" style="color: red;">Scale K 2</label>
+                        <select id="SCALE_K">
+                            <option value="0">1.5</option>
+                            <option value="1">2.0</option>
+                        </select>
+                    </div>
+					<div class="input-group">
+                        <label for="SCALE_N" style="color: red;">Scale N 1:0</label>
+                        <select id="SCALE_N">
+                            <option value="0">TH9</option>
+                            <option value="1">TH10</option>
+							<option value="2">TH11</option>
+							<option value="3">TH12</option>
+                        </select>
+                    </div>
+					<!-- TEMP_TRIM Register (Address = 28h)
+					TEMP_GAIN Bits 7:4 Temperature scaling gain: signed value can range from -8 (1000b) to 7 (0111b) used for
+					measured temperature value compensation
+					TEMP_OFF Bits 3:0 Temperature Scaling Offset: signed value can range from -8 (1000b) to 7 (0111b) used for
+					measured temperature value compensation -->
+					<div class="input-group">
+                        <label for="temperatureGain" style="color: blue;">Temp Gain</label>
+                        <input type="number" id="temperatureGain" value="-8" min="-8" max="7" step="1">
+                    </div>
+
+					<div class="input-group">
+                        <label for="temperatureOffset" style="color: blue;">Temp Offset</label>
+                        <input type="number" id="temperatureOffset" value="-8" min="-8" max="7" step="1">
+                    </div>
+					<!-- P1_GAIN_CTRL Register (Address = 29h)
+					P1_DIG_GAIN_LR_ST Bits 7:6 Selects the starting Preset1 threshold level point from which the long range (LR) digital gain
+					P1_DIG_GAIN_LR, is applied 00b = TH9 01b = TH10 10b = TH11 11b = TH12
+					P1_DIG_GAIN_LR Bits 5:3 Preset1 Digital long range (LR) gain applied from the selected long
+					range threshold level point to the end of the record period Applied to the thresholds set by P1_DIG_GAIN_LR_ST: 000b = multiplied by 1
+					001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid
+					P1_DIG_GAIN_SR Bits 2:0 Preset1 Digital short range (SR) gain applied from time zero to the start of the selected long range (LR) threshold level point:
+					000b = multiplied by 1 001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid -->
+					<div class="input-group">
+                        <label for="p1DigGainLrSt" style="color: red;">P1_DIG_GAIN_LR_ST</label>
+                        <select id="p1DigGainLrSt">
+                            <option value="0">TH9</option>
+                            <option value="1">TH10</option>
+                            <option value="2">TH11</option>
+                            <option value="3">TH12</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p1DigGainLr" style="color: red;">P1_DIG_GAIN_LR</label>
+                        <select id="p1DigGainLr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p1DigGainSr" style="color: red;">P1_DIG_GAIN_SR</label>
+                        <select id="p1DigGainSr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+					<!-- P2_GAIN_CTRL Register (Address = 2Ah)
+					P2_DIG_GAIN_LR_ST Bits 7:6 Selects the starting Preset1 threshold level point from which the long range (LR) digital gain
+					P2_DIG_GAIN_LR, is applied 00b = TH9 01b = TH10 10b = TH11 11b = TH12
+					P2_DIG_GAIN_LR Bits 5:3 Preset2 Digital long range (LR) gain applied from the selected long
+					range threshold level point to the end of the record period Applied to the thresholds set by P2_DIG_GAIN_LR_ST: 000b = multiplied by 1
+					001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid
+					P2_DIG_GAIN_SR Bits 2:0 Preset2 Digital short range (SR) gain applied from time zero to the start of the selected long range (LR) threshold level point:
+					000b = multiplied by 1 001b = multiplied by 2 010b = multiplied by 4 011b = multiplied by 8 100b = multiplied by 16 101b = multiplied by 32 110b = invalid 111b = invalid -->
+					<div class="input-group">
+                        <label for="p2DigGainLrSt" style="color: blue;">P2_DIG_GAIN_LR_ST</label>
+                        <select id="p2DigGainLrSt">
+                            <option value="0">TH9</option>
+                            <option value="1">TH10</option>
+                            <option value="2">TH11</option>
+                            <option value="3">TH12</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p2DigGainLr" style="color: blue;">P2_DIG_GAIN_LR</label>
+                        <select id="p2DigGainLr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="p2DigGainSr" style="color: blue;">P2_DIG_GAIN_SR</label>
+                        <select id="p2DigGainSr">
+                            <option value="0">x1</option>
+                            <option value="1">x2</option>
+                            <option value="2">x4</option>
+                            <option value="3">x8</option>
+                            <option value="4">x16</option>
+                            <option value="5">x32</option>
+                        </select>
+                    </div>
+					<!-- TEST_MUX Register (Address = 4Bh)
+					TEST_MUX Bits 7:5 Multiplexer output on the TEST Pin: 000b = GND ("Mux Off") 001b = Analog Front End output 010b = Reserved 011b = Reserved 100b = 8MHz clock
+					101b = ADC sample output clock 110b = Reserved 111b = Reserved
+					Note 1 000b through 011b are analog output signals
+					Note 2 100b through 111b are digital output signals
+					RESERVED Bits 4
+					SAMPLE_SEL Bits 3 Data path sample select: 0b = 8 bit sample output at 1 μs per sample 1b = 12 bit sample output at 2 μs per sample
+					Note: For use with DP_MUX parameter values 001b to 100b
+					DP_MUX Bits 2:0 Data path multiplexer source select codes: 000b = Disabled 001b = LPF output 010b = Rectifier output 011b = BPF output 100b = ADC output
+					101b = Not used 110b = Not used 111b = Not used -->
+					<div class="input-group">
+                        <label for="testMUX" style="color: red;">TEST MUX</label>
+                        <select id="testMUX">
+                            <option value="0">GND-MUX Off</option>
+                            <option value="1">Analog Front End</option>
+                            <option value="4">8MHz clock</option>
+                            <option value="5">ADC sample output clock</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="sampleSel" style="color: red;">Sample Select</label>
+                        <select id="sampleSel">
+                            <option value="0">8bit @ 1μs</option>
+                            <option value="1">12bit @ 2μs</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataPathMux" style="color: red;">Data path multiplexer</label>
+                        <select id="dataPathMux">
+							<option value="0">Disabled</option>
+                            <option value="1">LPF output</option>
+                            <option value="2">Rectifier output</option>
+							<option value="3">BPF output</option>
+							<option value="4">ADC output</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+	<div class="collapsible-container">
+		<!-- 
+		BPF_A2_LSB Register (Address = 42h)
+		BPF_A3_MSB Register (Address = 43h)
+		BPF_A3_LSB Register (Address = 44h)
+		BPF_B1_MSB Register (Address = 45h)
+		BPF_B1_LSB Register (Address = 46h)
+		LPF_A2_MSB Register (Address = 47h)
+		LPF_A2_LSB Register (Address = 48h)
+		LPF_B1_MSB Register (Address = 49h)
+		LPF_B1_LSB Register (Address = 4Ah)
+		 -->
+		<div class="container-header" data-target="bandPassContent">
+			<h2>Band Pass Filter Calculated Coefficients</h2>
+			<button class="toggle-button">▼</button>
+		</div>
+		<div id="bandPassContent" class="collapsible-content">
+			</div>
+	</div>	
+    <div class="collapsible-container">
+        <div class="container-header" data-target="thresholdP1Content">
+            <h2>Threshold & Digital Gain Settings (Preset 1)</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+        <div id="thresholdP1Content" class="collapsible-content">
+				<!-- P1_THR_0 Register (Address = 5Fh)
+					TH_P1_T1 7:4 Preset1 Threshold T1 absolute time
+					TH_P1_T2 3:0 Preset1 Threshold T2 delta time
+				P1_THR_1 Register (Address = 60h)
+					TH_P1_T3 7:4 Preset1 Threshold T3 delta time
+					TH_P1_T4 3:0 Preset1 Threshold T4 delta time
+				P1_THR_2 Register (Address = 61h)
+					TH_P1_T5 7:4 Preset1 Threshold T5 delta time
+					TH_P1_T6 3:0 Preset1 Threshold T6 delta time
+				P1_THR_3 Register (Address = 62h)
+					TH_P1_T7 7:4 Preset1 Threshold T7 delta time
+					TH_P1_T8 3:0 Preset1 Threshold T8 delta time
+				P1_THR_4 Register (Address = 63h)
+					TH_P1_T9 7:4 Preset1 Threshold T9 delta time
+					TH_P1_T10 3:0 Preset1 Threshold T10 delta time
+				P1_THR_5 Register (Address = 64h)
+					TH_P1_T11 7:4 Preset1 Threshold T11 delta time
+					TH_P1_T12 3:0 Preset1 Threshold T12 delta time
+				P1_THR_6 Register (Address = 65h)
+					TH_P1_L1 7:3 Preset1 Threshold L1 level
+					TH_P1_L2 2:0 Preset1 Threshold L2 level bits (Bit4 to Bit2) 
+				P1_THR_7 Register (Address = 66h)
+					TH_P1_L2 7:6 Preset1 Threshold L2 level (Bit1 to Bit0)
+					TH_P1_L3 5:1 Preset1 Threshold L3 level
+					TH_P1_L4 0 Preset1 Threshold L4 level (Bit4)
+				P1_THR_8 Register (Address = 67h)
+					TH_P1_L4 7:4 Preset1 Threshold L4 level (Bits3 to Bit0)
+					TH_P1_L5 3:0 Preset1 Threshold L5 level (Bit4 to Bit1)
+				P1_THR_9 Register (Address = 68h)
+					TH_P1_L5 7 Preset1 Threshold L5 level (Bit0)
+					TH_P1_L6 6:2 Preset1 Threshold L6 level
+					TH_P1_L7 1:0 Preset1 Threshold L7 level (Bits4 to Bit3)
+				P1_THR_10 Register (Address = 69h)
+					TH_P1_L7 7:5 Preset1 Threshold L7 Level (Bit2 to Bit0) 
+					TH_P1_L8 4:0 Preset1 Threshold L8 level
+				P1_THR_11 Register (Address = 6Ah)
+					TH_P1_L9 7:0 Threshold L9 level
+				P1_THR_12 Register (Address = 6Bh)
+					TH_P1_L10 7:0 Threshold L10 level				
+				P1_THR_13 Register (Address = 6Ch)
+					TH_P1_L11 7:0 Threshold L11 level
+				P1_THR_14 Register (Address = 6Dh)
+					TH_P1_L12 7:0 Threshold L12 level
+				P1_THR_15 Register (Address = 6Eh)
+					Bits 7:4 reserved
+					TH_P1_OFF 3:0 Preset1 Threshold level Offset with values from 7 to -8 using signed magnitude representation with MSB as the sign bit
+				-->
+				<div class="echo-parameters-grid">
+                <div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="thrPr1P1Time">THR P1 T1</label>
+                        <select id="thrPr1P1Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P1Level">THR P1 L1</label>
+                        <input type="number" id="thrPr1P1Level" value="31" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P2Time">THR P1 T2 (Delta)</label>
+                        <select id="thrPr1P2Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P2Level">THR P1 L2</label>
+                        <input type="number" id="thrPr1P2Level" value="29" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P3Time">THR P1 T3 (Delta)</label>
+                        <select id="thrPr1P3Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P3Level">THR P1 L3</label>
+                        <input type="number" id="thrPr1P3Level" value="27" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P4Time">THR P1 T4 (Delta)</label>
+                        <select id="thrPr1P4Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P4Level">THR P1 L4</label>
+                        <input type="number" id="thrPr1P4Level" value="25" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P5Time">THR P1 T5 (Delta)</label>
+                        <select id="thrPr1P5Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P5Level">THR P1 L5</label>
+                        <input type="number" id="thrPr1P5Level" value="23" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P6Time">THR P1 T6 (Delta)</label>
+                        <select id="thrPr1P6Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P6Level">THR P1 L6</label>
+                        <input type="number" id="thrPr1P6Level" value="21" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P7Time">THR P1 T7 (Delta)</label>
+                        <select id="thrPr1P7Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P7Level">THR P1 L7</label>
+                        <input type="number" id="thrPr1P7Level" value="19" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P8Time">THR P1 T8 (Delta)</label>
+                        <select id="thrPr1P8Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P8Level">THR P1 L8</label>
+                        <input type="number" id="thrPr1P8Level" value="17" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P9Time">THR P1 T9 (Delta)</label>
+                        <select id="thrPr1P9Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P9Level">THR P1 L9</label>
+                        <input type="number" id="thrPr1P9Level" value="20" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P10Time">THR P1 T10 (Delta)</label>
+                        <select id="thrPr1P10Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P10Level">THR P1 L10</label>
+                        <input type="number" id="thrPr1P10Level" value="15" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P11Time">THR P1 T11 (Delta)</label>
+                        <select id="thrPr1P11Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P11Level">THR P1 L11</label>
+                        <input type="number" id="thrPr1P11Level" value="10" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P12Time">THR P1 T12 (Delta)</label>
+                        <select id="thrPr1P12Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr1P12Level">THR P1 L12</label>
+                        <input type="number" id="thrPr1P12Level" value="5" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thP1Off">TH_P1_OFF</label>
+                        <input type="number" id="thP1Off" value="-8" min="-8" max="7" step="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="collapsible-container">
+        <div class="container-header" data-target="thresholdP2Content">
+            <h2>Threshold & Digital Gain Settings (Preset 2)</h2>
+            <button class="toggle-button">▼</button>
+        </div>
+        <div id="thresholdP2Content" class="collapsible-content">
+            <div class="echo-parameters-grid">
+				<!-- P2_THR_0 Register (Address = 6Fh)
+					TH_P2_T1 7:4 Preset2 Threshold T1 absolute time
+					TH_P2_T2 3:0 Preset2 Threshold T2 delta time
+				P2_THR_1 Register (Address = 70h)
+					TH_P2_T3 7:4 Preset2 Threshold T3 delta time
+					TH_P2_T4 3:0 Preset2 Threshold T4 delta time
+				P2_THR_2 Register (Address = 71h)
+					TH_P2_T5 7:4 Preset2 Threshold T5 delta time
+					TH_P2_T6 3:0 Preset2 Threshold T6 delta time
+				P2_THR_3 Register (Address = 72h)
+					TH_P2_T7 7:4 Preset2 Threshold T7 delta time
+					TH_P2_T8 3:0 Preset2 Threshold T8 delta time
+				P2_THR_4 Register (Address = 73h)
+					TH_P2_T9 7:4 Preset2 Threshold T9 delta time
+					TH_P2_T10 3:0 Preset2 Threshold T10 delta time
+				P2_THR_5 Register (Address = 74h)
+					TH_P2_T11 7:4 Preset2 Threshold T11 delta time
+					TH_P2_T12 3:0 Preset2 Threshold T12 delta time
+				P2_THR_6 Register (Address = 75h)
+					TH_P2_L1 7:3 Preset2 Threshold L1 level
+					TH_P2_L2 2:0 Preset2 Threshold L2 level bits (Bit4 to Bit2) 
+				P2_THR_7 Register (Address = 76h)
+					TH_P2_L2 7:6 Preset2 Threshold L2 level (Bit1 to Bit0)
+					TH_P2_L3 5:1 Preset2 Threshold L3 level
+					TH_P2_L4 0 Preset2 Threshold L4 level (Bit4)
+				P2_THR_8 Register (Address = 77h)
+					TH_P2_L4 7:4 Preset2 Threshold L4 level (Bits3 to Bit0)
+					TH_P2_L5 3:0 Preset2 Threshold L5 level (Bit4 to Bit1)
+				P2_THR_9 Register (Address = 78h)
+					TH_P2_L5 7 Preset2 Threshold L5 level (Bit0)
+					TH_P2_L6 6:2 Preset2 Threshold L6 level
+					TH_P2_L7 1:0 Preset2 Threshold L7 level (Bits4 to Bit3)
+				P2_THR_10 Register (Address = 79h)
+					TH_P2_L7 7:5 Preset2 Threshold L7 Level (Bit2 to Bit0) 
+					TH_P2_L8 4:0 Preset2 Threshold L8 level
+				P2_THR_11 Register (Address = 7Ah)
+					TH_P2_L9 7:0 Threshold L9 level
+				P2_THR_12 Register (Address = 7Bh)
+					TH_P2_L10 7:0 Threshold L10 level				
+				P2_THR_13 Register (Address = 7Ch)
+					TH_P2_L11 7:0 Threshold L11 level
+				P2_THR_14 Register (Address = 7Dh)
+					TH_P2_L12 7:0 Threshold L12 level
+				P2_THR_15 Register (Address = 7Eh)
+					Bits 7:4 reserved
+					TH_P2_OFF 3:0 Preset2 Threshold level Offset with values from 7 to -8 using signed magnitude representation with MSB as the sign bit
+				-->
+				<div class="threshold-inputs-row">
+                    <div class="input-group">
+                        <label for="thrPr2P1Time">THR P2 T1</label>
+                        <select id="thrPr2P1Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P1Level">THR P2 L1</label>
+                        <input type="number" id="thrPr2P1Level" value="31" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P2Time">THR P2 T2 (Delta)</label>
+                        <select id="thrPr2P2Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P2Level">THR P2 L2</label>
+                        <input type="number" id="thrPr2P2Level" value="29" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P3Time">THR P2 T3 (Delta)</label>
+                        <select id="thrPr2P3Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P3Level">THR P2 L3</label>
+                        <input type="number" id="thrPr2P3Level" value="27" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P4Time">THR P2 T4 (Delta)</label>
+                        <select id="thrPr2P4Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P4Level">THR P2 L4</label>
+                        <input type="number" id="thrPr2P4Level" value="25" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P5Time">THR P2 T5 (Delta)</label>
+                        <select id="thrPr2P5Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P5Level">THR P2 L5</label>
+                        <input type="number" id="thrPr2P5Level" value="23" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P6Time">THR P2 T6 (Delta)</label>
+                        <select id="thrPr2P6Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P6Level">THR P2 L6</label>
+                        <input type="number" id="thrPr2P6Level" value="21" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P7Time">THR P2 T7 (Delta)</label>
+                        <select id="thrPr2P7Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P7Level">THR P2 L7</label>
+                        <input type="number" id="thrPr2P7Level" value="19" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P8Time">THR P2 T8 (Delta)</label>
+                        <select id="thrPr2P8Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P8Level">THR P2 L8</label>
+                        <input type="number" id="thrPr2P8Level" value="17" min="0" max="31" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P9Time">THR P2 T9 (Delta)</label>
+                        <select id="thrPr2P9Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P9Level">THR P2 L9</label>
+                        <input type="number" id="thrPr2P9Level" value="20" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P10Time">THR P2 T10 (Delta)</label>
+                        <select id="thrPr2P10Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P10Level">THR P2 L10</label>
+                        <input type="number" id="thrPr2P10Level" value="15" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P11Time">THR P2 T11 (Delta)</label>
+                        <select id="thrPr2P11Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P11Level">THR P2 L11</label>
+                        <input type="number" id="thrPr2P11Level" value="10" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P12Time">THR P2 T12 (Delta)</label>
+                        <select id="thrPr2P12Time">
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="thrPr2P12Level">THR P2 L12</label>
+                        <input type="number" id="thrPr2P12Level" value="5" min="0" max="255" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="thP2Off">TH_P2_OFF</label>
+                        <input type="number" id="thP2Off" value="7" min="-8" max="7" step="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+	<div class="collapsible-container">
+		<div class="container-header" data-target="echoDumpContent">
+			<h2>Echo Data Dump</h2>
+			<button class="toggle-button">▼</button>
+		</div>
+
+		<div id="echoDumpContent" class="collapsible-content">
+			<div class="threshold-inputs-row">
+				<div class="input-group">
+					<label for="echoTimeStep1">Time Step (µs)</label>
+					<input type="number" id="echoTimeStep1" value="32" min="1" step="1">
+				</div>
+				<div class="input-group">
+					<label for="echoLabel1">Label</label>
+					<input id="echoLabel1" value="Dump 1">
+				</div>
+				<div class="input-group">
+					<label for="echoLabel2">Label</label>
+					<input id="echoLabel2" value="Dump 2">
+				</div>
+				<div class="input-group">
+					<label for="echoLabel3">Label</label>
+					<input id="echoLabel3" value="Dump 3">
+				</div>
+				<div class="input-group">
+					<label for="echoLabel4">Label</label>
+					<input id="echoLabel4" value="Dump 4">
+				</div>
+			</div>
+			<!-- Echo series 1 -->
+			<div class="threshold-inputs-row">
+				<div class="input-group">
+				  <textarea id="echoDataDump1" placeholder="Paste up to 128 comma-separated values..." style="width:100%; height:80px; color: red;"></textarea>
+				</div>
+			<!-- Echo series 2 -->
+				<div class="input-group">
+				  <textarea id="echoDataDump2" placeholder="Paste up to 128 comma-separated values..." style="width:100%; height:80px;  color: magenta;"></textarea>
+				</div>
+			<!-- Echo series 3 -->
+				<div class="input-group">
+				  <textarea id="echoDataDump3" placeholder="Paste up to 128 comma-separated values..." style="width:100%; height:80px;  color: blue;"></textarea>
+				</div>
+			<!-- Echo series 4 -->
+				<div class="input-group">
+				  <textarea id="echoDataDump4" placeholder="Paste up to 128 comma-separated values..." style="width:100%; height:80px;  color: green;"></textarea>
+				</div>
+			</div>
+		</div>
+	</div>
+    <div id="tvgChartContainer">
+        <canvas id="tvgChart"></canvas>
+        <button id="resetZoomBtn" title="Reset Zoom">
+            <svg viewBox="0 0 48 48">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/>
+            </svg>
+        </button>
+    </div>
+    <div class="action-buttons">
+        <button id="saveSettingsBtn">Save Settings (.h)</button>
+        <button id="loadSettingsBtn">Load Settings (.h)</button>
+        <button id="setDefaultBtn">Set Default</button>
+        <input type="file" id="loadFileInput" accept=".h" style="display: none;">
+    </div>
+    <div class="registry-summary-container">
+        <h2 class="registry-summary-header">All Registers Summary</h2>
+        <div class="registry-summary" id="full-register-summary">
+            </div>
+    </div>
+    
+    <script>
+/* -------------------- Constants -------------------- */
+const R_D = 287.05; 
+const R_V = 461.495;
+const GAMMA = 1.4;
+const L = 0.0065;
+const T0_KELVIN = 288.15;
+const P0_PA = 101325.0;
+const G = 9.80665;
+const M = 0.0289644;
+const R_UNIVERSAL = 8.3144598;
+const KELVIN_OFFSET = 273.15;
+const RH_DIVISOR = 100.0;
+const WATER_VAPOR_EFFECT = 0.6077;
+const SATURATION_CONSTANT = 6.1078;
+
+const tvgTimeMap = {
+  0: 100, 1: 200, 2: 300, 3: 400, 4: 600, 5: 800, 6: 1000, 7: 1200,
+  8: 1400, 9: 2000, 10: 2400, 11: 3200, 12: 4000, 13: 5200, 14: 6400, 15: 8000
+};
+const tvgTimeInverseMap = {
+  100: 0, 200: 1, 300: 2, 400: 3, 600: 4, 800: 5, 1000: 6, 1200: 7,
+  1400: 8, 2000: 9, 2400: 10, 3200: 11, 4000: 12, 5200: 13, 6400: 14, 8000: 15
+};
+const thrPxTimeMap = { ...tvgTimeMap };
+const thrPxTimeInverseMap = { ...tvgTimeInverseMap };
+
+/* ---- Echo overlay (4 series, fixed colors matching your textareas) ---- */
+const echoSeries = [
+  { labelId: 'echoLabel1', textId: 'echoDataDump1', color: 'red',     data: [] },
+  { labelId: 'echoLabel2', textId: 'echoDataDump2', color: 'magenta', data: [] },
+  { labelId: 'echoLabel3', textId: 'echoDataDump3', color: 'blue',    data: [] },
+  { labelId: 'echoLabel4', textId: 'echoDataDump4', color: 'green',   data: [] },
+];
+
+let currentRegisterValues = {};
+let tvgChart;
+const MAX_TIME_US = 8000;
+const MIN_THRESHOLD_TIME_US = 100;
+
+let tvgPointsAbsolute = [];
+let thresholdP1PointsAbsolute = [];
+let thresholdP2PointsAbsolute = [];
+
+/* -------------------- Helpers -------------------- */
+function populateThrPxTimeSelect(selectElement) {
+  selectElement.innerHTML = '';
+  for (const key in thrPxTimeMap) {
+    const usValue = thrPxTimeMap[key];
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = `${usValue} µs`;
+    selectElement.appendChild(option);
+  }
+}
+
+function calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity) {
+  let T_k = temperatureC + KELVIN_OFFSET;
+  let P_total = pressurePa;
+  if (heightM !== 0) {
+    if (heightM > 0) {
+      P_total = P0_PA * Math.pow((1 - (L * heightM) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L));
+    } else {
+      P_total = P0_PA * Math.pow((1 + (L * Math.abs(heightM)) / T0_KELVIN), (G * M) / (R_UNIVERSAL * L));
+    }
+  }
+
+  let P_sat = SATURATION_CONSTANT * Math.pow(10, (7.5 * temperatureC) / (temperatureC + 237.3)) * 100;
+  let P_v = P_sat * (relativeHumidity / RH_DIVISOR);
+  let P_d = P_total - P_v;
+  let H = P_v / P_d;
+  let soundSpeed = Math.sqrt(GAMMA * R_D * T_k * (1 + WATER_VAPOR_EFFECT * H));
+  return soundSpeed;
+}
+
+function snapToTvgTime(usValue) {
+  let closest = tvgTimeMap[0];
+  let minDiff = Math.abs(usValue - closest);
+  for (const key in tvgTimeMap) {
+    const mappedUs = tvgTimeMap[key];
+    const diff = Math.abs(usValue - mappedUs);
+    if (diff < minDiff) { minDiff = diff; closest = mappedUs; }
+  }
+  return closest;
+}
+
+function snapToThresholdTime(usValue) {
+  let closest = thrPxTimeMap[0];
+  let minDiff = Math.abs(usValue - closest);
+  for (const key in thrPxTimeMap) {
+    const mappedUs = thrPxTimeMap[key];
+    const diff = Math.abs(usValue - mappedUs);
+    if (diff < minDiff) { minDiff = diff; closest = mappedUs; }
+  }
+  return closest;
+}
+
+function snapToTvgGain(dBValue, afeGainBase) {
+  let targetN = ((dBValue - afeGainBase) / 0.5) - 1;
+  let snappedN = Math.round(Math.max(0, Math.min(63, targetN)));
+  return (0.5 * (snappedN + 1)) + afeGainBase;
+}
+
+function getRegisterLevel(inputValue, offset, levelIndex) {
+  if (levelIndex >= 1 && levelIndex <= 8) return Math.max(0, Math.min(31, inputValue));
+  return Math.max(0, Math.min(255, inputValue));
+}
+
+function getChartLevel(inputValue, offset, levelIndex) {
+  if (levelIndex >= 1 && levelIndex <= 8) return Math.max(0, Math.min(255, inputValue + offset));
+  return Math.max(0, Math.min(255, inputValue));
+}
+
+const afeGainRangeMap = { 0: 58, 1: 52, 2: 46, 3: 32 };
+
+/* --------- Signed-magnitude helpers --------- */
+function convertSignedMagnitude4Bit(value) {
+  value = Number(value);
+  if (!Number.isFinite(value)) value = 0;
+  value = (value | 0);
+  if (value > 7) value = 7;
+  if (value < -8) value = -8;
+  if (value >= 0) return value & 0x7;
+  return (value === -8) ? 8 : (8 | (-value & 0x7));
+}
+function decodeSignedMagnitude4Bit(encodedValue) {
+  const nib = (encodedValue | 0) & 0xF;
+  if (nib === 8) { // Special case for 1000b
+    return -8;
+  }
+  const sign = (nib >> 3) & 1;
+  const mag = nib & 0x7;
+  return sign ? -mag : mag;
+}
+
+/* -------------------- Register summary table -------------------- */
+function generateRegisterSummaryTable(registers, title) {
+  const addrToInt = (addr) => {
+    if (typeof addr === 'number') return addr;
+    const s = String(addr).trim().toUpperCase();
+    const hexish = s.replace(/^0X/, '').replace(/H$/, '');
+    let n = parseInt(hexish, 16);
+    if (Number.isNaN(n)) n = parseInt(s, 10);
+    return Number.isNaN(n) ? 0 : n;
+  };
+  const sorted = [...registers].sort((a, b) => addrToInt(a.address) - addrToInt(b.address));
+  const COLS = 4;
+  const chunkSize = Math.ceil(sorted.length / COLS);
+  const chunks = Array.from({ length: COLS }, (_, i) => sorted.slice(i * chunkSize, (i + 1) * chunkSize));
+
+  const makeTable = (arr) => {
+    let tableHtml = `
+      <table class="registry-summary-table">
+        <thead>
+          <tr><th>Name</th><th>Address</th><th>Dec</th><th>Hex</th><th>Binary</th></tr>
+        </thead><tbody>`;
+    arr.forEach(reg => {
+      const v = Number(reg.value) & 0xFF;
+      const hexValue = v.toString(16).toUpperCase().padStart(2, '0');
+      const binValue = v.toString(2).padStart(8, '0');
+      tableHtml += `
+        <tr>
+          <td>${reg.name}</td>
+          <td>${reg.address}</td>
+          <td>${v}</td>
+          <td>0x<span class="reg-hex">${hexValue}</span></td>
+          <td>0b<span class="reg-bin">${binValue}</span></td>
+        </tr>`;
+    });
+    tableHtml += '</tbody></table>';
+    return tableHtml;
+  };
+
+  return `
+    <h3>${title}</h3>
+    <div class="registry-summary-grid registry-summary-grid--four">
+      ${chunks.map(col => `<div class="registry-summary">${makeTable(col)}</div>`).join('')}
+    </div>
+  `;
+}
+
+/* -------------------- Main calculation pipeline -------------------- */
+function updateAllCalculations() {
+  calculateEchoParametersAndDisplay();
+  updateControlValues();
+  updateRegisterTable();
+  updateFilterCoefficients();
+
+  // Parse & stage all 4 dumps (safe even if chart isn't ready yet)
+  updateAllEchoSeries();
+
+  // TVG/Thresholds + axes/annotations
+  updateChartPointsFromInternalData();
+}
+
+function calculateEchoParametersAndDisplay() {
+  const transducerFreq = parseFloat(document.getElementById('transducerFreq').value);
+  const numPulses = parseInt(document.getElementById('numPulses').value);
+  const distanceTarget_mm = parseFloat(document.getElementById('distanceTarget').value);
+  const temperatureC = parseFloat(document.getElementById('temperatureC').value);
+  const pressurePa = parseFloat(document.getElementById('pressurePa').value);
+  const heightM = parseFloat(document.getElementById('heightM').value);
+  const relativeHumidity = parseFloat(document.getElementById('relativeHumidity').value);
+  const decayTime_us = parseFloat(document.getElementById('decayTime').value);
+
+  const distanceTarget_m = distanceTarget_mm / 1000;
+  const soundSpeed = calculateSpeedOfSound(temperatureC, pressurePa, heightM, relativeHumidity);
+  document.getElementById('soundSpeedDisplay').textContent = `${soundSpeed.toFixed(2)} m/s`;
+  const echoReturnTime_s = (2 * distanceTarget_m) / soundSpeed;
+  const echoReturnTime_us = echoReturnTime_s * 1e6;
+  document.getElementById('echoReturnTimeDisplay').textContent = `${echoReturnTime_us.toFixed(2)} µs`;
+
+  const pulseDuration_s = numPulses / transducerFreq;
+  const pulseDuration_us = pulseDuration_s * 1e6;
+  document.getElementById('pulseLengthDisplay').textContent = `${pulseDuration_us.toFixed(2)} µs`;
+
+  const theoreticalRecordTime_us = echoReturnTime_us + pulseDuration_us + decayTime_us;
+  document.getElementById('totalTimeDisplay').textContent = `${theoreticalRecordTime_us.toFixed(2)} µs`;
+
+  let theoreticalPRecValue = (theoreticalRecordTime_us / 4096) - 1;
+  theoreticalPRecValue = Math.round(theoreticalPRecValue);
+  const displayPRecValue = Math.max(0, Math.min(255, theoreticalPRecValue));
+
+  document.getElementById('theoreticalRecLengthDisplay').innerHTML = `
+    ${displayPRecValue} (Dec)
+    <span>0x${displayPRecValue.toString(16).toUpperCase().padStart(2, '0')}</span> (Hex)
+    <span>0b${displayPRecValue.toString(2).padStart(8, '0')}</span> (Bin)
+  `;
+}
+
+function updateControlValues() {
+  const gainInitVal = parseInt(document.getElementById('gainInitSlider').value);
+  document.getElementById('gainInitValue').textContent = gainInitVal;
+
+  const bpfBwVal = parseInt(document.getElementById('bpfBwSlider').value);
+  document.getElementById('bpfBwValue').textContent = `${2 * (bpfBwVal + 1)} kHz`;
+
+  const frequencyVal = parseInt(document.getElementById('frequencySlider').value);
+  const calculatedFreq = 0.2 * frequencyVal + 30;
+  document.getElementById('frequencyValue').textContent = `${frequencyVal} (${calculatedFreq} kHz)`;
+
+  const deglitchVal = parseInt(document.getElementById('deglitchPeriodSlider').value);
+  document.getElementById('deglitchPeriodValue').textContent = `${deglitchVal} (${deglitchVal * 8} µs)`;
+
+  const pulseDeadTimeVal = parseInt(document.getElementById('pulseDeadTimeSlider').value);
+  document.getElementById('pulseDeadTimeValue').textContent = `${pulseDeadTimeVal} (${(pulseDeadTimeVal * 0.0625).toFixed(4)} µs)`;
+
+  const p1nVal = parseInt(document.getElementById('p1nSlider').value);
+  document.getElementById('p1nValue').textContent = p1nVal === 0 ? '0 (1 OutA)' : p1nVal;
+  const p2nVal = parseInt(document.getElementById('p2nSlider').value);
+  document.getElementById('p2nValue').textContent = p2nVal === 0 ? '0 (1 OutA)' : p2nVal;
+
+  const currLim1Val = parseInt(document.getElementById('CURR_LIM1').value);
+  document.getElementById('CURR_LIM1Value').textContent = `${7 * currLim1Val + 50} mA`;
+
+  const lpfCoVal = parseInt(document.getElementById('lpfCoSlider').value);
+  document.getElementById('lpfCoValue').textContent = `${lpfCoVal + 1} kHz`;
+
+  const currLim2Val = parseInt(document.getElementById('CURR_LIM2').value);
+  document.getElementById('CURR_LIM2Value').textContent = `${7 * currLim2Val + 50} mA`;
+
+  const p1RecVal = parseInt(document.getElementById('p1RecSlider').value);
+  document.getElementById('p1RecValue').textContent = `${p1RecVal} (${(4.096 * (p1RecVal + 1)).toFixed(3)} ms)`;
+
+  const p2RecVal = parseInt(document.getElementById('p2RecSlider').value);
+  document.getElementById('p2RecValue').textContent = `${p2RecVal} (${(4.096 * (p2RecVal + 1)).toFixed(3)} ms)`;
+
+  const fDiagWinVal = parseInt(document.getElementById('fDiagWinSlider').value);
+  document.getElementById('fDiagWinValue').textContent = `${fDiagWinVal} (${3 * fDiagWinVal} T)`;
+
+  const fDiagLenVal = parseInt(document.getElementById('fDiagLenSlider').value);
+  document.getElementById('fDiagLenValue').textContent = `${fDiagLenVal} (${fDiagLenVal * 100} µs)`;
+
+  const fDiagThrVal = parseInt(document.getElementById('fDiagThrSlider').value);
+  document.getElementById('fDiagThrValue').textContent = `${fDiagThrVal} (${fDiagThrVal + 1} µs)`;
+
+  const satThrVal = parseInt(document.getElementById('satThrSlider').value);
+  document.getElementById('satThrValue').textContent = satThrVal;
+
+  const noiseLvlVal = parseInt(document.getElementById('noiseLvlSlider').value);
+  document.getElementById('noiseLvlValue').textContent = noiseLvlVal;
+}
+
+/* -------------------- Registers build/update -------------------- */
+function updateRegisterTable() {
+  currentRegisterValues = {};
+  const allRegisters = [];
+  const transducerRegisters = [];
+
+  // REG_TVGAIN0 (0x14)
+  const tvgT0 = parseInt(document.getElementById('tvgT0').value);
+  const tvgT1 = parseInt(document.getElementById('tvgT1').value);
+  const regTvgGain0 = (tvgT0 << 4) | tvgT1;
+  transducerRegisters.push({ name: 'REG_TVGAIN0', address: '0x14', value: regTvgGain0 });
+  currentRegisterValues.TVGAIN0 = regTvgGain0;
+
+  // REG_TVGAIN1 (0x15)
+  const tvgT2 = parseInt(document.getElementById('tvgT2').value);
+  const tvgT3 = parseInt(document.getElementById('tvgT3').value);
+  const regTvgGain1 = (tvgT2 << 4) | tvgT3;
+  transducerRegisters.push({ name: 'REG_TVGAIN1', address: '0x15', value: regTvgGain1 });
+  currentRegisterValues.TVGAIN1 = regTvgGain1;
+
+  // REG_TVGAIN2 (0x16)
+  const tvgT4 = parseInt(document.getElementById('tvgT4').value);
+  const tvgT5 = parseInt(document.getElementById('tvgT5').value);
+  const regTvgGain2 = (tvgT4 << 4) | tvgT5;
+  transducerRegisters.push({ name: 'REG_TVGAIN2', address: '0x16', value: regTvgGain2 });
+  currentRegisterValues.TVGAIN2 = regTvgGain2;
+
+  // REG_TVGAIN3..6
+  const tvgG1 = parseInt(document.getElementById('tvgG1').value);
+  const tvgG2 = parseInt(document.getElementById('tvgG2').value);
+  const tvgG3 = parseInt(document.getElementById('tvgG3').value);
+  const tvgG4 = parseInt(document.getElementById('tvgG4').value);
+  const tvgG5 = parseInt(document.getElementById('tvgG5').value);
+  const freqShift = parseInt(document.getElementById('freq_shift').value);
+
+  const regTvgGain3 = (tvgG1 << 2) | (tvgG2 & 0x3);
+  const regTvgGain4 = ((tvgG2 >> 2) << 4) | (tvgG3 & 0xF);
+  const regTvgGain5 = ((tvgG3 >> 4) << 6) | (tvgG4 & 0x3F);
+  const regTvgGain6 = (tvgG5 << 2) | (0 << 1) | freqShift;
+
+  transducerRegisters.push({ name: 'REG_TVGAIN3', address: '0x17', value: regTvgGain3 });
+  transducerRegisters.push({ name: 'REG_TVGAIN4', address: '0x18', value: regTvgGain4 });
+  transducerRegisters.push({ name: 'REG_TVGAIN5', address: '0x19', value: regTvgGain5 });
+  transducerRegisters.push({ name: 'REG_TVGAIN6', address: '0x1A', value: regTvgGain6 });
+
+  currentRegisterValues.TVGAIN3 = regTvgGain3;
+  currentRegisterValues.TVGAIN4 = regTvgGain4;
+  currentRegisterValues.TVGAIN5 = regTvgGain5;
+  currentRegisterValues.TVGAIN6 = regTvgGain6;
+  currentRegisterValues.FREQ_SHIFT = freqShift;
+
+  // REG_INIT_GAIN (0x1B)
+  const bpfBw = parseInt(document.getElementById('bpfBwSlider').value);
+  const gainInit = parseInt(document.getElementById('gainInitSlider').value);
+  const initGainReg = (bpfBw << 6) | gainInit;
+  transducerRegisters.push({ name: 'REG_INIT_GAIN', address: '0x1B', value: initGainReg });
+  currentRegisterValues.INIT_GAIN = initGainReg;
+
+  // REG_FREQUENCY (0x1C)
+  const frequencyVal = parseInt(document.getElementById('frequencySlider').value);
+  const freqReg = frequencyVal;
+  transducerRegisters.push({ name: 'REG_FREQUENCY', address: '0x1C', value: freqReg });
+  currentRegisterValues.FREQ = freqReg;
+
+  // REG_DEADTIME (0x1D)
+  const deglitchVal = parseInt(document.getElementById('deglitchPeriodSlider').value);
+  const pulseDeadTimeVal = parseInt(document.getElementById('pulseDeadTimeSlider').value);
+  const deadtimeReg = (deglitchVal << 4) | pulseDeadTimeVal;
+  transducerRegisters.push({ name: 'REG_DEADTIME', address: '0x1D', value: deadtimeReg });
+  currentRegisterValues.DEADTIME = deadtimeReg;
+
+  // REG_PULSE_P1 (0x1E)
+  const interfaceVal = parseInt(document.getElementById('interface').value);
+  const diagnosticVal = parseInt(document.getElementById('diagnostic').value);
+  const transceiverVal = parseInt(document.getElementById('transceiver').value);
+  const p1nPulseVal = parseInt(document.getElementById('p1nSlider').value);
+  const pulseP1Reg = (interfaceVal << 7) | (diagnosticVal << 6) | (transceiverVal << 5) | p1nPulseVal;
+  transducerRegisters.push({ name: 'REG_PULSE_P1', address: '0x1E', value: pulseP1Reg });
+  currentRegisterValues.PULSE_P1 = pulseP1Reg;
+
+  // REG_PULSE_P2 (0x1F)
+  const uartAddrVal = parseInt(document.getElementById('uartAddrSlider').value);
+  const p2nPulseVal = parseInt(document.getElementById('p2nSlider').value);
+  const pulseP2Reg = (uartAddrVal << 5) | p2nPulseVal;
+  transducerRegisters.push({ name: 'REG_PULSE_P2', address: '0x1F', value: pulseP2Reg });
+  currentRegisterValues.PULSE_P2 = pulseP2Reg;
+
+  // REG_CURR_LIM_P1 (0x20)
+  const disCl = parseInt(document.getElementById('DIS_CL').value);
+  const currLim1 = parseInt(document.getElementById('CURR_LIM1').value);
+  const currLimP1Reg = (disCl << 7) | currLim1;
+  transducerRegisters.push({ name: 'REG_CURR_LIM_P1', address: '0x20', value: currLimP1Reg });
+  currentRegisterValues.CURR_LIM_P1 = currLimP1Reg;
+
+  // REG_CURR_LIM_P2 (0x21)
+  const lpfCo = parseInt(document.getElementById('lpfCoSlider').value);
+  const currLim2 = parseInt(document.getElementById('CURR_LIM2').value);
+  const currLimP2Reg = (lpfCo << 6) | currLim2;
+  transducerRegisters.push({ name: 'REG_CURR_LIM_P2', address: '0x21', value: currLimP2Reg });
+  currentRegisterValues.CURR_LIM_P2 = currLimP2Reg;
+
+  // REG_REC_LENGTH (0x22)
+  const p1Rec = parseInt(document.getElementById('p1RecSlider').value);
+  const p2Rec = parseInt(document.getElementById('p2RecSlider').value);
+  const recLengthReg = (p1Rec << 4) | p2Rec;
+  transducerRegisters.push({ name: 'REG_REC_LENGTH', address: '0x22', value: recLengthReg });
+  currentRegisterValues.REC_LENGTH = recLengthReg;
+
+  // REG_FREQ_DIAG (0x23)
+  const fDiagWin = parseInt(document.getElementById('fDiagWinSlider').value);
+  const fDiagLen = parseInt(document.getElementById('fDiagLenSlider').value);
+  const freqDiagReg = (fDiagWin << 4) | fDiagLen;
+  transducerRegisters.push({ name: 'REG_FREQ_DIAG', address: '0x23', value: freqDiagReg });
+  currentRegisterValues.FREQ_DIAG = freqDiagReg;
+
+  // REG_SAT_FDIAG_TH (0x24)
+  const fDiagThr = parseInt(document.getElementById('fDiagThrSlider').value);
+  const satThr = parseInt(document.getElementById('satThrSlider').value);
+  const nlP1Scaling = parseInt(document.getElementById('nlP1Scaling').value);
+  const satFdiagThReg = (fDiagThr << 5) | (satThr << 1) | nlP1Scaling;
+  transducerRegisters.push({ name: 'REG_SAT_FDIAG_TH', address: '0x24', value: satFdiagThReg });
+  currentRegisterValues.SAT_FDIAG_TH = satFdiagThReg;
+
+  // REG_FVOLT_DEC (0x25)
+  const nlP2Scaling = parseInt(document.getElementById('nlP2Scaling').value);
+  const ovThr = parseInt(document.getElementById('ovThr').value);
+  const lpTimer = parseInt(document.getElementById('lpTimer').value);
+  const voltageDiagnostic = parseInt(document.getElementById('voltageDiagnostic').value);
+  const fvoltDecReg = (nlP2Scaling << 7) | (ovThr << 5) | (lpTimer << 3) | voltageDiagnostic;
+  transducerRegisters.push({ name: 'REG_FVOLT_DEC', address: '0x25', value: fvoltDecReg });
+  currentRegisterValues.FVOLT_DEC = fvoltDecReg;
+
+  // REG_DECPL_TEMP (0x26)
+  const afeGainRng = parseInt(document.getElementById('gainAFE').value);
+  const lpmEn = parseInt(document.getElementById('LPM_EN').value);
+  const decplTempSel = parseInt(document.getElementById('DECPL_TEMP_SEL').value);
+  const decplT = parseInt(document.getElementById('DECPL_T').value);
+  const decplTempReg = (afeGainRng << 6) | (lpmEn << 5) | (decplTempSel << 4) | decplT;
+  transducerRegisters.push({ name: 'REG_DECPL_TEMP', address: '0x26', value: decplTempReg });
+  currentRegisterValues.DECPL_TEMP = decplTempReg;
+
+  // REG_DSP_SCALE (0x27)
+  const noiseLvl = parseInt(document.getElementById('noiseLvlSlider').value);
+  const scaleK = parseInt(document.getElementById('SCALE_K').value);
+  const scaleN = parseInt(document.getElementById('SCALE_N').value);
+  const dspScaleReg = (noiseLvl << 3) | (scaleK << 2) | scaleN;
+  transducerRegisters.push({ name: 'REG_DSP_SCALE', address: '0x27', value: dspScaleReg });
+  currentRegisterValues.DSP_SCALE = dspScaleReg;
+
+  // REG_TEMP_TRIM (0x28)
+  const tempGain = parseInt(document.getElementById('temperatureGain').value);
+  const tempOffset = parseInt(document.getElementById('temperatureOffset').value);
+  const tempTrimReg = (convertSignedMagnitude4Bit(tempGain) << 4) | convertSignedMagnitude4Bit(tempOffset);
+  transducerRegisters.push({ name: 'REG_TEMP_TRIM', address: '0x28', value: tempTrimReg });
+  currentRegisterValues.TEMP_TRIM = tempTrimReg;
+
+  // REG_P1_GAIN_CTRL (0x29)
+  const p1DigGainLrSt = parseInt(document.getElementById('p1DigGainLrSt').value);
+  const p1DigGainLr = parseInt(document.getElementById('p1DigGainLr').value);
+  const p1DigGainSr = parseInt(document.getElementById('p1DigGainSr').value);
+  const p1GainCtrlReg = (p1DigGainLrSt << 6) | (p1DigGainLr << 3) | p1DigGainSr;
+  transducerRegisters.push({ name: 'REG_P1_GAIN_CTRL', address: '0x29', value: p1GainCtrlReg });
+  currentRegisterValues.P1_GAIN_CTRL = p1GainCtrlReg;
+
+  // REG_P2_GAIN_CTRL (0x2A)
+  const p2DigGainLrSt = parseInt(document.getElementById('p2DigGainLrSt').value);
+  const p2DigGainLr = parseInt(document.getElementById('p2DigGainLr').value);
+  const p2DigGainSr = parseInt(document.getElementById('p2DigGainSr').value);
+  const p2GainCtrlReg = (p2DigGainLrSt << 6) | (p2DigGainLr << 3) | p2DigGainSr;
+  transducerRegisters.push({ name: 'REG_P2_GAIN_CTRL', address: '0x2A', value: p2GainCtrlReg });
+  currentRegisterValues.P2_GAIN_CTRL = p2GainCtrlReg;
+
+  // TEST_MUX (4Bh) — stored in currentRegisterValues only (UI control)
+  const testMux = parseInt(document.getElementById('testMUX').value);
+  const sampleSel = parseInt(document.getElementById('sampleSel').value);
+  const dataPathMux = parseInt(document.getElementById('dataPathMux').value);
+  currentRegisterValues.TEST_MUX = (testMux << 5) | (sampleSel << 3) | dataPathMux;
+
+  // EE_CNTRL (40h) — simplified
+  const datadumpEn = 0;
+  currentRegisterValues.EE_CNTRL = datadumpEn << 7;
+
+  // Final EEPROM CRC (EE_CRC 0x2B)
+  const eeCrcData = [
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,
+    regTvgGain0, regTvgGain1, regTvgGain2, regTvgGain3, regTvgGain4, regTvgGain5, regTvgGain6,
+    initGainReg, freqReg, deadtimeReg, pulseP1Reg, pulseP2Reg, currLimP1Reg, currLimP2Reg,
+    recLengthReg, freqDiagReg, satFdiagThReg, fvoltDecReg, decplTempReg, dspScaleReg, tempTrimReg,
+    p1GainCtrlReg, p2GainCtrlReg
+  ];
+  const eeCrcValue = calculateChecksum(eeCrcData);
+  transducerRegisters.push({ name: 'REG_EE_CRC', address: '0x2B', value: eeCrcValue });
+  currentRegisterValues.EE_CRC = eeCrcValue;
+
+  /* ----- Threshold Preset 1 Registers ----- */
+  const thresholdP1Registers = [];
+  const p1ThrTimes = [];
+  const p1ThrLevels = [];
+  const thP1Off = Math.max(-8, Math.min(7, parseInt(document.getElementById('thP1Off').value)));
+  for (let i = 1; i <= 12; i++) {
+    p1ThrTimes.push(parseInt(document.getElementById(`thrPr1P${i}Time`).value, 10) || 0);
+    p1ThrLevels.push(parseInt(document.getElementById(`thrPr1P${i}Level`).value, 10) || 0);
+  }
+  const p1ThrDataBytes = [];
+  const thP1OffReg = convertSignedMagnitude4Bit(thP1Off);
+  for (let i = 0; i < 6; i++) {
+    const timeReg = ((p1ThrTimes[2 * i] & 0xF) << 4) | (p1ThrTimes[2 * i + 1] & 0xF);
+    p1ThrDataBytes.push(timeReg);
+    thresholdP1Registers.push({ name: `P1_THR_${i}`, address: `0x${(0x5F + i).toString(16).toUpperCase()}`, value: timeReg });
+  }
+  const l1Reg  = p1ThrLevels[0];
+  const l2Reg  = p1ThrLevels[1];
+  const l3Reg  = p1ThrLevels[2];
+  const l4Reg  = p1ThrLevels[3];
+  const l5Reg  = p1ThrLevels[4];
+  const l6Reg  = p1ThrLevels[5];
+  const l7Reg  = p1ThrLevels[6];
+  const l8Reg  = p1ThrLevels[7];
+  const l9Reg  = p1ThrLevels[8]  & 0xFF;
+  const l10Reg = p1ThrLevels[9]  & 0xFF;
+  const l11Reg = p1ThrLevels[10] & 0xFF;
+  const l12Reg = p1ThrLevels[11] & 0xFF;
+
+  const p1Thr6  = ((l1Reg & 0x1F) << 3) | ((l2Reg >> 2) & 0x07);
+  thresholdP1Registers.push({ name: 'P1_THR_6',  address: '0x65', value: p1Thr6  }); p1ThrDataBytes.push(p1Thr6);
+  const p1Thr7  = ((l2Reg & 0x03) << 6) | ((l3Reg & 0x1F) << 1) | ((l4Reg >> 4) & 0x01);
+  thresholdP1Registers.push({ name: 'P1_THR_7',  address: '0x66', value: p1Thr7  }); p1ThrDataBytes.push(p1Thr7);
+  const p1Thr8  = ((l4Reg & 0x0F) << 4) | ((l5Reg >> 1) & 0x0F);
+  thresholdP1Registers.push({ name: 'P1_THR_8',  address: '0x67', value: p1Thr8  }); p1ThrDataBytes.push(p1Thr8);
+  const p1Thr9  = ((l5Reg & 0x01) << 7) | ((l6Reg & 0x1F) << 2) | ((l7Reg >> 3) & 0x03);
+  thresholdP1Registers.push({ name: 'P1_THR_9',  address: '0x68', value: p1Thr9  }); p1ThrDataBytes.push(p1Thr9);
+  const p1Thr10 = ((l7Reg & 0x07) << 5) | (l8Reg & 0x1F);
+  thresholdP1Registers.push({ name: 'P1_THR_10', address: '0x69', value: p1Thr10 }); p1ThrDataBytes.push(p1Thr10);
+
+  thresholdP1Registers.push({ name: 'P1_THR_11', address: '0x6A', value: l9Reg  });  p1ThrDataBytes.push(l9Reg);
+  thresholdP1Registers.push({ name: 'P1_THR_12', address: '0x6B', value: l10Reg });  p1ThrDataBytes.push(l10Reg);
+  thresholdP1Registers.push({ name: 'P1_THR_13', address: '0x6C', value: l11Reg });  p1ThrDataBytes.push(l11Reg);
+  thresholdP1Registers.push({ name: 'P1_THR_14', address: '0x6D', value: l12Reg });  p1ThrDataBytes.push(l12Reg);
+
+  const p1Thr15 = thP1OffReg & 0x0F;
+  thresholdP1Registers.push({ name: 'P1_THR_15', address: '0x6E', value: p1Thr15 });
+  p1ThrDataBytes.push(p1Thr15);
+
+  currentRegisterValues.P1_THR_0  = p1ThrDataBytes[0];
+  currentRegisterValues.P1_THR_1  = p1ThrDataBytes[1];
+  currentRegisterValues.P1_THR_2  = p1ThrDataBytes[2];
+  currentRegisterValues.P1_THR_3  = p1ThrDataBytes[3];
+  currentRegisterValues.P1_THR_4  = p1ThrDataBytes[4];
+  currentRegisterValues.P1_THR_5  = p1ThrDataBytes[5];
+  currentRegisterValues.P1_THR_6  = p1ThrDataBytes[6];
+  currentRegisterValues.P1_THR_7  = p1ThrDataBytes[7];
+  currentRegisterValues.P1_THR_8  = p1ThrDataBytes[8];
+  currentRegisterValues.P1_THR_9  = p1ThrDataBytes[9];
+  currentRegisterValues.P1_THR_10 = p1ThrDataBytes[10];
+  currentRegisterValues.P1_THR_11 = p1ThrDataBytes[11];
+  currentRegisterValues.P1_THR_12 = p1ThrDataBytes[12];
+  currentRegisterValues.P1_THR_13 = p1ThrDataBytes[13];
+  currentRegisterValues.P1_THR_14 = p1ThrDataBytes[14];
+  currentRegisterValues.P1_THR_15 = p1ThrDataBytes[15];
+
+  /* ----- Threshold Preset 2 Registers ----- */
+  const thresholdP2Registers = [];
+  const p2ThrTimes = [];
+  const p2ThrLevels = [];
+  const thP2Off = Math.max(-8, Math.min(7, parseInt(document.getElementById('thP2Off').value)));
+  for (let i = 1; i <= 12; i++) {
+    p2ThrTimes.push(parseInt(document.getElementById(`thrPr2P${i}Time`).value, 10) || 0);
+    p2ThrLevels.push(parseInt(document.getElementById(`thrPr2P${i}Level`).value, 10) || 0);
+  }
+  const p2ThrDataBytes = [];
+  const thP2OffReg = convertSignedMagnitude4Bit(thP2Off);
+  for (let i = 0; i < 6; i++) {
+    const timeReg = ((p2ThrTimes[2 * i] & 0xF) << 4) | (p2ThrTimes[2 * i + 1] & 0xF);
+    p2ThrDataBytes.push(timeReg);
+    thresholdP2Registers.push({ name: `P2_THR_${i}`, address: `0x${(0x6F + i).toString(16).toUpperCase()}`, value: timeReg });
+  }
+  const p2l1Reg  = p2ThrLevels[0];
+  const p2l2Reg  = p2ThrLevels[1];
+  const p2l3Reg  = p2ThrLevels[2];
+  const p2l4Reg  = p2ThrLevels[3];
+  const p2l5Reg  = p2ThrLevels[4];
+  const p2l6Reg  = p2ThrLevels[5];
+  const p2l7Reg  = p2ThrLevels[6];
+  const p2l8Reg  = p2ThrLevels[7];
+  const p2l9Reg  = p2ThrLevels[8]  & 0xFF;
+  const p2l10Reg = p2ThrLevels[9]  & 0xFF;
+  const p2l11Reg = p2ThrLevels[10] & 0xFF;
+  const p2l12Reg = p2ThrLevels[11] & 0xFF;
+
+  const p2Thr6  = ((p2l1Reg & 0x1F) << 3) | ((p2l2Reg >> 2) & 0x07);
+  thresholdP2Registers.push({ name: 'P2_THR_6',  address: '0x75', value: p2Thr6  }); p2ThrDataBytes.push(p2Thr6);
+  const p2Thr7  = ((p2l2Reg & 0x03) << 6) | ((p2l3Reg & 0x1F) << 1) | ((p2l4Reg >> 4) & 0x01);
+  thresholdP2Registers.push({ name: 'P2_THR_7',  address: '0x76', value: p2Thr7  }); p2ThrDataBytes.push(p2Thr7);
+  const p2Thr8  = ((p2l4Reg & 0x0F) << 4) | ((p2l5Reg >> 1) & 0x0F);
+  thresholdP2Registers.push({ name: 'P2_THR_8',  address: '0x77', value: p2Thr8  }); p2ThrDataBytes.push(p2Thr8);
+  const p2Thr9  = ((p2l5Reg & 0x01) << 7) | ((p2l6Reg & 0x1F) << 2) | ((p2l7Reg >> 3) & 0x03);
+  thresholdP2Registers.push({ name: 'P2_THR_9',  address: '0x78', value: p2Thr9  }); p2ThrDataBytes.push(p2Thr9);
+  const p2Thr10 = ((p2l7Reg & 0x07) << 5) | (p2l8Reg & 0x1F);
+  thresholdP2Registers.push({ name: 'P2_THR_10', address: '0x79', value: p2Thr10 }); p2ThrDataBytes.push(p2Thr10);
+
+  thresholdP2Registers.push({ name: 'P2_THR_11', address: '0x7A', value: p2l9Reg  });  p2ThrDataBytes.push(p2l9Reg);
+  thresholdP2Registers.push({ name: 'P2_THR_12', address: '0x7B', value: p2l10Reg });  p2ThrDataBytes.push(p2l10Reg);
+  thresholdP2Registers.push({ name: 'P2_THR_13', address: '0x7C', value: p2l11Reg });  p2ThrDataBytes.push(p2l11Reg);
+  thresholdP2Registers.push({ name: 'P2_THR_14', address: '0x7D', value: p2l12Reg });  p2ThrDataBytes.push(p2l12Reg);
+
+  const p2Thr15 = thP2OffReg & 0x0F;
+  thresholdP2Registers.push({ name: 'P2_THR_15', address: '0x7E', value: p2Thr15 });
+  p2ThrDataBytes.push(p2Thr15);
+
+  currentRegisterValues.P2_THR_0  = p2ThrDataBytes[0];
+  currentRegisterValues.P2_THR_1  = p2ThrDataBytes[1];
+  currentRegisterValues.P2_THR_2  = p2ThrDataBytes[2];
+  currentRegisterValues.P2_THR_3  = p2ThrDataBytes[3];
+  currentRegisterValues.P2_THR_4  = p2ThrDataBytes[4];
+  currentRegisterValues.P2_THR_5  = p2ThrDataBytes[5];
+  currentRegisterValues.P2_THR_6  = p2ThrDataBytes[6];
+  currentRegisterValues.P2_THR_7  = p2ThrDataBytes[7];
+  currentRegisterValues.P2_THR_8  = p2ThrDataBytes[8];
+  currentRegisterValues.P2_THR_9  = p2ThrDataBytes[9];
+  currentRegisterValues.P2_THR_10 = p2ThrDataBytes[10];
+  currentRegisterValues.P2_THR_11 = p2ThrDataBytes[11];
+  currentRegisterValues.P2_THR_12 = p2ThrDataBytes[12];
+  currentRegisterValues.P2_THR_13 = p2ThrDataBytes[13];
+  currentRegisterValues.P2_THR_14 = p2ThrDataBytes[14];
+  currentRegisterValues.P2_THR_15 = p2ThrDataBytes[15];
+
+  // THR_CRC (0x7F)
+  const thrCrcData = [
+    ...p1ThrDataBytes, ...p2ThrDataBytes,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+  ];
+  const thrCrcValue = calculateChecksum(thrCrcData);
+  thresholdP2Registers.push({ name: 'REG_THR_CRC', address: '0x7F', value: thrCrcValue });
+  currentRegisterValues.THR_CRC = thrCrcValue;
+
+  /* ----- Filter Coefficients Registers ----- */
+  const filterCoefficients = [];
+  const bpfCoefficients = getBpfCoefficients();
+  const lpfCoefficients = getLpfCoefficients();
+
+  const bpfA2MsbVal = (bpfCoefficients.bpfA2 >> 8) & 0xFF;
+  const bpfA2LsbVal = bpfCoefficients.bpfA2 & 0xFF;
+  const bpfA3MsbVal = (bpfCoefficients.bpfA3 >> 8) & 0xFF;
+  const bpfA3LsbVal = bpfCoefficients.bpfA3 & 0xFF;
+  const bpfB1MsbVal = (bpfCoefficients.bpfB1 >> 8) & 0xFF;
+  const bpfB1LsbVal = bpfCoefficients.bpfB1 & 0xFF;
+
+  filterCoefficients.push({ name: 'BPF_A2_MSB', address: '0x41', value: bpfA2MsbVal });
+  filterCoefficients.push({ name: 'BPF_A2_LSB', address: '0x42', value: bpfA2LsbVal });
+  filterCoefficients.push({ name: 'BPF_A3_MSB', address: '0x43', value: bpfA3MsbVal });
+  filterCoefficients.push({ name: 'BPF_A3_LSB', address: '0x44', value: bpfA3LsbVal });
+  filterCoefficients.push({ name: 'BPF_B1_MSB', address: '0x45', value: bpfB1MsbVal });
+  filterCoefficients.push({ name: 'BPF_B1_LSB', address: '0x46', value: bpfB1LsbVal });
+
+  const lpfA2MsbVal = (lpfCoefficients.lpfA2 >> 8) & 0xFF;
+  const lpfA2LsbVal = lpfCoefficients.lpfA2 & 0xFF;
+  const lpfB1MsbVal = (lpfCoefficients.lpfB1 >> 8) & 0xFF;
+  const lpfB1LsbVal = lpfCoefficients.lpfB1 & 0xFF;
+
+  filterCoefficients.push({ name: 'LPF_A2_MSB', address: '0x47', value: lpfA2MsbVal });
+  filterCoefficients.push({ name: 'LPF_A2_LSB', address: '0x48', value: lpfA2LsbVal });
+  filterCoefficients.push({ name: 'LPF_B1_MSB', address: '0x49', value: lpfB1MsbVal });
+  filterCoefficients.push({ name: 'LPF_B1_LSB', address: '0x4A', value: lpfB1LsbVal });
+
+  allRegisters.push(...transducerRegisters, ...thresholdP1Registers, ...thresholdP2Registers, ...filterCoefficients);
+  document.getElementById('full-register-summary').innerHTML = generateRegisterSummaryTable(allRegisters, 'All Registers');
+}
+
+/* -------------------- Filter Coeffs UI table -------------------- */
+function updateFilterCoefficients() {
+  const bpfCoefficients = getBpfCoefficients();
+  const lpfCoefficients = getLpfCoefficients();
+
+  const bpfA2Msb = (bpfCoefficients.bpfA2 >> 8) & 0xFF;
+  const bpfA2Lsb = bpfCoefficients.bpfA2 & 0xFF;
+  const bpfA3Msb = (bpfCoefficients.bpfA3 >> 8) & 0xFF;
+  const bpfA3Lsb = bpfCoefficients.bpfA3 & 0xFF;
+  const bpfB1Msb = (bpfCoefficients.bpfB1 >> 8) & 0xFF;
+  const bpfB1Lsb = bpfCoefficients.bpfB1 & 0xFF;
+  const lpfA2Msb = (lpfCoefficients.lpfA2 >> 8) & 0xFF;
+  const lpfA2Lsb = lpfCoefficients.lpfA2 & 0xFF;
+  const lpfB1Msb = (lpfCoefficients.lpfB1 >> 8) & 0xFF;
+  const lpfB1Lsb = lpfCoefficients.lpfB1 & 0xFF;
+
+  const contentDiv = document.getElementById('bandPassContent');
+  contentDiv.innerHTML = `
+    <div class="registry-summary">
+      <table class="registry-summary-table">
+        <thead>
+          <tr><th>Coefficient</th><th>Value (Dec)</th><th>MSB (Hex)</th><th>LSB (Hex)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>BPF A2</td><td>${bpfCoefficients.bpfA2}</td><td>0x${bpfA2Msb.toString(16).toUpperCase().padStart(2,'0')}</td><td>0x${bpfA2Lsb.toString(16).toUpperCase().padStart(2,'0')}</td></tr>
+          <tr><td>BPF A3</td><td>${bpfCoefficients.bpfA3}</td><td>0x${bpfA3Msb.toString(16).toUpperCase().padStart(2,'0')}</td><td>0x${bpfA3Lsb.toString(16).toUpperCase().padStart(2,'0')}</td></tr>
+          <tr><td>BPF B1</td><td>${bpfCoefficients.bpfB1}</td><td>0x${bpfB1Msb.toString(16).toUpperCase().padStart(2,'0')}</td><td>0x${bpfB1Lsb.toString(16).toUpperCase().padStart(2,'0')}</td></tr>
+          <tr><td>LPF A2</td><td>${lpfCoefficients.lpfA2}</td><td>0x${lpfA2Msb.toString(16).toUpperCase().padStart(2,'0')}</td><td>0x${lpfA2Lsb.toString(16).toUpperCase().padStart(2,'0')}</td></tr>
+          <tr><td>LPF B1</td><td>${lpfCoefficients.lpfB1}</td><td>0x${lpfB1Msb.toString(16).toUpperCase().padStart(2,'0')}</td><td>0x${lpfB1Lsb.toString(16).toUpperCase().padStart(2,'0')}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function getBpfCoefficients() {
+  const bpfBwVal = parseInt(document.getElementById('bpfBwSlider').value);
+  const freqVal = parseInt(document.getElementById('frequencySlider').value);
+  const cf = 0.2 * freqVal + 30;
+  const BPF_BW_MAP = { 0: 2, 1: 4, 2: 6, 3: 8 };
+  const bw = BPF_BW_MAP[bpfBwVal];
+  let bpfA2, bpfA3, bpfB1;
+
+  if (bw === 2) bpfA2 = 0.6036 * Math.pow(cf, 2) + 2.7401 * cf - 32615;
+  else if (bw === 4) bpfA2 = 0.5999 * Math.pow(cf, 2) + 2.7217 * cf - 32415;
+  else if (bw === 6) bpfA2 = 0.5965 * Math.pow(cf, 2) + 2.6791 * cf - 32217;
+  else if (bw === 8) bpfA2 = 0.5928 * Math.pow(cf, 2) - 2.6726 * cf - 32024;
+  bpfA2 = Math.round(bpfA2);
+
+  const B1_MAP = { 2: 409, 4: 813, 6: 1213, 8: 1607 };
+  const A3_MAP = { 2: 64718, 4: 63909, 6: 63111, 8: 62322 };
+  bpfB1 = B1_MAP[bw];
+  bpfA3 = A3_MAP[bw];
+
+  return { bpfA2, bpfA3, bpfB1 };
+}
+
+function getLpfCoefficients() {
+  const lpfCoVal = parseInt(document.getElementById('lpfCoSlider').value);
+  const LPF_CO_MAP = { 0: 1, 1: 2, 2: 3, 3: 4 };
+  const co = LPF_CO_MAP[lpfCoVal];
+
+  const LPF_B1_MAP = { 1: 103, 2: 205, 3: 306, 4: 407 };
+  const LPF_A2_MAP = { 1: -32563, 2: -32359, 3: -32156, 4: -31955 };
+  const lpfB1 = LPF_B1_MAP[co];
+  const lpfA2 = LPF_A2_MAP[co];
+
+  return { lpfA2, lpfB1 };
+}
+
+function calculateChecksum(dataArray) {
+  let carry = 0;
+  for (let i = 0; i < dataArray.length; i++) carry = (carry + dataArray[i]);
+  return (~carry) & 0xFF;
+}
+
+/* -------------------- Echo parsing & sync -------------------- */
+function parseDumpToPoints(text, timeStepUs) {
+  if (!text || !timeStepUs || timeStepUs <= 0) return [];
+  const parts = text.replace(/\s+/g, ',').replace(/,+/g, ',').replace(/^,|,$/g, '').split(',');
+  const vals = [];
+  for (let i = 0; i < parts.length && vals.length < 256; i++) {
+    const v = parseInt(parts[i], 10);
+    if (Number.isFinite(v)) vals.push(Math.max(0, Math.min(255, v)));
+  }
+  return vals.map((y, i) => ({ x: i * timeStepUs, y }));
+}
+
+/* Chart access + dataset ensure */
+function getChart() {
+  const candidate =
+    (typeof tvgChart !== 'undefined' && tvgChart) ? tvgChart :
+    (typeof window !== 'undefined' ? window.tvgChart : undefined);
+
+  // Only return it if it looks like a real Chart instance
+  if (
+    candidate &&
+    candidate.data &&
+    Array.isArray(candidate.data.datasets) &&
+    typeof candidate.update === 'function'
+  ) {
+    return candidate;
+  }
+  return undefined;
+}
+function ensureEchoDatasets(chart) {
+  if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) return;
+  for (let i = 0; i < 4; i++) {
+    const idx = 3 + i;
+    if (!chart.data.datasets[idx]) {
+      chart.data.datasets[idx] = {
+        label: `Dump ${i + 1}`,
+        data: [],
+        borderColor: (echoSeries?.[i]?.color) || 'rgba(255,255,255,0.9)',
+        backgroundColor: 'transparent',
+        yAxisID: 'y1',
+        pointRadius: 0,
+        borderWidth: 2,
+        showLine: true,
+        type: 'line',
+        dragData: false,
+      };
+    }
+  }
+}
+
+function updateEchoData(i) {
+  const s = echoSeries?.[i];
+  if (!s) return;
+
+  const timeStep = parseInt(document.getElementById('echoTimeStep1')?.value || '32', 10);
+  const raw = (document.getElementById(s.textId)?.value || '').trim();
+
+  const parts = raw.replace(/\s+/g, ',').replace(/,+/g, ',').replace(/^,|,$/g, '').split(',').filter(Boolean);
+  const vals = [];
+  for (let k = 0; k < parts.length && vals.length < 256; k++) {
+    const v = parseInt(parts[k], 10);
+    if (Number.isFinite(v)) vals.push(Math.max(0, Math.min(255, v)));
+  }
+  s.data = (timeStep > 0) ? vals.map((y, idx) => ({ x: idx * timeStep, y })) : [];
+
+  const chart = getChart();
+  if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) return;
+
+  ensureEchoDatasets(chart);
+  const ds = chart.data.datasets[3 + i];
+  if (!ds) return;
+
+  ds.data = s.data;
+  ds.label = (document.getElementById(s.labelId)?.value || `Dump ${i + 1}`).trim();
+  ds.borderColor = s.color;
+  ds.backgroundColor = 'transparent';
+  ds.pointRadius = 0;
+  ds.borderWidth = 2;
+  ds.showLine = true;
+  ds.yAxisID = 'y1';
+}
+
+function updateAllEchoSeries() {
+  if (!Array.isArray(echoSeries)) return;
+  for (let i = 0; i < echoSeries.length; i++) updateEchoData(i);
+
+  const chart = getChart();
+  if (chart && chart.data && Array.isArray(chart.data.datasets) && typeof chart.update === 'function') {
+    ensureEchoDatasets(chart);
+    chart.update();
+  }
+}
+
+/* -------------------- Chart points & rendering -------------------- */
+function updateChartPointsFromInternalData() {
+  const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
+
+  // --- TVG absolute points ---
+  tvgPointsAbsolute = [];
+  const initialGainValue = (0.5 * (parseInt(document.getElementById('gainInitSlider').value) + 1)) + afeGainBase;
+  tvgPointsAbsolute.push({ x: 0, y: initialGainValue });
+
+  const tvgT0_abs_us = tvgTimeMap[parseInt(document.getElementById('tvgT0').value)];
+  tvgPointsAbsolute.push({ x: tvgT0_abs_us, y: initialGainValue });
+  let currentTime = tvgT0_abs_us;
+
+  for (let i = 1; i <= 5; i++) {
+    const tvgT_delta_us = tvgTimeMap[parseInt(document.getElementById(`tvgT${i}`).value)];
+    currentTime += tvgT_delta_us;
+    const tvgG_val = parseFloat(document.getElementById(`tvgG${i}`).value);
+    const gainAtPoint = (0.5 * (tvgG_val + 1)) + afeGainBase;
+    tvgPointsAbsolute.push({ x: currentTime, y: gainAtPoint });
+  }
+
+  // --- threshold P1 absolute points ---
+  thresholdP1PointsAbsolute = [];
+  let currentP1Time = 0;
+  const thP1Off = parseInt(document.getElementById('thP1Off').value);
+  const p1LevelsChartValues = [];
+  const thP1OffsetValue = parseInt(document.getElementById('thP1Off').value);
+  for (let i = 1; i <= 8; i++) {
+    const base = parseInt(document.getElementById(`thrPr1P${i}Level`).value);
+    const calculatedLevel = (base * 8) + thP1OffsetValue;
+    p1LevelsChartValues.push(Math.max(0, Math.min(255, calculatedLevel)));
+  }
+  for (let i = 9; i <= 12; i++) {
+    const base = parseInt(document.getElementById(`thrPr1P${i}Level`).value);
+    p1LevelsChartValues.push(base);
+  }
+  currentP1Time = thrPxTimeMap[parseInt(document.getElementById('thrPr1P1Time').value)];
+  thresholdP1PointsAbsolute.push({ x: 0, y: p1LevelsChartValues[0] });
+  thresholdP1PointsAbsolute.push({ x: currentP1Time, y: p1LevelsChartValues[0] });
+  for (let i = 1; i <= 11; i++) {
+    const delta = thrPxTimeMap[parseInt(document.getElementById(`thrPr1P${i + 1}Time`).value)];
+    currentP1Time = Math.min(MAX_TIME_US, currentP1Time + delta);
+    thresholdP1PointsAbsolute.push({ x: currentP1Time, y: p1LevelsChartValues[i] });
+  }
+  const p1RecUs = 4.096 * (parseInt(document.getElementById('p1RecSlider').value) + 1) * 1000;
+  if (p1RecUs > currentP1Time && p1RecUs <= MAX_TIME_US) {
+    thresholdP1PointsAbsolute.push({ x: p1RecUs, y: p1LevelsChartValues[11] });
+  } else if (currentP1Time < MAX_TIME_US) {
+    thresholdP1PointsAbsolute.push({ x: MAX_TIME_US, y: p1LevelsChartValues[11] });
+  }
+
+  // --- threshold P2 absolute points ---
+  thresholdP2PointsAbsolute = [];
+  let currentP2Time = 0;
+  const thP2Off = parseInt(document.getElementById('thP2Off').value);
+  const p2LevelsChartValues = [];
+  const thP2OffsetValue = parseInt(document.getElementById('thP2Off').value);
+  for (let i = 1; i <= 8; i++) {
+    const base = parseInt(document.getElementById(`thrPr2P${i}Level`).value);
+    const calculatedLevel = (base * 8) + thP2OffsetValue;
+    p2LevelsChartValues.push(Math.max(0, Math.min(255, calculatedLevel)));
+  }
+  for (let i = 9; i <= 12; i++) {
+    const base = parseInt(document.getElementById(`thrPr2P${i}Level`).value);
+    p2LevelsChartValues.push(base);
+  }
+  currentP2Time = thrPxTimeMap[parseInt(document.getElementById('thrPr2P1Time').value)];
+  thresholdP2PointsAbsolute.push({ x: 0, y: p2LevelsChartValues[0] });
+  thresholdP2PointsAbsolute.push({ x: currentP2Time, y: p2LevelsChartValues[0] });
+  for (let i = 1; i <= 11; i++) {
+    const delta = thrPxTimeMap[parseInt(document.getElementById(`thrPr2P${i + 1}Time`).value)];
+    currentP2Time = Math.min(MAX_TIME_US, currentP2Time + delta);
+    thresholdP2PointsAbsolute.push({ x: currentP2Time, y: p2LevelsChartValues[i] });
+  }
+  const p2RecUs = 4.096 * (parseInt(document.getElementById('p2RecSlider').value) + 1) * 1000;
+  if (p2RecUs > currentP2Time && p2RecUs <= MAX_TIME_US) {
+    thresholdP2PointsAbsolute.push({ x: p2RecUs, y: p2LevelsChartValues[11] });
+  } else if (currentP2Time < MAX_TIME_US) {
+    thresholdP2PointsAbsolute.push({ x: MAX_TIME_US, y: p2LevelsChartValues[11] });
+  }
+
+  // --- annotations ---
+  const pulseLength_us = parseFloat(document.getElementById('pulseLengthDisplay').textContent.replace(' µs', ''));
+  const echoReturnTime_us = parseFloat(document.getElementById('echoReturnTimeDisplay').textContent.replace(' µs', ''));
+  const decayTime_us_input = parseFloat(document.getElementById('decayTime').value);
+  const annotations = {
+    burstPulse: {
+      type: 'box', xMin: 0, xMax: pulseLength_us,
+      backgroundColor: 'rgba(255, 99, 132, 0.2)', borderColor: 'rgba(255, 99, 132, 0.5)', borderWidth: 1,
+      label: { enabled: true, content: 'Burst Pulse', position: 'start', color: 'rgb(255, 99, 132)', font: { size: 10 } }
+    },
+    decayRegion: {
+      type: 'box', xMin: pulseLength_us, xMax: pulseLength_us + decayTime_us_input,
+      backgroundColor: 'rgba(255, 205, 86, 0.2)', borderColor: 'rgba(255, 205, 86, 0.5)', borderWidth: 1,
+      label: { enabled: true, content: 'Decay', position: 'start', color: 'rgb(255, 205, 86)', font: { size: 10 } }
+    }
+  };
+  if (!isNaN(echoReturnTime_us) && echoReturnTime_us > 0) {
+    annotations.echoRegion = {
+      type: 'box', xMin: echoReturnTime_us, xMax: echoReturnTime_us + pulseLength_us,
+      backgroundColor: 'rgba(75, 192, 192, 0.2)', borderColor: 'rgba(75, 192, 192, 0.5)', borderWidth: 1,
+      label: { enabled: true, content: 'Echo', position: 'start', color: 'rgb(75, 192, 192)', font: { size: 10 } }
+    };
+  }
+
+  // --- compute X range including echo overlays already parsed into echoSeries ---
+  const totalTimeElement = document.getElementById('totalTimeDisplay');
+  const totalTime_us_from_echo_params = totalTimeElement?.textContent
+    ? parseFloat(totalTimeElement.textContent.replace(' µs', ''))
+    : 0;
+
+  let longestEchoX = 0;
+  for (const s of echoSeries) {
+    if (s.data && s.data.length) {
+      const lastX = s.data[s.data.length - 1].x;
+      if (lastX > longestEchoX) longestEchoX = lastX;
+    }
+  }
+  let calculatedMaxX = Math.max(p1RecUs, p2RecUs, totalTime_us_from_echo_params, currentTime, longestEchoX);
+  const xMax = Math.round(calculatedMaxX * 1.1);
+
+  // --- ensure chart exists BEFORE touching datasets ---
+  let chart = getChart();
+  if (!chart) {
+    initializeChart(
+      tvgPointsAbsolute,
+      thresholdP1PointsAbsolute,
+      thresholdP2PointsAbsolute,
+      [], // echo datasets will get filled right after
+      annotations,
+      xMax
+    );
+    chart = getChart();
+  }
+  // If it STILL doesn’t exist or isn’t fully formed, bail gracefully.
+  if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) return;
+
+  // Make sure 4 echo slots exist
+  ensureEchoDatasets(chart);
+
+  // Now it's safe to assign data/options
+  chart.data.datasets[0].data = tvgPointsAbsolute;
+  chart.data.datasets[1].data = thresholdP1PointsAbsolute;
+  chart.data.datasets[2].data = thresholdP2PointsAbsolute;
+
+  for (let i = 0; i < 4; i++) {
+    const ds = chart.data.datasets[3 + i];
+    const s = echoSeries[i];
+    ds.data = s.data;
+    ds.label = (document.getElementById(s.labelId)?.value || `Dump ${i + 1}`).trim();
+    ds.borderColor = s.color;
+    ds.backgroundColor = 'transparent';
+    ds.pointRadius = 0;
+    ds.borderWidth = 2;
+    ds.showLine = true;
+    ds.yAxisID = 'y1';
+  }
+
+  const maxGainLevel = Math.max(...tvgPointsAbsolute.map(p => p.y), 90);
+  chart.options.plugins.annotation.annotations = annotations;
+  chart.options.scales.y.max = maxGainLevel + 10;
+  chart.options.scales.y1.max = 255;
+  chart.options.scales.x.min = 0;
+  chart.options.scales.x.max = xMax;
+
+  chart.update();
+}
+
+/* -------------------- Chart init -------------------- */
+function initializeChart(tvgData, thresholdP1, thresholdP2, echoData, annotations, initialXMax) {
+  const ctx = document.getElementById('tvgChart').getContext('2d');
+  tvgChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'TVG Gain (dB)',
+          data: tvgData,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1,
+          fill: false,
+          yAxisID: 'y',
+          pointRadius: 5,
+          pointBackgroundColor: 'rgb(75, 192, 192)',
+          showLine: true,
+          dragData: true,
+          dragX: true,
+          dragY: true,
+        },
+        {
+          label: 'Threshold P1 (ADC Level)',
+          data: thresholdP1,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+          showLine: true,
+          pointRadius: 5,
+          pointBackgroundColor: 'rgb(255, 99, 132)',
+          type: 'scatter',
+          yAxisID: 'y1',
+          dragData: true,
+          dragX: true,
+          dragY: true,
+        },
+        {
+          label: 'Threshold P2 (ADC Level)',
+          data: thresholdP2,
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          showLine: true,
+          pointRadius: 5,
+          pointBackgroundColor: 'rgb(54, 162, 235)',
+          type: 'scatter',
+          yAxisID: 'y1',
+          dragData: true,
+          dragX: true,
+          dragY: true,
+        },
+        // Echo overlays 1..4
+        {
+          label: (document.getElementById('echoLabel1')?.value || 'Dump 1'),
+          data: (echoSeries?.[0]?.data || []),
+          borderColor: 'rgb(255, 0, 0)',
+          backgroundColor: 'rgba(255, 0, 0, 0.25)',
+          fill: false, yAxisID: 'y1', pointRadius: 0, borderWidth: 2, showLine: true, dragData: false, type: 'line',
+        },
+        {
+          label: (document.getElementById('echoLabel2')?.value || 'Dump 2'),
+          data: (echoSeries?.[1]?.data || []),
+          borderColor: 'rgb(255, 0, 255)',
+          backgroundColor: 'rgba(255, 0, 255, 0.25)',
+          fill: false, yAxisID: 'y1', pointRadius: 0, borderWidth: 2, showLine: true, dragData: false, type: 'line',
+        },
+        {
+          label: (document.getElementById('echoLabel3')?.value || 'Dump 3'),
+          data: (echoSeries?.[2]?.data || []),
+          borderColor: 'rgb(0, 0, 255)',
+          backgroundColor: 'rgba(0, 0, 255, 0.25)',
+          fill: false, yAxisID: 'y1', pointRadius: 0, borderWidth: 2, showLine: true, dragData: false, type: 'line',
+        },
+        {
+          label: (document.getElementById('echoLabel4')?.value || 'Dump 4'),
+          data: (echoSeries?.[3]?.data || []),
+          borderColor: 'rgb(0, 128, 0)',
+          backgroundColor: 'rgba(0, 128, 0, 0.25)',
+          fill: false, yAxisID: 'y1', pointRadius: 0, borderWidth: 2, showLine: true, dragData: false, type: 'line',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'linear',
+          position: 'bottom',
+          beginAtZero: true,
+          offset: false,
+          title: { display: true, text: 'Time (µs)' },
+          min: 0,
+          max: initialXMax,
+        },
+        y: {
+          type: 'linear',
+          position: 'left',
+          title: { display: true, text: 'Gain (dB)' },
+          min: 0,
+          max: 100
+        },
+        y1: {
+          type: 'linear',
+          position: 'right',
+          title: { display: true, text: 'ADC Level' },
+          min: 0,
+          max: 255,
+          grid: { drawOnChartArea: false }
+        }
+      },
+      plugins: {
+        zoom: {
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'xy',
+            limits: { x: { min: 0, minRange: 50 }, y: { min: 0, minRange: 5 }, y1: { min: 0, minRange: 5 } },
+            onZoomComplete({ chart }) { chart.options.scales.x.min = 0; chart.update('none'); }
+          },
+          pan: {
+            enabled: true,
+            mode: 'xy',
+            limits: { x: { min: 0 }, y: { min: 0 }, y1: { min: 0 } },
+            onPanComplete({ chart }) { chart.options.scales.x.min = 0; chart.update('none'); }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context){
+              let label = context.dataset.label || '';
+              if (label) label += ': ';
+              if (context.datasetIndex === 0) label += context.parsed.y.toFixed(1) + ' dB';
+              else label += Math.round(context.parsed.y) + ' ADC';
+              return label;
+            },
+            title: function(context){
+              const rawX = context[0].parsed.x;
+              const snappedX = (context[0].datasetIndex === 0) ? snapToTvgTime(rawX) : snapToThresholdTime(rawX);
+              return 'Time: ' + snappedX + ' µs';
+            }
+          }
+        },
+        annotation: { annotations: annotations },
+        dragData: {
+          round: 1,
+          onDragStart: function(e){ e.target.style.cursor = 'grabbing'; },
+          onDrag: function(){},
+          onDragEnd: function(e, datasetIndex, index, value) {
+            e.target.style.cursor = 'grab';
+            let newX = Math.max(0, value.x);
+            let newY = value.y;
+            if (newX > MAX_TIME_US) newX = MAX_TIME_US;
+
+            if (datasetIndex === 0) {
+              const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
+              newY = snapToTvgGain(newY, afeGainBase);
+              if (index === 0) {
+                newX = 0;
+                tvgPointsAbsolute[0].y = newY;
+                tvgPointsAbsolute[1].y = newY;
+              } else if (index === 1) {
+                newX = snapToTvgTime(newX);
+                tvgPointsAbsolute[1].x = newX;
+                tvgPointsAbsolute[1].y = newY;
+                if (newY < tvgPointsAbsolute[0].y) newY = tvgPointsAbsolute[0].y;
+              } else {
+                newX = snapToTvgTime(newX);
+                const prevX = tvgPointsAbsolute[index - 1].x;
+                if (newX < prevX) newX = prevX;
+                tvgPointsAbsolute[index].x = newX;
+                tvgPointsAbsolute[index].y = newY;
+              }
+              updateTvgInputsFromAbsoluteData();
+            } else if (datasetIndex === 1 || datasetIndex === 2) {
+              const absolutePoints = datasetIndex === 1 ? thresholdP1PointsAbsolute : thresholdP2PointsAbsolute;
+              const thOffInput = document.getElementById(`thP${datasetIndex === 1 ? '1' : '2'}Off`);
+              const thOffset = parseInt(thOffInput.value);
+              newX = snapToThresholdTime(newX);
+
+              const levelIndex = index;
+              let newLevelInputValue;
+              if (levelIndex >= 1 && levelIndex <= 8) {
+                const baseLevelInput = (newY - thOffset) / 8;
+                newLevelInputValue = Math.round(Math.max(0, Math.min(31, baseLevelInput)));
+              } else {
+                newLevelInputValue = Math.round(Math.max(0, Math.min(255, newY)));
+              }
+              const preset = (datasetIndex === 1) ? '1' : '2';
+              const levelInputId = `thrPr${preset}P${levelIndex}Level`;
+              const timeInputId  = `thrPr${preset}P${levelIndex}Time`;
+
+              if (document.getElementById(levelInputId)) document.getElementById(levelInputId).value = newLevelInputValue;
+
+              if (levelIndex > 1) {
+                const prevX = absolutePoints[levelIndex - 1].x;
+                const deltaT = newX - prevX;
+                const deltaTRegValue = thrPxTimeInverseMap[snapToThresholdTime(deltaT)];
+                if (document.getElementById(timeInputId)) document.getElementById(timeInputId).value = deltaTRegValue;
+              } else {
+                const t1RegValue = thrPxTimeInverseMap[newX];
+                if (document.getElementById(timeInputId)) document.getElementById(timeInputId).value = t1RegValue;
+              }
+
+              updateThresholdInputsFromAbsoluteData(datasetIndex === 1 ? 1 : 2);
+            }
+            updateAllCalculations();
+          }
+        }
+      }
+    }
+  });
+
+  // expose & precreate echo slots
+  window.tvgChart = tvgChart;
+  ensureEchoDatasets(tvgChart);
+}
+
+/* -------------------- UI sync back to inputs -------------------- */
+function updateTvgInputsFromAbsoluteData() {
+  const afeGainBase = afeGainRangeMap[parseInt(document.getElementById('gainAFE').value)];
+  const initialGainChart = tvgPointsAbsolute[0].y;
+  let gainInitVal = Math.round(((initialGainChart - afeGainBase) / 0.5) - 1);
+  gainInitVal = Math.max(0, Math.min(63, gainInitVal));
+  document.getElementById('gainInitSlider').value = gainInitVal;
+
+  const tvgT0_abs_us = tvgPointsAbsolute[1].x;
+  const tvgT0_reg_val = tvgTimeInverseMap[snapToTvgTime(tvgT0_abs_us)];
+  document.getElementById('tvgT0').value = tvgT0_reg_val;
+
+  for (let i = 1; i <= 5; i++) {
+    const currentPoint = tvgPointsAbsolute[i + 1];
+    const prevPoint = tvgPointsAbsolute[i];
+    let deltaT = currentPoint.x - prevPoint.x;
+    deltaT = snapToTvgTime(deltaT);
+    const tvgT_reg_val = tvgTimeInverseMap[deltaT];
+    document.getElementById(`tvgT${i}`).value = tvgT_reg_val;
+
+    let gainAtPoint = currentPoint.y;
+    let tvgG_val = Math.round(((gainAtPoint - afeGainBase) / 0.5) - 1);
+    tvgG_val = Math.max(0, Math.min(63, tvgG_val));
+    document.getElementById(`tvgG${i}`).value = tvgG_val;
+  }
+}
+
+function updateThresholdInputsFromAbsoluteData(presetNum) {
+  const absolutePoints = presetNum === 1 ? thresholdP1PointsAbsolute : thresholdP2PointsAbsolute;
+  const thOffInput = document.getElementById(`thP${presetNum}Off`);
+  const thOffset = parseInt(thOffInput.value);
+
+  const thrP1LevelInput = document.getElementById(`thrPr${presetNum}P1Level`);
+  let newL1ChartValue = absolutePoints[1].y;
+  let newL1InputValue = newL1ChartValue - thOffset;
+  newL1InputValue = Math.round(Math.max(0, Math.min(248, newL1InputValue)));
+  thrP1LevelInput.value = newL1InputValue;
+
+  const thP1T1_abs_us = absolutePoints[1].x;
+  const thP1T1_reg_val = thrPxTimeInverseMap[snapToThresholdTime(thP1T1_abs_us)];
+  document.getElementById(`thrPr${presetNum}P1Time`).value = thP1T1_reg_val;
+
+  for (let i = 1; i <= 11; i++) {
+    const currentPoint = absolutePoints[i + 1];
+    const prevPoint = absolutePoints[i];
+    let deltaT_us = currentPoint.x - prevPoint.x;
+    deltaT_us = snapToThresholdTime(deltaT_us);
+    deltaT_us = Math.max(MIN_THRESHOLD_TIME_US, deltaT_us);
+
+    const deltaT_reg_val = thrPxTimeInverseMap[deltaT_us];
+    document.getElementById(`thrPr${presetNum}P${i + 1}Time`).value = deltaT_reg_val;
+
+    let newLevelChartValue = currentPoint.y;
+    let newLevelInputValue;
+    if ((i + 1) >= 1 && (i + 1) <= 8) {
+      newLevelInputValue = newLevelChartValue - thOffset;
+      newLevelInputValue = Math.round(Math.max(0, Math.min(248, newLevelInputValue)));
+    } else {
+      newLevelInputValue = Math.round(Math.max(0, Math.min(255, newLevelChartValue)));
+    }
+    document.getElementById(`thrPr${presetNum}P${i + 1}Level`).value = newLevelInputValue;
+  }
+}
+
+/* -------------------- .h file load/parse -------------------- */
+function parseHFileContent(hFileContent) {
+  const regMap = {};
+  const lineRe = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(0x[0-9A-Fa-f]+|\d+)\s*;\s*$/gm;
+  let m;
+  while ((m = lineRe.exec(hFileContent)) !== null) {
+    const name = m[1].trim();
+    const vstr = m[2].trim();
+    const val = vstr.startsWith('0x') || vstr.startsWith('0X') ? parseInt(vstr, 16) : parseInt(vstr, 10);
+    if (!Number.isNaN(val)) regMap[name] = val & 0xFF;
+  }
+  if (Object.keys(regMap).length === 0) throw new Error('No "RegisterName = Value;" entries found.');
+
+  const get = (key) => (key in regMap ? regMap[key] : (('REG_' + key) in regMap ? regMap['REG_' + key] : undefined));
+  const parsed = {};
+
+  // TVG times
+  const tvg0 = get('TVGAIN0'); if (tvg0 !== undefined) { parsed.tvgT0 = (tvg0 >> 4) & 0xF; parsed.tvgT1 = tvg0 & 0xF; }
+  const tvg1 = get('TVGAIN1'); if (tvg1 !== undefined) { parsed.tvgT2 = (tvg1 >> 4) & 0xF; parsed.tvgT3 = tvg1 & 0xF; }
+  const tvg2 = get('TVGAIN2'); if (tvg2 !== undefined) { parsed.tvgT4 = (tvg2 >> 4) & 0xF; parsed.tvgT5 = tvg2 & 0xF; }
+
+  // TVG gains + shift
+  const tvg3 = get('TVGAIN3') ?? get('TVG3');
+  const tvg4 = get('TVGAIN4') ?? get('TVG4');
+  const tvg5 = get('TVGAIN5') ?? get('TVG5');
+  const tvg6 = get('TVGAIN6') ?? get('TVG6');
+  if (tvg3 !== undefined) parsed.tvgG1 = (tvg3 >> 2) & 0x3F;
+  if (tvg3 !== undefined && tvg4 !== undefined) {
+    const g2low = tvg3 & 0x3, g2high = (tvg4 >> 4) & 0xF;
+    parsed.tvgG2 = ((g2high << 2) | g2low) & 0x3F;
+  }
+  if (tvg4 !== undefined && tvg5 !== undefined) {
+    const g3low = tvg4 & 0xF, g3high = (tvg5 >> 6) & 0x3;
+    parsed.tvgG3 = ((g3high << 4) | g3low) & 0x3F;
+  }
+  if (tvg5 !== undefined) parsed.tvgG4 = tvg5 & 0x3F;
+  if (tvg6 !== undefined) { parsed.tvgG5 = (tvg6 >> 2) & 0x3F; parsed.freq_shift = tvg6 & 0x1; }
+
+  const initGain = get('INIT_GAIN');
+  if (initGain !== undefined) { parsed.bpfBwSlider = (initGain >> 6) & 0x3; parsed.gainInitSlider = initGain & 0x3F; }
+
+  const freq = get('FREQUENCY') ?? get('FREQ');
+  if (freq !== undefined) parsed.frequencySlider = freq & 0xFF;
+
+  const dead = get('DEADTIME');
+  if (dead !== undefined) { parsed.deglitchPeriodSlider = (dead >> 4) & 0xF; parsed.pulseDeadTimeSlider = dead & 0xF; }
+
+  const p1 = get('PULSE_P1');
+  if (p1 !== undefined) { parsed.interface = (p1 >> 7) & 0x1; parsed.diagnostic = (p1 >> 6) & 0x1; parsed.transceiver = (p1 >> 5) & 0x1; parsed.p1nSlider = p1 & 0x1F; }
+
+  const p2 = get('PULSE_P2');
+  if (p2 !== undefined) { parsed.uartAddrSlider = (p2 >> 5) & 0x7; parsed.p2nSlider = p2 & 0x1F; }
+
+  const cl1 = get('CURR_LIM_P1');
+  if (cl1 !== undefined) { parsed.DIS_CL = (cl1 >> 7) & 0x1; parsed.CURR_LIM1 = cl1 & 0x3F; }
+  const cl2 = get('CURR_LIM_P2');
+  if (cl2 !== undefined) { parsed.lpfCoSlider = (cl2 >> 6) & 0x3; parsed.CURR_LIM2 = cl2 & 0x3F; }
+
+  const rec = get('REC_LENGTH');
+  if (rec !== undefined) { parsed.p1RecSlider = (rec >> 4) & 0xF; parsed.p2RecSlider = rec & 0xF; }
+
+  const fd = get('FREQ_DIAG');
+  if (fd !== undefined) { parsed.fDiagWinSlider = (fd >> 4) & 0xF; parsed.fDiagLenSlider = fd & 0xF; }
+
+  const sft = get('SAT_FDIAG_TH');
+  if (sft !== undefined) { parsed.fDiagThrSlider = (sft >> 5) & 0x7; parsed.satThrSlider = (sft >> 1) & 0xF; parsed.nlP1Scaling = sft & 0x1; }
+
+  const fvd = get('FVOLT_DEC');
+  if (fvd !== undefined) { parsed.nlP2Scaling = (fvd >> 7) & 0x1; parsed.ovThr = (fvd >> 5) & 0x3; parsed.lpTimer = (fvd >> 3) & 0x3; parsed.voltageDiagnostic = fvd & 0x7; }
+
+  const dct = get('DECPL_TEMP');
+  if (dct !== undefined) { parsed.gainAFE = (dct >> 6) & 0x3; parsed.LPM_EN = (dct >> 5) & 0x1; parsed.DECPL_TEMP_SEL = (dct >> 4) & 0x1; parsed.DECPL_T = dct & 0xF; }
+
+  const dsc = get('DSP_SCALE');
+  if (dsc !== undefined) { parsed.noiseLvlSlider = (dsc >> 3) & 0x1F; parsed.SCALE_K = (dsc >> 2) & 0x1; parsed.SCALE_N = dsc & 0x3; }
+
+  const ttrim = get('TEMP_TRIM');
+  if (ttrim !== undefined) { parsed.temperatureGain = decodeSignedMagnitude4Bit((ttrim >> 4) & 0xF); parsed.temperatureOffset = decodeSignedMagnitude4Bit(ttrim & 0xF); }
+
+  // P1 thresholds 0x5F..0x6E
+  const p1Thr = {};
+  for (let a = 0x5F; a <= 0x6E; a++) { const name = 'P1_THR_' + (a - 0x5F); if (regMap[name] !== undefined) p1Thr[a] = regMap[name]; }
+  if (Object.keys(p1Thr).length === 16) {
+    const off = decodeSignedMagnitude4Bit(p1Thr[0x6E] & 0xF); parsed.thP1Off = off;
+    parsed.thrPr1P1Time  = (p1Thr[0x5F] >> 4) & 0xF; parsed.thrPr1P2Time  = p1Thr[0x5F] & 0xF;
+    parsed.thrPr1P3Time  = (p1Thr[0x60] >> 4) & 0xF; parsed.thrPr1P4Time  = p1Thr[0x60] & 0xF;
+    parsed.thrPr1P5Time  = (p1Thr[0x61] >> 4) & 0xF; parsed.thrPr1P6Time  = p1Thr[0x61] & 0xF;
+    parsed.thrPr1P7Time  = (p1Thr[0x62] >> 4) & 0xF; parsed.thrPr1P8Time  = p1Thr[0x62] & 0xF;
+    parsed.thrPr1P9Time  = (p1Thr[0x63] >> 4) & 0xF; parsed.thrPr1P10Time = p1Thr[0x63] & 0xF;
+    parsed.thrPr1P11Time = (p1Thr[0x64] >> 4) & 0xF; parsed.thrPr1P12Time = p1Thr[0x64] & 0xF;
+
+    const l1 = (p1Thr[0x65] >> 3) & 0x1F;
+    const l2 = ((p1Thr[0x65] & 0x7) << 2) | ((p1Thr[0x66] >> 6) & 0x3);
+    const l3 = (p1Thr[0x66] >> 1) & 0x1F;
+    const l4 = ((p1Thr[0x66] & 0x1) << 4) | ((p1Thr[0x67] >> 4) & 0xF);
+    const l5 = ((p1Thr[0x67] & 0xF) << 1) | ((p1Thr[0x68] >> 7) & 0x1);
+    const l6 = (p1Thr[0x68] >> 2) & 0x1F;
+    const l7 = ((p1Thr[0x68] & 0x3) << 3) | ((p1Thr[0x69] >> 5) & 0x7);
+    const l8 = p1Thr[0x69] & 0x1F;
+
+    parsed.thrPr1P1Level = l1;
+    parsed.thrPr1P2Level = l2;
+    parsed.thrPr1P3Level = l3;
+    parsed.thrPr1P4Level = l4;
+    parsed.thrPr1P5Level = l5;
+    parsed.thrPr1P6Level = l6;
+    parsed.thrPr1P7Level = l7;
+    parsed.thrPr1P8Level = l8;
+    parsed.thrPr1P9Level  = p1Thr[0x6A];
+    parsed.thrPr1P10Level = p1Thr[0x6B];
+    parsed.thrPr1P11Level = p1Thr[0x6C];
+    parsed.thrPr1P12Level = p1Thr[0x6D];
+  }
+
+  // P2 thresholds 0x6F..0x7E
+  const p2Thr = {};
+  for (let a = 0x6F; a <= 0x7E; a++) { const name = 'P2_THR_' + (a - 0x6F); if (regMap[name] !== undefined) p2Thr[a] = regMap[name]; }
+  if (Object.keys(p2Thr).length === 16) {
+    const off = decodeSignedMagnitude4Bit(p2Thr[0x7E] & 0xF); parsed.thP2Off = off;
+    parsed.thrPr2P1Time  = (p2Thr[0x6F] >> 4) & 0xF; parsed.thrPr2P2Time  = p2Thr[0x6F] & 0xF;
+    parsed.thrPr2P3Time  = (p2Thr[0x70] >> 4) & 0xF; parsed.thrPr2P4Time  = p2Thr[0x70] & 0xF;
+    parsed.thrPr2P5Time  = (p2Thr[0x71] >> 4) & 0xF; parsed.thrPr2P6Time  = p2Thr[0x71] & 0xF;
+    parsed.thrPr2P7Time  = (p2Thr[0x72] >> 4) & 0xF; parsed.thrPr2P8Time  = p2Thr[0x72] & 0xF;
+    parsed.thrPr2P9Time  = (p2Thr[0x73] >> 4) & 0xF; parsed.thrPr2P10Time = p2Thr[0x73] & 0xF;
+    parsed.thrPr2P11Time = (p2Thr[0x74] >> 4) & 0xF; parsed.thrPr2P12Time = p2Thr[0x74] & 0xF;
+
+    const l1 = (p2Thr[0x75] >> 3) & 0x1F;
+    const l2 = ((p2Thr[0x75] & 0x7) << 2) | ((p2Thr[0x76] >> 6) & 0x3);
+    const l3 = (p2Thr[0x76] >> 1) & 0x1F;
+    const l4 = ((p2Thr[0x76] & 0x1) << 4) | ((p2Thr[0x77] >> 4) & 0xF);
+    const l5 = ((p2Thr[0x77] & 0xF) << 1) | ((p2Thr[0x78] >> 7) & 0x1);
+    const l6 = (p2Thr[0x78] >> 2) & 0x1F;
+    const l7 = ((p2Thr[0x78] & 0x3) << 3) | ((p2Thr[0x79] >> 5) & 0x7);
+    const l8 = p2Thr[0x79] & 0x1F;
+
+    parsed.thrPr2P1Level = l1;
+    parsed.thrPr2P2Level = l2;
+    parsed.thrPr2P3Level = l3;
+    parsed.thrPr2P4Level = l4;
+    parsed.thrPr2P5Level = l5;
+    parsed.thrPr2P6Level = l6;
+    parsed.thrPr2P7Level = l7;
+    parsed.thrPr2P8Level = l8;
+    parsed.thrPr2P9Level  = p2Thr[0x7A];
+    parsed.thrPr2P10Level = p2Thr[0x7B];
+    parsed.thrPr2P11Level = p2Thr[0x7C];
+    parsed.thrPr2P12Level = p2Thr[0x7D];
+  }
+
+  return parsed;
+}
+
+/* -------------------- DOM Ready -------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // Populate THR P1/P2 time selects
+  for (let i = 1; i <= 12; i++) {
+    populateThrPxTimeSelect(document.getElementById(`thrPr1P${i}Time`));
+    populateThrPxTimeSelect(document.getElementById(`thrPr2P${i}Time`));
+  }
+
+  // Generic inputs -> recalc
+  document.querySelectorAll('input[type="number"], input[type="range"], select')
+    .forEach(input => { input.addEventListener('input', () => { updateAllCalculations(); }); });
+
+  // Collapsibles
+  document.querySelectorAll('.container-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const targetId = header.dataset.target;
+      const content = document.getElementById(targetId);
+      const button = header.querySelector('.toggle-button');
+      if (content) {
+        content.classList.toggle('expanded');
+        if (button) button.classList.toggle('expanded');
+      }
+    });
+  });
+
+  // Echo inputs (shared timestep + labels + textareas)
+  const triggerUpdate = () => updateAllCalculations();
+  const tsEl = document.getElementById('echoTimeStep1');
+  if (tsEl) { tsEl.addEventListener('input', triggerUpdate); tsEl.addEventListener('change', triggerUpdate); }
+  [1,2,3,4].forEach(i => {
+    const lbl = document.getElementById(`echoLabel${i}`);
+    const ta  = document.getElementById(`echoDataDump${i}`);
+    if (lbl) { lbl.addEventListener('input', triggerUpdate); lbl.addEventListener('change', triggerUpdate); }
+    if (ta)  { ta.addEventListener('input', triggerUpdate);  ta.addEventListener('change', triggerUpdate);  }
+  });
+
+  // Initial render
+  updateAllCalculations();
+});
+
+/* -------------------- Save / Load / Reset -------------------- */
+document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+  updateRegisterTable();
+  const container = document.getElementById('full-register-summary');
+  if (!container) { alert('full-register-summary container not found.'); return; }
+
+  const rows = container.querySelectorAll('table.registry-summary-table tbody tr');
+  if (!rows.length) { alert('No register rows found to save.'); return; }
+
+  const lines = [];
+  rows.forEach(tr => {
+    const tds = tr.querySelectorAll('td');
+    if (tds.length < 5) return;
+    const rawName = (tds[0].textContent || '').trim();
+	const name = rawName.replace('REG_', '');
+    let decStr = (tds[2].textContent || '').trim();
+    if (decStr === '') {
+      const hexText = (tds[3].textContent || '').trim().replace(/^0x/i, '');
+      if (hexText) decStr = String(parseInt(hexText, 16));
+    }
+    let value = parseInt(decStr, 10);
+    if (Number.isNaN(value)) value = 0;
+    lines.push(`${name} = ${value};`);
+  });
+
+  if (!lines.length) { alert('No valid register entries found.'); return; }
+
+  const header = `// Auto-generated from registry-summary-table\n// Format: RegisterName = Value;  (decimal)\n`;
+  const content = header + lines.join('\n') + '\n';
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pga460_registers.h';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('loadSettingsBtn').addEventListener('click', () => {
+  document.getElementById('loadFileInput').click();
+});
+
+document.getElementById('loadFileInput').addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const hFileContent = e.target.result;
+      const parsedSettings = parseHFileContent(hFileContent);
+      const imported = [];
+      const skippedNoUIElement = [];
+
+      for (const [id, rawVal] of Object.entries(parsedSettings)) {
+        const input = document.getElementById(id);
+        if (input) {
+          const val = (input.type === 'number' || input.type === 'range') ? Number(rawVal) : String(rawVal);
+          input.value = val;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          imported.push({ id, value: val });
+        } else {
+          skippedNoUIElement.push({ id, value: rawVal });
+        }
+      }
+
+      if (typeof updateAllCalculations === 'function') updateAllCalculations();
+
+      console.group('PGA460 Load Report (.h -> UI)');
+      console.info(`Read ${Object.keys(parsedSettings).length} entries from file.`);
+      console.info(`Applied to UI: ${imported.length}`); console.table(imported);
+      if (skippedNoUIElement.length) { console.warn(`Skipped (no matching UI element by id): ${skippedNoUIElement.length}`); console.table(skippedNoUIElement); }
+      console.groupEnd();
+      console.log('Settings loaded successfully from .h file.');
+    } catch (error) {
+      console.error('Failed to load settings: Error parsing .h file.', error);
+      console.error('Failed to load settings: Please ensure it is a valid .h file generated by this tool.');
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('resetZoomBtn').addEventListener('click', () => {
+  if (tvgChart) tvgChart.resetZoom();
+});
+
+/* -------------------- TI Defaults -------------------- */
+const DEFAULT_TI_REGISTERS = {
+  TVGAIN0: 0xAF, TVGAIN1: 0xFF, TVGAIN2: 0xFF, TVGAIN3: 0x2D, TVGAIN4: 0x68, TVGAIN5: 0x36, TVGAIN6: 0xFC,
+  INIT_GAIN: 0xC0, FREQUENCY: 0x8C, DEADTIME: 0x00, PULSE_P1: 0x01, PULSE_P2: 0x12, CURR_LIM_P1: 0x47,
+  CURR_LIM_P2: 0xFF, REC_LENGTH: 0x1C, FREQ_DIAG: 0x00, SAT_FDIAG_TH: 0xEE, FVOLT_DEC: 0x7C,
+  DECPL_TEMP: 0x0A, DSP_SCALE: 0x00, TEMP_TRIM: 0x00, P1_GAIN_CTRL: 0x00, P2_GAIN_CTRL: 0x00,
+  EE_CRC: 0xFF, EE_CNTRL: 0x00,
+  P1_THR_0: 0x88, P1_THR_1: 0x88, P1_THR_2: 0x88, P1_THR_3: 0x88, P1_THR_4: 0x88, P1_THR_5: 0x88,
+  P1_THR_6: 0x84, P1_THR_7: 0x21, P1_THR_8: 0x08, P1_THR_9: 0x42, P1_THR_10: 0x10, P1_THR_11: 0x80,
+  P1_THR_12: 0x80, P1_THR_13: 0x80, P1_THR_14: 0x80, P1_THR_15: 0x80,
+  P2_THR_0: 0x88, P2_THR_1: 0x88, P2_THR_2: 0x88, P2_THR_3: 0x88, P2_THR_4: 0x88, P2_THR_5: 0x88,
+  P2_THR_6: 0x84, P2_THR_7: 0x21, P2_THR_8: 0x08, P2_THR_9: 0x42, P2_THR_10: 0x10, P2_THR_11: 0x80,
+  P2_THR_12: 0x80, P2_THR_13: 0x80, P2_THR_14: 0x80, P2_THR_15: 0x80
+};
+
+document.getElementById('setDefaultBtn').addEventListener('click', () => {
+  let simpleHeader = '';
+  for (const [name, val] of Object.entries(DEFAULT_TI_REGISTERS)) {
+    simpleHeader += `${name} = 0x${val.toString(16).toUpperCase().padStart(2,'0')};\n`;
+  }
+  try {
+    const parsed = parseHFileContent(simpleHeader);
+    for (const id in parsed) {
+      const el = document.getElementById(id);
+      if (el) { el.value = parsed[id]; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    updateAllCalculations();
+    console.log('Applied TI default register set.');
+  } catch (e) {
+    console.error('Failed to apply TI defaults:', e);
+    alert('Failed to apply TI defaults. Check console for details.');
+  }
+});
+</script>
+
+</body>
+</html>
