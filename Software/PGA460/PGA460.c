@@ -64,6 +64,8 @@ const uint8_t pga460_cmd_threshold_bulk_write[PGA_CMD_SIZE] =           {PGA460_
 // const uint8_t pga460_cmd_broadcast_tvg_bulk_write[PGA_CMD_SIZE]       = {PGA460_SYNC, PGA460_CMD_BROADCAST_TVG_BULK_WRITE,       255 - PGA460_CMD_BROADCAST_TVG_BULK_WRITE};
 // const uint8_t pga460_cmd_broadcast_threshold_bulk_write[PGA_CMD_SIZE] = {PGA460_SYNC, PGA460_CMD_BROADCAST_THRESHOLD_BULK_WRITE, 255 - PGA460_CMD_BROADCAST_THRESHOLD_BULK_WRITE};
 
+static const uint16_t time_lookup[16] = {100, 200, 300, 400, 600, 800, 1000, 1200, 1400, 2000, 2400, 3200, 4000, 5200, 6400, 8000};
+
 const PGA460_Regs_t s1 = {
   .EEData.UserData = {0},    // 0x00..0x13
   .EEData.TVG = {            // keep your proven TVG shape
@@ -222,15 +224,11 @@ float soundSpeed = 343.0f;
 
 static void PGA460_ReadAndPrintEEPROM(uint8_t sensorID) {
     printf("Reading and printing EEPROM registers for Sensor %u individually...\n", sensorID);
-
     uint8_t regValue = 0;
-    
     // EEPROM registers range from 0x00 to 0x2B
     for (uint8_t regAddr = 0x00; regAddr <= 0x2B; ++regAddr) {
         // Read the single register
-        HAL_StatusTypeDef status = PGA460_RegisterRead(sensorID, regAddr, &regValue);
-        
-        if (status == HAL_OK) {
+        if (PGA460_RegisterRead(sensorID, regAddr, &regValue) == HAL_OK) {
             const char* regName;
             switch (regAddr) {
                 case REG_USER_DATA1: regName = "USER_DATA1"; break;
@@ -283,16 +281,12 @@ static void PGA460_ReadAndPrintEEPROM(uint8_t sensorID) {
         } else {
             printf("  Address 0x%02X: FAILED to read\n", regAddr);
         }
-        
         HAL_Delay(10);
     }
-    
     printf("EEPROM individual read complete.\n");
 }
 	
-	
 static void PrintThresholdStruct(const Thresholds_t *thr) {
-    if (!thr) return;
     printf("P1: ");
     for (int i = 0; i < 16; ++i) {
         printf("0x%02X%s", thr->P1_THR[i], (i < 15) ? ", " : "\n");
@@ -301,8 +295,7 @@ static void PrintThresholdStruct(const Thresholds_t *thr) {
     for (int i = 0; i < 16; ++i) {
         printf("0x%02X%s", thr->P2_THR[i], (i < 15) ? ", " : "\n");
     }
-//    printf("CRC: 0x%02X\n", thr->THR_CRC);
-		printf("-------\n");
+	printf("-------\n");
 }
 	
 static uint8_t PGA460_CalculateChecksum(const uint8_t *data, uint8_t len) {
@@ -337,6 +330,19 @@ static HAL_StatusTypeDef PGA460_SetEEPROMAccess(const uint8_t sensorID, const ui
     return HAL_OK;
 }
 
+// Transmit a RUN command without any post-wait/reads.
+static HAL_StatusTypeDef PGA460_RunCmd_NoWait(uint8_t sensorID, PGA460_Command_t cmd){
+    const uint8_t *frame = NULL;
+    switch (cmd) {
+        case PGA460_CMD_LISTEN_ONLY_PRESET1:           frame = pga460_cmd_listen_only_preset1; break;
+        case PGA460_CMD_BURST_AND_LISTEN_PRESET1:      frame = pga460_cmd_burst_and_listen_preset1; break;
+        case PGA460_CMD_LISTEN_ONLY_PRESET2:           frame = pga460_cmd_listen_only_preset2; break;
+        /* add others as needed */
+        default: return HAL_ERROR;
+    }
+    return HAL_UART_Transmit(sensors[sensorID].uartPort, frame, PGA_CMD_SIZE, UART_TIMEOUT);
+}
+
 // Function to initialize 3x PGA460 sensors
 HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
     for (uint8_t i = 0; i < ULTRASONIC_SENSOR_COUNT; ++i) {
@@ -354,7 +360,6 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
             DEBUG("Sensor %u: Threshold write failed!\n", i);
             return HAL_ERROR;
         }
-
         // ---- Step 2: EEPROM bulk write (shadow -> device) ----
         if (PGA460_EEPROMBulkWrite(i) != HAL_OK) {
             DEBUG("Sensor %u: EEPROM bulk write failed!\n", i);
@@ -368,17 +373,6 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
 							return HAL_ERROR;
 					}
 				}
-    if (PGA460_AutoTune(
-        i,         // The ID of the sensor to calibrate (e.g., 0, 1, or 2)
-        10,               // noiseMargin: The margin between noise level and threshold (e.g., 10)
-        0,                // windowIndex: Controls the time spacing of thresholds (0 for short distances)
-        12,               // autoMax: Number of threshold points to auto-calibrate (max 12)
-        16,               // loops: Number of measurements to average for stability (e.g., 16)
-        160               // targetAmp: Target amplitude for the TVG to achieve (e.g., 160)
-    ) != HAL_OK) {
-            DEBUG("Sensor %u: Auto Tune failed!\n", i);
-            return HAL_ERROR;
-    }
         // (Optional) Auto-threshold pass
 //        if (PGA460_AutoThreshold(i, 10, 0, 12, 16) != HAL_OK) {
 //            DEBUG("Sensor %u: Auto THR failed!\n", i);
@@ -394,21 +388,16 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
             DEBUG("Sensor %u: Status check failed!\n", i);
             return HAL_ERROR;
         }
-
         // Frequency (Hz) via system diagnostics (diag=0)
         float diagVal = 0.0f;
-        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagVal) == HAL_OK) {
+        if (PGA460_GetSystemDiagnostics(i, 1, 0, &diagVal) == HAL_OK)
             DEBUG("Sensor %u: Frequency Diagnostic = %.2f kHz\n", i, diagVal);
-        }
         if (PGA460_GetSystemDiagnostics(i, 0, 1, &diagVal) == HAL_OK)
             DEBUG("Sensor %u: Decay Period Diagnostic = %.2f us\n", i, diagVal);
         if (PGA460_GetSystemDiagnostics(i, 0, 2, &diagVal) == HAL_OK)
             DEBUG("Sensor %u: Die Temperature = %.2f C\n", i, diagVal);
         if (PGA460_GetSystemDiagnostics(i, 0, 3, &diagVal) == HAL_OK)
             DEBUG("Sensor %u: Noise Level = %.0f\n", i, diagVal);
-
-
-
         // ---- Step 7: Optional Echo Data Dump for verification ----
         uint8_t echoBuf[128];
         if (PGA460_GetEchoDataDump(i, PGA460_CMD_BURST_AND_LISTEN_PRESET1, echoBuf) != HAL_OK) {
@@ -419,14 +408,9 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
         for (uint8_t j = 0; j < 128; ++j) {
             DEBUG("%u%s", echoBuf[j], (j < 127) ? "," : "\n");
         }
-
         DEBUG("-----\n");
-        //PrintThresholdStruct(&sensors[i].Registers.THR);
-        //DEBUG("-----\n");
-
         HAL_Delay(1000);
     }
-
     return HAL_OK;
 }
 
@@ -441,10 +425,6 @@ HAL_StatusTypeDef PGA460_RegisterRead(uint8_t sensorID, uint8_t regAddr, uint8_t
     // --- RX frame: [DIAG][DATA][CHK] ---
     uint8_t rx[3] = {0};
     if (HAL_UART_Receive(sensors[sensorID].uartPort, rx, sizeof(rx), UART_TIMEOUT) != HAL_OK) return HAL_ERROR;
-    // Validate checksum over DIAG + DATA
-//    if (PGA460_CalculateChecksum(rx, 2) != rx[2]) {
-//        return HAL_ERROR;
-//    }
     *regValue = rx[1]; // DATA byte
     return HAL_OK;
 }
@@ -544,7 +524,7 @@ HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID) {
         }
     }
     // Step 2: Construct UART frame
-		uint8_t frame[46] = {0};
+	uint8_t frame[46] = {0};
     frame[0] = PGA460_SYNC;
     frame[1] = PGA460_CMD_EEPROM_BULK_WRITE;
     memcpy(&frame[2], &sensors[sensorID].Registers.EEData, 44);  // 44 bytes
@@ -556,48 +536,45 @@ HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID) {
     }
     HAL_Delay(100);  // Wait for EEPROM write
     if (PGA460_SetEEPROMAccess(sensorID, 0) != HAL_OK) {
-				DEBUG("Sensor %d: EEPROM lock failed after bulk write\n", sensorID);
-				return HAL_ERROR;
-		}
+		DEBUG("Sensor %d: EEPROM lock failed after bulk write\n", sensorID);
+		return HAL_ERROR;
+	}
     return HAL_OK;
 }
 
 HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID) {
     // Step 1: Unlock EEPROM (EE_UNLCK=0xD, EE_PRGM=0) => 0x68
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, PGA460_UNLOCK_EEPROM) != HAL_OK) {
-        DEBUG("Sensor %d: EEPROM Burn Step 1 (0x68) Failed!\n", (int)sensorID);
+        DEBUG("Sensor %d: EEPROM Burn Step 1 (0x68) Failed!\n", sensorID);
         return HAL_ERROR;
     }
     HAL_Delay(1); // short delay per datasheet
     // Step 2: Trigger EEPROM burn (EE_UNLCK=0xD, EE_PRGM=1) => 0x69
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, PGA460_LOCK_EEPROM) != HAL_OK) {
-        DEBUG("Sensor %d: EEPROM Burn Step 2 (0x69) Failed!\n", (int)sensorID);
+        DEBUG("Sensor %d: EEPROM Burn Step 2 (0x69) Failed!\n", sensorID);
         return HAL_ERROR;
     }
-    // Burn time: ~600–1000 ms per datasheet
-    HAL_Delay(1000);
+    // EEPROM programming time TYP 600ms
+    HAL_Delay(650);
     // Step 3: Read back EE_CTRL to verify
     uint8_t ctrlVal = 0;
     if (PGA460_RegisterRead(sensorID, REG_EE_CTRL, &ctrlVal) != HAL_OK) {
-        DEBUG("Sensor %d: Failed to read EE_CTRL after burn!\n", (int)sensorID);
+        DEBUG("Sensor %d: Failed to read EE_CTRL after burn!\n", sensorID);
         return HAL_ERROR;
     }
     sensors[sensorID].Registers.eeCtrl.Val.Value = ctrlVal;
     // Step 4: Check EE_PRGM_OK (bit 2)
     if (sensors[sensorID].Registers.eeCtrl.Val.BitField.EE_PRGM_OK) {
-        //DEBUG("Sensor %d: EEPROM Burn Successful (EE_CTRL = 0x%02X)\n", (int)sensorID, ctrlVal);
-        // Optional: re-lock by clearing unlock nibble if you wish:
         if(PGA460_RegisterWrite(sensorID, REG_EE_CTRL, 0x00) != HAL_OK)
-					return HAL_ERROR;
-        return HAL_OK;
+			return HAL_ERROR;
+		return HAL_OK;
     } else {
-        DEBUG("Sensor %d: EEPROM Burn Failed (EE_CTRL = 0x%02X)\n", (int)sensorID, ctrlVal);
+        DEBUG("Sensor %d: EEPROM Burn Failed (EE_CTRL = 0x%02X)\n", sensorID, ctrlVal);
         return HAL_ERROR;
     }
 }
 
 // TVG bulk read: fetch TVGAIN0..TVGAIN6 into sensors[sid].Registers.EEData.TVG
-
 HAL_StatusTypeDef PGA460_GetTVG(uint8_t sensorID) {
     // Send prebuilt command [SYNC][CMD][CHK]
     if (HAL_UART_Transmit(sensors[sensorID].uartPort, pga460_cmd_tvg_bulk_read, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
@@ -655,12 +632,6 @@ HAL_StatusTypeDef PGA460_GetThresholds(uint8_t sensorID) {
     }
     // 3) Copy 33 bytes (P1_THR[16], P2_THR[16], THR_CRC) into mirror (skip DIAG)
     memcpy(&sensors[sensorID].Registers.THR, &rx[1], sizeof(Thresholds_t));
-    // 4) CRC check: compute over first 32 bytes (P1+P2) and compare with THR_CRC
-//    const uint8_t expected_crc = PGA460_CalculateEEPROM_CRC(&rx[1], 32);
-//    if (sensors[sensorID].Registers.THR.THR_CRC != expected_crc) {
-//		DEBUG("Sensor %d: THR CRC mismatch! exp=0x%02X, got=0x%02X\n", sensorID, expected_crc, sensors[sensorID].Registers.THR.THR_CRC);
-//        return HAL_ERROR;
-//    }
     return HAL_OK;
 }
 
@@ -671,18 +642,12 @@ HAL_StatusTypeDef PGA460_SetThresholds(uint8_t sensorID) {
     frame[0] = PGA460_SYNC;
     frame[1] = PGA460_CMD_THRESHOLD_BULK_WRITE;
     memcpy(&frame[2], &sensors[sensorID].Registers.THR, 32);
-    //memcpy(&frame[18], sensors[sensorID].Registers.THR.P2_THR, 16);
-    //thr_image[32] = PGA460_CalculateChecksum(thr_image, 32); // checksum over first 32 bytes
-
     // Frame: [SYNC][CMD=0x10][33 bytes][CHK] => total 36 bytes
     frame[34] = PGA460_CalculateChecksum(&frame[1], 33); // checksum over CMD + 33 data bytes
 
     if (HAL_UART_Transmit(sensors[sensorID].uartPort, frame, sizeof(frame), UART_TIMEOUT) != HAL_OK) {
         return HAL_ERROR;
     }
-
-    // Mirror CRC locally on success (P1/P2 were already the source)
-    //sensors[sensorID].Registers.THR.THR_CRC = thr_image[32];
     HAL_Delay(70);
     return HAL_OK;
 }
@@ -727,46 +692,38 @@ HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Comm
     return HAL_OK;
 }
 
-// Public wrapper: run auto-threshold on P1 then P2, commit to device
+// Run auto-threshold on P1 then P2, commit to device
 HAL_StatusTypeDef PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops) {
     Thresholds_t *thr = &sensors[sensorID].Registers.THR;
     HAL_StatusTypeDef status;
-    
     // TI's approach is to read all 32 bytes of thresholds first to preserve the other preset's values.
-    // Assuming PGA460_GetThresholds reads all 32 bytes into the thr struct.
-    status = PGA460_GetThresholds(sensorID);
-    if (status != HAL_OK) return status;
-
+    if (PGA460_GetThresholds(sensorID) != HAL_OK)
+		return status;
     // Run auto-tuning for Preset 1 and then Preset 2
     for (uint8_t preset = 1; preset <= 2; preset++) {
         PGA460_Command_t cmd = (preset == 1) ? PGA460_CMD_BURST_AND_LISTEN_PRESET1 : PGA460_CMD_BURST_AND_LISTEN_PRESET2;
         uint8_t *thrStart = (preset == 1) ? thr->P1_THR : thr->P2_THR;
-        
         uint8_t echoSum[128] = {0};
         uint8_t echoBuf[128];
         uint8_t maxVals[12] = {0};
         uint8_t eddMarkers[13] = {0};
         uint16_t recTime_us = 0;
         int8_t thrOffset = 0;
-
-        // --- 1) Read REC_LENGTH and convert to time ---
+        // 1) Read REC_LENGTH and convert to time ---
         uint8_t rec = 0;
-        if (PGA460_RegisterRead(sensorID, REG_REC_LENGTH, &rec) != HAL_OK) return HAL_ERROR;
+        if (PGA460_RegisterRead(sensorID, REG_REC_LENGTH, &rec) != HAL_OK)
+			return HAL_ERROR;
         const uint8_t recNibble = (preset == 1) ? ((rec >> 4) & 0x0F) : (rec & 0x0F);
-        recTime_us = (uint16_t)(recNibble + 1u) * 4096u;
-
-        // --- 2) Set threshold times based on windowIndex ---
-        const uint16_t time_lookup[16] = {100, 200, 300, 400, 600, 800, 1000, 1200, 1400, 2000, 2400, 3200, 4000, 5200, 6400, 8000};
+        recTime_us = (uint16_t)(recNibble + 1) * 4096;
+        // 2) Set threshold times based on windowIndex ---
         uint16_t thrTime_us = 0;
         eddMarkers[0] = 0;
-
         if (windowIndex < 16) {
             // Overwrite existing threshold times with the new windowIndex
             for (uint8_t i = 0; i < 6; i++) {
                 thrStart[i] = (uint8_t)((windowIndex << 4) | (windowIndex & 0x0F));
             }
         }
-        
         // Calculate EDD markers based on the chosen/existing threshold times
         uint8_t numPoints = 0;
         for (uint8_t i = 0; i < 12; i++) {
@@ -779,38 +736,40 @@ HAL_StatusTypeDef PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, ui
                 index_nibble = (thrStart[i/2] >> (4 * ((i+1)%2))) & 0x0F;
             }
             thrTime_us += time_lookup[index_nibble];
-            
-            uint32_t marker = (uint32_t)thrTime_us * 128u / recTime_us;
-            eddMarkers[i+1] = (uint8_t)((marker > 127u) ? 127u : marker);
+            uint32_t marker = (uint32_t)thrTime_us * 128 / recTime_us;
+            eddMarkers[i+1] = (uint8_t)((marker > 127) ? 127 : marker);
             if (thrTime_us >= recTime_us) {
                 numPoints = i + 1;
                 break;
             }
         }
-        if (numPoints == 0) numPoints = 12;
-
-        // --- 3) Average N loops for current preset ---
+        if (numPoints == 0)
+			numPoints = 12;
+        // 3) Average N loops for current preset ---
         for (uint8_t l = 0; l < loops; l++) {
-            if (PGA460_GetEchoDataDump(sensorID, cmd, echoBuf) != HAL_OK) return HAL_ERROR;
-            for (uint8_t i = 0; i < 128; i++) echoSum[i] += echoBuf[i];
+            if (PGA460_GetEchoDataDump(sensorID, cmd, echoBuf) != HAL_OK)
+				return HAL_ERROR;
+            for (uint8_t i = 0; i < 128; i++)
+				echoSum[i] += echoBuf[i];
         }
-        for (uint8_t i = 0; i < 128; i++) echoSum[i] = (uint8_t)(echoSum[i] / loops);
-
-        // --- 4) Window maxima and quantization per TI logic ---
+        for (uint8_t i = 0; i < 128; i++)
+			echoSum[i] = (uint8_t)(echoSum[i] / loops);
+        // 4) Window maxima and quantization per TI logic ---
         memset(maxVals, 0, sizeof(maxVals));
-        if (autoMax > 12) autoMax = 12;
-
+        if (autoMax > 12)
+			autoMax = 12;
         for (uint8_t p = 0; p < autoMax; p++) {
             uint8_t start = eddMarkers[p];
             uint8_t stop = eddMarkers[p+1];
             for (uint8_t i = start; i < stop; i++) {
-                if (echoSum[i] > maxVals[p]) maxVals[p] = echoSum[i];
+                if (echoSum[i] > maxVals[p])
+					maxVals[p] = echoSum[i];
             }
         }
-        
         for (uint8_t i = 0; i < autoMax; i++) {
             if (i < 8) {
-                while ((maxVals[i] % 8 != 0) && (maxVals[i] < 248)) maxVals[i]++;
+                while ((maxVals[i] % 8 != 0) && (maxVals[i] < 248))
+					maxVals[i]++;
             }
             uint16_t v = (uint16_t)maxVals[i] + (uint16_t)noiseMargin;
             if (v >= 248) {
@@ -823,18 +782,18 @@ HAL_StatusTypeDef PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, ui
             }
             maxVals[i] = (uint8_t)v;
         }
-        
         for (uint8_t i = 0; i < autoMax && i < 8; i++) {
             maxVals[i] = (uint8_t)(maxVals[i] / 8);
         }
-
-        // --- 5) Pack 16-byte threshold block using read-modify-write ---
-        if (autoMax > 0) thrStart[6] = (thrStart[6] & ~0xF8) | (maxVals[0] << 3);
+        // 5) Pack 16-byte threshold block using read-modify-write ---
+        if (autoMax > 0)
+			thrStart[6] = (thrStart[6] & ~0xF8) | (maxVals[0] << 3);
         if (autoMax > 1) {
             thrStart[6] = (thrStart[6] & ~0x07) | (maxVals[1] >> 2);
             thrStart[7] = (thrStart[7] & ~0xC0) | (maxVals[1] << 6);
         }
-        if (autoMax > 2) thrStart[7] = (thrStart[7] & ~0x3E) | (maxVals[2] << 1);
+        if (autoMax > 2)
+			thrStart[7] = (thrStart[7] & ~0x3E) | (maxVals[2] << 1);
         if (autoMax > 3) {
             thrStart[7] = (thrStart[7] & ~0x01) | (maxVals[3] >> 4);
             thrStart[8] = (thrStart[8] & ~0xF0) | (maxVals[3] << 4);
@@ -843,24 +802,30 @@ HAL_StatusTypeDef PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, ui
             thrStart[8] = (thrStart[8] & ~0x0F) | (maxVals[4] >> 1);
             thrStart[9] = (thrStart[9] & ~0x80) | (maxVals[4] << 7);
         }
-        if (autoMax > 5) thrStart[9] = (thrStart[9] & ~0x7C) | (maxVals[5] << 2);
+        if (autoMax > 5)
+			thrStart[9] = (thrStart[9] & ~0x7C) | (maxVals[5] << 2);
         if (autoMax > 6) {
             thrStart[9] = (thrStart[9] & ~0x03) | (maxVals[6] >> 3);
             thrStart[10] = (thrStart[10] & ~0xE0) | (maxVals[6] << 5);
         }
-        if (autoMax > 7) thrStart[10] = (thrStart[10] & ~0x1F) | (maxVals[7]);
-        if (autoMax > 8) thrStart[11] = maxVals[8];
-        if (autoMax > 9) thrStart[12] = maxVals[9];
-        if (autoMax > 10) thrStart[13] = maxVals[10];
-        if (autoMax > 11) thrStart[14] = maxVals[11];
-        if (thrOffset != 0) thrStart[15] = (uint8_t)(thrOffset & 0x0F);
-        
+        if (autoMax > 7)
+			thrStart[10] = (thrStart[10] & ~0x1F) | (maxVals[7]);
+        if (autoMax > 8)
+			thrStart[11] = maxVals[8];
+        if (autoMax > 9)
+			thrStart[12] = maxVals[9];
+        if (autoMax > 10)
+			thrStart[13] = maxVals[10];
+        if (autoMax > 11)
+			thrStart[14] = maxVals[11];
+        if (thrOffset != 0)
+			thrStart[15] = (uint8_t)(thrOffset & 0x0F);
         DEBUG("Sensor %d: Final Threshold Block (P%u):\n", sensorID, preset);
-        for (uint8_t i = 0; i < 16; i++) DEBUG("%u%s", thrStart[i], (i == 15) ? "" : ", ");
+        for (uint8_t i = 0; i < 16; i++)
+			DEBUG("%u%s", thrStart[i], (i == 15) ? "" : ", ");
         DEBUG("\n");
     }
-
-    // --- 6) Push to device via threshold bulk write ---
+    // 6) Push to device via threshold bulk write ---
     if (PGA460_SetThresholds(sensorID) != HAL_OK) {
         DEBUG("Sensor %d: Failed to apply new thresholds!\n", sensorID);
         return HAL_ERROR;
@@ -913,14 +878,12 @@ HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID) {
 HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset, uint8_t *echoOut) {
     HAL_StatusTypeDef ret = HAL_OK;
     uint8_t response[ECHO_DATA_TOTAL_BYTES] = {0}; // 2-byte header + 128 bins
-    
     // 1) Enable Echo Data Dump Mode (EE_CTRL.DATADUMP_EN = 1)
     if (PGA460_RegisterWrite(sensorID, REG_EE_CTRL, ECHO_DATA_DUMP_ENABLE) != HAL_OK) {
         DEBUG("Sensor %d: Failed to enable Echo Data Dump mode!\n", sensorID);
         return HAL_ERROR;
     }
     HAL_Delay(10);
-    
     // 2) Trigger the requested preset (burst+listen or listen-only)
     if (PGA460_UltrasonicCmd(sensorID, (PGA460_Command_t)preset) != HAL_OK) {
         DEBUG("Sensor %d: Echo trigger preset failed!\n", sensorID);
@@ -928,24 +891,20 @@ HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset, uint8
         goto cleanup_disable_dump;
     }
     HAL_Delay(70); // allow full capture (~65 ms)
-    
     // 3) Request Bulk Echo Data Dump (CMD = 0x07)
     if (HAL_UART_Transmit(sensors[sensorID].uartPort, pga460_cmd_transducer_echo_data_dump, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump request TX failed!\n", sensorID);
         ret = HAL_ERROR;
         goto cleanup_disable_dump;
     }
-    
     // 4) Receive Echo Data Dump (2-byte header + 128 samples)
     if (HAL_UART_Receive(sensors[sensorID].uartPort, response, sizeof(response), UART_TIMEOUT) != HAL_OK) {
         DEBUG("Sensor %d: Echo Data Dump RX failed!\n", sensorID);
         ret = HAL_ERROR;
         goto cleanup_disable_dump;
     }
-    
     // 5) Copy only the 128 echo bins (skip the 2-byte header)
     memcpy(echoOut, &response[2], 128);
-
 cleanup_disable_dump:
     // 6) Disable Echo Data Dump Mode (best-effort)
     // The previous status should be preserved. The return value should not be overwritten.
@@ -1077,7 +1036,6 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
         DEBUG("Sensor %d: Failed to Receive Temp/Noise Data!\n", sensorID);
         return result;
     }
-
     // Step 4: Parse result
     if (!isNoise) {
         result = ((float)rx[1] - 64.0f) / 1.5f;  // Temperature in °C
@@ -1086,16 +1044,19 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
         result = (float)rx[2];                   // Noise level (raw 8-bit)
         //DEBUG("Sensor %d: Noise Level = %.2f\n", sensorID, result);
     }
-
     return result;
 }
 
-// --- Helper functions for PGA460_AutoTVG ---
+// ============================================================================
+// Helper functions for PGA460_AutoTune  (dedup + centralized THR builder)
+// ============================================================================
 
-// Helper functions for PGA460_AutoTune
-static uint8_t u8_clamp(int v, int lo, int hi) {
-    if (v < lo) return (uint8_t)lo;
-    if (v > hi) return (uint8_t)hi;
+// --- tiny utils ---
+static inline uint8_t u8_clamp(int v, int lo, int hi) {
+    if (v < lo)
+		return (uint8_t)lo;
+    if (v > hi)
+		return (uint8_t)hi;
     return (uint8_t)v;
 }
 
@@ -1104,302 +1065,276 @@ static uint8_t median5_u8(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e)
     for (int i = 0; i < 5; i++) {
         for (int j = i + 1; j < 5; j++) {
             if (s[j] < s[i]) {
-                uint8_t t = s[i];
-                s[i] = s[j];
-                s[j] = t;
-            }
+				uint8_t t = s[i];
+				s[i] = s[j];
+				s[j] = t;
+			}
         }
     }
     return s[2];
 }
 
-static const uint16_t kTimeLookup[16] = {100, 200, 300, 400, 600, 800, 1000, 1200, 1400, 2000, 2400, 3200, 4000, 5200, 6400, 8000};
+// Uses your file-scope: static const uint16_t time_lookup[16] = {...};
 static uint8_t time_code_from_us(uint16_t us) {
     uint8_t best_code = 0;
-    uint32_t best_err = 0xFFFFFFFFu;
+    uint32_t best_err = 0xFFFFFFFF;
     for (uint8_t i = 0; i < 16; i++) {
-        uint32_t err = (kTimeLookup[i] > us) ? (kTimeLookup[i] - us) : (us - kTimeLookup[i]);
+        uint32_t lut = (uint32_t)time_lookup[i];
+        uint32_t err = (lut > us) ? (lut - us) : (us - lut);
         if (err < best_err) {
-            best_code = i;
-            best_err = err;
-        }
+			best_err = err;
+			best_code = i;
+		}
     }
     return best_code;
 }
 
 static uint8_t tvg_code_from_factor(float factor) {
-    float clamped_factor = factor;
-    if (clamped_factor < 0.0625f) clamped_factor = 0.0625f;
-    if (clamped_factor > 16.0f) clamped_factor = 16.0f;
-    int code = (int)lroundf(16.0f * log2f(clamped_factor));
+    if (factor < 0.0625f)
+		factor = 0.0625f;
+    if (factor > 16.0f)
+		factor = 16.0f;
+    int code = (int)lroundf(16.0f * log2f(factor));   // 0..63
     return u8_clamp(code, 0, 63);
 }
 
-// Main auto-tuning function to calibrate both thresholds and TVG.
-HAL_StatusTypeDef PGA460_AutoTune(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, uint8_t targetAmp) {
-    HAL_StatusTypeDef status;
-    uint8_t echoAvg[128] = {0}, echoBuf[128];
-    uint8_t thrMax[12] = {0};
-    uint8_t eddMarkers[13] = {0};
-    int8_t thrOffset = 0;
+// ============================================================================
+// Centralized THR builder (P1/P2): sets windows, builds markers, quantizes, packs
+// Call this anywhere you need to compute a 16-byte THR block from a 128-bin echo.
+// ============================================================================
 
-    // --- Data Collection: Average Echo Data Dump ---
-    if (loops == 0) loops = 8;
+static void _thr_set_uniform_windows(uint8_t *thrStart, uint8_t windowIndex) {
+    for (uint8_t i = 0; i < 6; i++)
+        thrStart[i] = (uint8_t)((windowIndex << 4) | (windowIndex & 0x0F));
+}
+
+static uint8_t _thr_build_markers(const uint8_t *thrStart, uint16_t recTime_us, uint8_t markers[13]) {
+    uint16_t acc_us = 0;
+    markers[0] = 0;
+    uint8_t i;
+    for (i = 0; i < 12; i++) {
+        // nibble order: T1_hi, T1_lo, T2_hi, T2_lo, ...
+        const uint8_t code = (i == 0) ? ((thrStart[0] >> 4) & 0x0F) : (i == 1) ? (thrStart[0] & 0x0F) : ((thrStart[i/2] >> (4 * ((i+1) & 1))) & 0x0F);
+        acc_us += time_lookup[code];
+        uint32_t m = (uint32_t)acc_us * 128 / recTime_us;
+        markers[i+1] = (m > 127) ? 127 : (uint8_t)m;
+        if (acc_us >= recTime_us) {
+			i++; 
+			break;
+		}
+    }
+    // i = number of windows produced (<=12)
+    return i;
+}
+
+static void _thr_pack_p1(uint8_t *thrStart, const uint8_t q[12], uint8_t n, int8_t thrOffset) {
+    if (n > 12) n = 12;
+    if (n > 0)
+		thrStart[6] = (thrStart[6] & ~0xF8) | ((q[0] & 0x1F) << 3);
+    if (n > 1) {
+		thrStart[6]  = (thrStart[6] & ~0x07) | ((q[1] >> 2) & 0x07);
+        thrStart[7]  = (thrStart[7]  & ~0xC0) | ((q[1] & 0x03) << 6);
+	}
+    if (n > 2)
+		thrStart[7]  = (thrStart[7]  & ~0x3E) | ((q[2] & 0x1F) << 1);
+    if (n > 3) {
+		thrStart[7]  = (thrStart[7]  & ~0x01) | ((q[3] >> 4) & 0x01);
+		thrStart[8]  = (thrStart[8]  & ~0xF0) | ((q[3] & 0x0F) << 4);
+	}
+    if (n > 4) {
+		thrStart[8]  = (thrStart[8]  & ~0x0F) | ((q[4] >> 1) & 0x0F);
+        thrStart[9]  = (thrStart[9]  & ~0x80) | ((q[4] & 0x01) << 7);
+	}
+    if (n > 5)
+		thrStart[9]  = (thrStart[9]  & ~0x7C) | ((q[5] & 0x1F) << 2);
+    if (n > 6) {
+		thrStart[9]  = (thrStart[9]  & ~0x03) | ((q[6] >> 3) & 0x03);
+        thrStart[10] = (thrStart[10] & ~0xE0) | ((q[6] & 0x07) << 5);
+	}
+    if (n > 7)
+		thrStart[10] = (thrStart[10] & ~0x1F) | (q[7] & 0x1F);
+    if (n > 8)
+		thrStart[11] = q[8];
+    if (n > 9)
+		thrStart[12] = q[9];
+    if (n > 10)
+		thrStart[13] = q[10];
+    if (n > 11)
+		thrStart[14] = q[11];
+    if (thrOffset)
+		thrStart[15] = (uint8_t)(thrOffset & 0x0F);
+}
+
+// 16B P1 or P2 block
+// 0..15 -> uniform windows
+// record window (this preset)
+// averaged EDD
+// 1..12
+// ADC counts
+static void PGA460_UpdateThresholdBlock(uint8_t *thrStart, uint8_t windowIndex, uint16_t recTime_us, const uint8_t  echo[128], uint8_t autoMax, uint8_t noiseMargin) {
+    if (recTime_us == 0)
+		recTime_us = 4096;
+    if (autoMax == 0)
+		autoMax = 12;
+    if (autoMax > 12)
+		autoMax = 12;
+    if (windowIndex < 16) {
+        _thr_set_uniform_windows(thrStart, windowIndex);
+    }
+    uint8_t markers[13];
+    (void)_thr_build_markers(thrStart, recTime_us, markers);
+    // window maxima
+    uint8_t maxVals[12] = {0};
+    for (uint8_t p = 0; p < autoMax; p++) {
+        uint8_t s = markers[p], e = markers[p+1];
+        if (e <= s)
+			e = (uint8_t)(s + 1);
+        if (e > 128)
+			e = 128;
+        for (uint8_t i = s; i < e; i++)
+			if (echo[i] > maxVals[p])
+				maxVals[p] = echo[i];
+    }
+    // quantize + margin
+    int8_t thrOffset = 0;
+    for (uint8_t i = 0; i < autoMax; i++) {
+        if (i < 8)
+			while ((maxVals[i] % 8) && (maxVals[i] < 248))
+				maxVals[i]++;
+        uint16_t v = (uint16_t)maxVals[i] + noiseMargin;
+        if (v >= 248) {
+			v = 248;
+			thrOffset = (noiseMargin >= 7) ? 7 : (int8_t)noiseMargin;
+		}
+        maxVals[i] = (uint8_t)v;
+    }
+    for (uint8_t i = 0; i < autoMax && i < 8; i++)
+		maxVals[i] = (uint8_t)(maxVals[i] / 8);
+    // pack into P1/P2 layout (same packing bytes; you pass the proper block)
+    _thr_pack_p1(thrStart, maxVals, autoMax, thrOffset);
+}
+
+// ============================================================================
+// Main auto-tuning function to calibrate thresholds (P1 & P2) and TVG
+// ============================================================================
+HAL_StatusTypeDef PGA460_AutoTune(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, uint8_t targetAmp) {
+    // 1) Collect a loop-averaged EDD using P1 (reused for P2 timing too)
+    if (loops == 0)
+		loops = 8;
+    uint8_t echoAvg[128] = {0};
+	uint8_t echoBuf[128] = {0};
     for (uint8_t l = 0; l < loops; l++) {
         if (PGA460_GetEchoDataDump(sensorID, PGA460_CMD_BURST_AND_LISTEN_PRESET1, echoBuf) != HAL_OK) {
             DEBUG("Sensor %u: Failed to get echo data dump for auto-tuning.\n", sensorID);
             return HAL_ERROR;
         }
-        for (int i = 0; i < 128; i++) echoAvg[i] += echoBuf[i];
+        for (int i = 0; i < 128; i++)
+			echoAvg[i] += echoBuf[i];
     }
-    for (int i = 0; i < 128; i++) echoAvg[i] /= loops;
-
-    // --- Process for both presets P1 and P2 ---
-    for (uint8_t preset_id = 1; preset_id <= 2; preset_id++) {
-        PGA460_Command_t cmd = (preset_id == 1) ? PGA460_CMD_BURST_AND_LISTEN_PRESET1 : PGA460_CMD_BURST_AND_LISTEN_PRESET2;
-        uint8_t *thrStart = (preset_id == 1) ? sensors[sensorID].Registers.THR.P1_THR : sensors[sensorID].Registers.THR.P2_THR;
-        
-        // Read existing thresholds to apply read-modify-write logic
-        if (PGA460_GetThresholds(sensorID) != HAL_OK) return HAL_ERROR;
-
-        // --- Auto-Tune Thresholds using echoAvg ---
-        uint8_t rec = 0;
-        if (PGA460_RegisterRead(sensorID, REG_REC_LENGTH, &rec) != HAL_OK) return HAL_ERROR;
-        const uint8_t recNibble = (preset_id == 1) ? ((rec >> 4) & 0x0F) : (rec & 0x0F);
-        const uint16_t recTime_us = (uint16_t)(recNibble + 1u) * 4096u;
-
-        // Calculate EDD markers
-        uint16_t thrTime_us = 0;
-        eddMarkers[0] = 0;
-        if (windowIndex < 16) {
-            for (uint8_t i = 0; i < 6; i++) thrStart[i] = (uint8_t)((windowIndex << 4) | (windowIndex & 0x0F));
-        }
-        for (uint8_t i = 0; i < 12; i++) {
-            uint8_t index_nibble = (i < 1) ? ((thrStart[0] >> 4) & 0x0F) : (i < 2) ? (thrStart[0] & 0x0F) : ((thrStart[i/2] >> (4 * ((i+1)%2))) & 0x0F);
-            thrTime_us += kTimeLookup[index_nibble];
-            uint32_t marker = (uint32_t)thrTime_us * 128u / recTime_us;
-            eddMarkers[i+1] = (uint8_t)((marker > 127u) ? 127u : marker);
-            if (thrTime_us >= recTime_us) break;
-        }
-
-        // Calculate maxVals and apply quantization
-        memset(thrMax, 0, sizeof(thrMax));
-        if (autoMax > 12) autoMax = 12;
-        for (uint8_t p = 0; p < autoMax; p++) {
-            uint8_t start = eddMarkers[p], stop = eddMarkers[p+1];
-            for (uint8_t i = start; i < stop; i++) {
-                if (echoAvg[i] > thrMax[p]) thrMax[p] = echoAvg[i];
-            }
-        }
-        for (uint8_t i = 0; i < autoMax; i++) {
-            if (i < 8) while ((thrMax[i] % 8 != 0) && (thrMax[i] < 248)) thrMax[i]++;
-            uint16_t v = (uint16_t)thrMax[i] + (uint16_t)noiseMargin;
-            if (v >= 248) { v = 248; thrOffset = (noiseMargin >= 7) ? 7 : noiseMargin; }
-            thrMax[i] = (uint8_t)v;
-        }
-        for (uint8_t i = 0; i < autoMax && i < 8; i++) thrMax[i] /= 8;
-
-        // Pack the new threshold values
-        if (autoMax > 0) thrStart[6] = (thrStart[6] & ~0xF8) | (thrMax[0] << 3);
-        if (autoMax > 1) { thrStart[6] = (thrStart[6] & ~0x07) | (thrMax[1] >> 2); thrStart[7] = (thrStart[7] & ~0xC0) | (thrMax[1] << 6); }
-        if (autoMax > 2) thrStart[7] = (thrStart[7] & ~0x3E) | (thrMax[2] << 1);
-        if (autoMax > 3) { thrStart[7] = (thrStart[7] & ~0x01) | (thrMax[3] >> 4); thrStart[8] = (thrStart[8] & ~0xF0) | (thrMax[3] << 4); }
-        if (autoMax > 4) { thrStart[8] = (thrStart[8] & ~0x0F) | (thrMax[4] >> 1); thrStart[9] = (thrStart[9] & ~0x80) | (thrMax[4] << 7); }
-        if (autoMax > 5) thrStart[9] = (thrStart[9] & ~0x7C) | (thrMax[5] << 2);
-        if (autoMax > 6) { thrStart[9] = (thrStart[9] & ~0x03) | (thrMax[6] >> 3); thrStart[10] = (thrStart[10] & ~0xE0) | (thrMax[6] << 5); }
-        if (autoMax > 7) thrStart[10] = (thrStart[10] & ~0x1F) | (thrMax[7]);
-        if (autoMax > 8) thrStart[11] = thrMax[8]; if (autoMax > 9) thrStart[12] = thrMax[9];
-        if (autoMax > 10) thrStart[13] = thrMax[10]; if (autoMax > 11) thrStart[14] = thrMax[11];
-        if (thrOffset != 0) thrStart[15] = (uint8_t)(thrOffset & 0x0F);
-
-        // --- Auto-Tune TVG using echoAvg ---
-        TVG_t tvg_new = sensors[sensorID].Registers.EEData.TVG;
-        uint8_t env[128];
-        for (int i = 0; i < 128; i++) {
-            env[i] = median5_u8(echoAvg[u8_clamp(i - 2, 0, 127)], echoAvg[u8_clamp(i - 1, 0, 127)], echoAvg[i],
-                                echoAvg[u8_clamp(i + 1, 0, 127)], echoAvg[u8_clamp(i + 2, 0, 127)]);
-        }
-        uint16_t acc = 0;
-        for (int i = 112; i < 128; i++) acc += env[i];
-        uint8_t noise = (uint8_t)(acc / 16);
-        
-        const int thr_env = noise + noiseMargin;
-        const uint8_t K = 6;
-        int run = 0, rd_bin = -1;
-        for (int i = 0; i < 128; i++) {
-            if (env[i] < thr_env) {
-                if (++run >= K) { rd_bin = i - (K - 1); break; }
-            } else { run = 0; }
-        }
-        if (rd_bin < 0) rd_bin = 8;
-        
-        const float bin_us = (float)recTime_us / 128.0f;
-        const uint16_t t0_us = (uint16_t)lroundf(rd_bin * bin_us);
-        float rem_us = (float)recTime_us - (float)t0_us;
-        if (rem_us < 5 * bin_us) rem_us = 5 * bin_us;
-        uint16_t dt_us = (uint16_t)lroundf(0.85f * rem_us / 5.0f);
-        uint16_t T0_us_snap = kTimeLookup[time_code_from_us(t0_us)];
-        uint16_t Td_us_snap = kTimeLookup[time_code_from_us(dt_us)];
-
-        uint8_t g[5] = {0};
-        int start_bin = (int)lroundf(T0_us_snap / bin_us);
-        start_bin = u8_clamp(start_bin, 0, 127);
-        int seg_bins = (int)lroundf(Td_us_snap / bin_us);
-        if (seg_bins < 1) seg_bins = 1;
-        
-        for (int s = 0; s < 5; s++) {
-            int b0 = start_bin + s * seg_bins;
-            int b1 = (s == 4) ? 128 : (b0 + seg_bins);
-            if (b0 >= 128) { g[s] = (s ? g[s-1] : 0); continue; }
-            b1 = (b1 > 128) ? 128 : b1;
-            
-            float tmp[80]; int m = 0;
-            for (int i = b0; i < b1 && m < 80; i++) {
-                float e = env[i]; if (e < 1.f) e = 1.f;
-                tmp[m++] = (float)targetAmp / e;
-            }
-            // Sort
-            for (int i=1;i<m;i++){ float key=tmp[i]; int j=i-1; while(j>=0 && tmp[j]>key){tmp[j+1]=tmp[j];j--;} tmp[j+1]=key;}
-            int trim = (m>=10)? (m/10) : 0;
-            if (2*trim >= m) trim = 0;
-            double sum=0.0; int cnt=0;
-            for (int i=trim;i<m-trim;i++){ sum+=tmp[i]; cnt++; }
-            float mean = (cnt? (float)(sum/(double)cnt) : 1.0f);
-            g[s] = tvg_code_from_factor(mean);
-        }
-        
-        tvg_new.TVGAIN0 = (uint8_t)((time_code_from_us(T0_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
-        tvg_new.TVGAIN1 = (uint8_t)((time_code_from_us(Td_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
-        tvg_new.TVGAIN2 = (uint8_t)((time_code_from_us(Td_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
-        tvg_new.TVGAIN3 = (uint8_t)((g[0] & 0x3F) << 2) | ((g[1] >> 4) & 0x03);
-        tvg_new.TVGAIN4 = (uint8_t)((g[1] & 0x0F) << 4) | ((g[2] >> 2) & 0x0F);
-        tvg_new.TVGAIN5 = (uint8_t)((g[2] & 0x03) << 6) | (g[3] & 0x3F);
-        tvg_new.TVGAIN6 = (uint8_t)((g[4] & 0x3F) << 2) | (sensors[sensorID].Registers.EEData.TVG.TVGAIN6 & 0x01);
-
-        // --- Apply the new thresholds and TVG to the device ---
-        if (PGA460_SetThresholds(sensorID) != HAL_OK) return HAL_ERROR;
-        if (PGA460_SetTVG(sensorID, PGA460_GAIN_58_90dB, &tvg_new) != HAL_OK) return HAL_ERROR;
+    for (int i = 0; i < 128; i++)
+		echoAvg[i] = (uint8_t)(echoAvg[i] / loops);
+    // Read current THR image once (so we preserve the other preset each time)
+    if (PGA460_GetThresholds(sensorID) != HAL_OK)
+		return HAL_ERROR;
+    // 2) Build thresholds for P1 and P2 using the centralized helper
+    uint8_t recReg = 0;
+    if (PGA460_RegisterRead(sensorID, REG_REC_LENGTH, &recReg) != HAL_OK)
+		return HAL_ERROR;
+    const uint8_t p1_n = (recReg >> 4) & 0x0F;
+    const uint8_t p2_n = recReg & 0x0F;
+    const uint16_t recTime_us_P1 = (uint16_t)(p1_n + 1) * 4096;
+    const uint16_t recTime_us_P2 = (uint16_t)(p2_n + 1) * 4096;
+    // P1
+    PGA460_UpdateThresholdBlock(sensors[sensorID].Registers.THR.P1_THR, windowIndex, recTime_us_P1, echoAvg, autoMax, noiseMargin);
+    // P2 (reuse same echoAvg; different record time)
+    PGA460_UpdateThresholdBlock(sensors[sensorID].Registers.THR.P2_THR, windowIndex, recTime_us_P2, echoAvg, autoMax, noiseMargin);
+    if (PGA460_SetThresholds(sensorID) != HAL_OK)
+		return HAL_ERROR;
+    // 3) TVG autotune (keep your existing approach, but reuse helpers)
+    TVG_t tvg_new = sensors[sensorID].Registers.EEData.TVG;
+    // Smooth echo to estimate noise & ring-down
+    uint8_t env[128];
+    for (int i = 0; i < 128; i++) {
+		env[i] = median5_u8(echoAvg[u8_clamp(i - 2, 0, 127)], echoAvg[u8_clamp(i - 1, 0, 127)], echoAvg[i], echoAvg[u8_clamp(i + 1, 0, 127)], echoAvg[u8_clamp(i + 2, 0, 127)]);
     }
-
-    return HAL_OK;
-}
-
-// === Wind from 3 shots using PRESET1 only (common record time) ===============
-static inline void _sensor_xy_tri(int id, float *x, float *y) {
-    // Ring radius (m) = 98.32/2 mm, index: 0=1(North), 1=2(East), 2=3(West)
-    const float r = 0.04916f;
-    const float a_deg[3] = {90.f, -30.f, 210.f};   // (x=East, y=North)
-    const float th = a_deg[id] * (float)M_PI / 180.0f;
-    *x = r * cosf(th);
-    *y = r * sinf(th);
-}
-
-// Solve horizontal wind v=[vx(+E), vy(+N)] from N rows of:  [ux uy]·v = d
-static int _solve_ls_2d(const float *ux, const float *uy, const float *d,
-                        int N, float *vx, float *vy) {
-    float a11=0,a22=0,a12=0, bt1=0,bt2=0;
-    for (int k=0;k<N;k++){ a11+=ux[k]*ux[k]; a22+=uy[k]*uy[k];
-                           a12+=ux[k]*uy[k]; bt1+=ux[k]*d[k]; bt2+=uy[k]*d[k]; }
-    const float det = a11*a22 - a12*a12;
-    if (fabsf(det) < 1e-9f) return 0;
-    *vx = ( a22*bt1 - a12*bt2) / det;
-    *vy = (-a12*bt1 + a11*bt2) / det;
-    return 1;
-}
-
-// Transmit a RUN command without any post-wait/reads.
-static HAL_StatusTypeDef PGA460_RunCmd_NoWait(uint8_t sensorID, PGA460_Command_t cmd){
-    const uint8_t *frame = NULL;
-    switch (cmd) {
-        case PGA460_CMD_LISTEN_ONLY_PRESET1:           frame = pga460_cmd_listen_only_preset1; break;
-        case PGA460_CMD_BURST_AND_LISTEN_PRESET1:      frame = pga460_cmd_burst_and_listen_preset1; break;
-        case PGA460_CMD_LISTEN_ONLY_PRESET2:           frame = pga460_cmd_listen_only_preset2; break;
-        /* add others as needed */
-        default: return HAL_ERROR;
+    // noise estimate from last 16 bins
+    uint16_t acc = 0;
+    for (int i = 112; i < 128; i++)
+		acc += env[i];
+    const uint8_t noise = (uint8_t)(acc / 16);
+    const int thr_env = (int)noise + (int)noiseMargin;
+    // find ring-down end (K consecutive bins below threshold)
+    const uint8_t K = 6;
+    int run = 0, rd_bin = -1;
+    for (int i = 0; i < 128; i++) {
+        if (env[i] < thr_env) {
+			if (++run >= K) {
+				rd_bin = i - (K - 1);
+				break;
+			}
+		} else
+			run = 0;
     }
-    return HAL_UART_Transmit(sensors[sensorID].uartPort, frame, PGA_CMD_SIZE, UART_TIMEOUT);
-}
-
-HAL_StatusTypeDef PGA460_MeasureWind(PGA460_Wind_t *out) {
-    // Common PRESET1 record time from local mirror (high nibble of REC_LENGTH)
-    const uint8_t rec = sensors[0].Registers.EEData.Sett.REC_LENGTH; // same for all
-    const uint8_t nP1 = (rec >> 4) & 0x0F;
-    const uint32_t rec_us = ((uint32_t)nP1 + 1u) * 4096u;
-    const uint32_t wait_ms = (rec_us + 2000u + 999u) / 1000u; // +2 ms guard + ceil
-
-    // Acquire six directed ToFs (µs) with 3 shots
-    uint32_t t12_us=0, t13_us=0, t23_us=0, t21_us=0, t31_us=0, t32_us=0;
-
-    struct { uint8_t tx, a, b; uint32_t *t_tx_a, *t_tx_b; } shots[3] = {
-        {0,1,2, &t12_us, &t13_us}, // TX1 -> RX2 & RX3
-        {1,2,0, &t23_us, &t21_us}, // TX2 -> RX3 & RX1
-        {2,0,1, &t31_us, &t32_us}  // TX3 -> RX1 & RX2
-    };
-
-    for (int s=0; s<3; ++s) {
-        const uint8_t tx = shots[s].tx, a = shots[s].a, b = shots[s].b;
-
-        // Arm both listeners first (listen-only P1)
-				if (HAL_UART_Transmit(sensors[a].uartPort, pga460_cmd_listen_only_preset1, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) return HAL_ERROR;
-        if (HAL_UART_Transmit(sensors[b].uartPort, pga460_cmd_listen_only_preset1, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) return HAL_ERROR;
-        if (PGA460_UltrasonicCmd(a, PGA460_CMD_LISTEN_ONLY_PRESET1) != HAL_OK) return HAL_ERROR;
-        if (PGA460_UltrasonicCmd(b, PGA460_CMD_LISTEN_ONLY_PRESET1) != HAL_OK) return HAL_ERROR;
-
-        // Fire transmitter (burst+listen P1 — we ignore TX’s own result)
-				if (HAL_UART_Transmit(sensors[tx].uartPort, pga460_cmd_burst_and_listen_preset1, PGA_CMD_SIZE, UART_TIMEOUT) != HAL_OK) return HAL_ERROR;
-        if (PGA460_UltrasonicCmd(tx, PGA460_CMD_BURST_AND_LISTEN_PRESET1) != HAL_OK) return HAL_ERROR;
-
-        // Wait full common record window
-        HAL_Delay(wait_ms);
-
-        // Read first-object TOF from each listener directly
-        if (PGA460_GetUltrasonicMeasurement(a) != HAL_OK) return HAL_ERROR;
-        *(shots[s].t_tx_a) = sensors[a].Measures.tof_us;
-
-        if (PGA460_GetUltrasonicMeasurement(b) != HAL_OK) return HAL_ERROR;
-        *(shots[s].t_tx_b) = sensors[b].Measures.tof_us;
-
-        HAL_Delay(5); // brief damping between shots
+    if (rd_bin < 0)
+		rd_bin = 8;
+    // derive TVG timing and segment gains
+    const uint16_t bin_us = 32*(p1_n + 1);
+    const uint16_t t0_us = rd_bin * bin_us;
+    uint16_t rem_us = recTime_us_P1 - t0_us;
+    if (rem_us < 5 * bin_us)
+		rem_us = 5 * bin_us;
+    const uint16_t dt_us = (uint16_t)lroundf(0.17f * rem_us);
+    const uint16_t T0_us_snap = time_lookup[time_code_from_us(t0_us)];
+    const uint16_t Td_us_snap = time_lookup[time_code_from_us(dt_us)];
+    uint8_t g[5] = {0};
+    int start_bin = (int)lroundf(T0_us_snap / bin_us);
+    start_bin = u8_clamp(start_bin, 0, 127);
+    int seg_bins = (int)lroundf(Td_us_snap / bin_us);
+    if (seg_bins < 1)
+		seg_bins = 1;
+    for (int s = 0; s < 5; s++) {
+        int b0 = start_bin + s * seg_bins;
+        int b1 = (s == 4) ? 128 : (b0 + seg_bins);
+        if (b0 >= 128) {
+			g[s] = (s ? g[s-1] : 0);
+			continue;
+		}
+        if (b1 > 128)
+			b1 = 128;
+        float tmp[80]; int m = 0;
+        for (int i = b0; i < b1 && m < 80; i++) {
+            float e = (env[i] < 1.f) ? 1.f : (float)env[i];
+            tmp[m++] = (float)targetAmp / e;
+        }
+        // trimmed mean for robustness
+        for (int i=1;i<m;i++){
+			float key=tmp[i];
+			int j=i-1;
+			while(j>=0 && tmp[j]>key){
+				tmp[j+1]=tmp[j];
+				j--;
+			}
+			tmp[j+1]=key;
+		}
+        int trim = (m>=10)? (m/10) : 0;
+		if (2*trim >= m)
+			trim = 0;
+        double sum=0.0; int cnt=0;
+        for (int i=trim;i<m-trim;i++){
+			sum+=tmp[i];
+			cnt++;
+		}
+        float mean = (cnt? (float)(sum/(double)cnt) : 1.0f);
+        g[s] = tvg_code_from_factor(mean);
     }
-
-    // Sanity
-    if (!t12_us || !t13_us || !t23_us || !t21_us || !t31_us || !t32_us) return HAL_ERROR;
-
-    // Solve horizontal wind from six ToFs (mirror method)
-    const float Z0 = 0.15115f;               // m to reflector plane
-    const float DZ = -2.0f * Z0;             // mirror depth
-    const float c  = externalData.SoundSpeed;// m/s
-
-    float px[3], py[3]; for (int i=0;i<3;i++) _sensor_xy_tri(i, &px[i], &py[i]);
-
-    float ux[6], uy[6], rhs[6]; int N=0;
-    struct Pair { int i,j; uint32_t t_us; } P[6] = {
-        {0,1,t12_us}, {0,2,t13_us}, {1,2,t23_us},
-        {1,0,t21_us}, {2,0,t31_us}, {2,1,t32_us}
-    };
-
-    for (int k=0;k<6;k++){
-        if (P[k].t_us == 0) continue;
-        const int i = P[k].i, j = P[k].j;
-				const float dx = px[j]-px[i], dy = py[j]-py[i];
-				const float Lxy = sqrtf(dx*dx + dy*dy); if (Lxy <= 0) continue;
-				const float path3D = sqrtf(Lxy*Lxy + DZ*DZ);    
-				const float uxh = dx / Lxy,  uyh = dy / Lxy;
-				const float cosTheta = Lxy / path3D;            
-				const float t_s = (float)P[k].t_us * 1e-6f;
-				const float p = (path3D / t_s) - c;             
-				const float d = p / cosTheta;
-				ux[N]=uxh; uy[N]=uyh; rhs[N]=d; N++;
-    }
-
-    float vx=0.0f, vy=0.0f;
-    if (N < 2 || !_solve_ls_2d(ux, uy, rhs, N, &vx, &vy)) return HAL_ERROR;
-
-    // Output (meteorological “FROM”: 0=N, 90=E, 180=S, 270=W)
-    out->Speed = sqrtf(vx*vx + vy*vy);
-    float dir_deg = atan2f(-vx, -vy) * 180.0f / (float)M_PI;
-    if (dir_deg < 0.0f) dir_deg += 360.0f;
-    out->Direction = dir_deg;
-
+    tvg_new.TVGAIN0 = (uint8_t)((time_code_from_us(T0_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
+    tvg_new.TVGAIN1 = (uint8_t)((time_code_from_us(Td_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
+    tvg_new.TVGAIN2 = (uint8_t)((time_code_from_us(Td_us_snap) << 4) | (time_code_from_us(Td_us_snap) & 0x0F));
+    tvg_new.TVGAIN3 = (uint8_t)((g[0] & 0x3F) << 2) | ((g[1] >> 4) & 0x03);
+    tvg_new.TVGAIN4 = (uint8_t)((g[1] & 0x0F) << 4) | ((g[2] >> 2) & 0x0F);
+    tvg_new.TVGAIN5 = (uint8_t)((g[2] & 0x03) << 6) | (g[3] & 0x3F);
+    tvg_new.TVGAIN6 = (uint8_t)((g[4] & 0x3F) << 2) | (sensors[sensorID].Registers.EEData.TVG.TVGAIN6 & 0x01);
+    if (PGA460_SetTVG(sensorID, PGA460_GAIN_58_90dB, &tvg_new) != HAL_OK)
+		return HAL_ERROR;
     return HAL_OK;
 }

@@ -425,6 +425,7 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
 
 TVG_t PGA460_AutoTVG(uint8_t sensorID, PGA460_Command_t preset, uint8_t targetAmp, uint8_t noiseGuard, uint8_t loops);
 HAL_StatusTypeDef PGA460_AutoTune(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, uint8_t targetAmp);
+HAL_StatusTypeDef PGA460_AutoWindSetup(uint8_t loops, uint8_t windowIndex, uint8_t noiseMargin, uint8_t autoMax, uint8_t targetAmp);
 HAL_StatusTypeDef PGA460_MeasureWind(PGA460_Wind_t *out);
 
 #endif // PGA460_H
