@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Solar Energy Calculator</title>
+
+  <!-- Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tz-lookup@6.1.25/tz.js"></script>
+
+  <!-- Minimal styling -->
+  <style>
+    :root { --bg:#f0f2f5; --fg:#333; --card:#fff; --muted:#6b7280; --primary:#2563eb; --ring:rgba(37,99,235,.35); }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;margin:0;padding:24px;background:var(--bg);color:var(--fg)}
+    h1{color:#2c3e50;margin:0 0 14px}
+    .collapsible-container{width:min(1200px,92vw);background:var(--card);border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);margin:12px 0;overflow:hidden}
+    .container-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;border-bottom:1px solid #eee;user-select:none}
+    .container-header h2{margin:0;color:#34495e;font-size:1.1rem;font-weight:600}
+    .toggle-button{background:none;border:none;font-size:1.25rem;cursor:pointer;color:#3498db;transition:transform .25s ease;line-height:1}
+    .toggle-button.expanded{transform:rotate(180deg)}
+    .container-content{padding:16px 18px 20px;display:none}
+    .container-content.open{display:block}
+    .grid{display:flex;flex-wrap:wrap;gap:14px}
+    .input-group{flex:1 1 220px;min-width:190px}
+    label{display:block;font-size:.9rem;margin-bottom:6px;color:#374151}
+    .input,textarea,select{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;outline:none;transition:box-shadow .15s,border-color .15s;background:#fff}
+    .input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--ring)}
+    textarea{min-height:92px;resize:vertical}
+    small.muted{color:var(--muted);display:block;margin-top:6px}
+    .btn{display:inline-flex;justify-content:center;align-items:center;gap:.5rem;font-weight:600;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;transition:filter .15s,transform .02s}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary:hover{filter:brightness(.96)}
+    .btn-secondary{background:#6b7280;color:#fff}
+    .btn-secondary:hover{filter:brightness(.97)}
+    .btn-block{width:100%}
+    @media (min-width:768px){.btn-half{width:48%}}
+    .radio-row{display:flex;flex-wrap:wrap;gap:8px}
+    .radio-pill{display:flex;align-items:center;gap:.5rem;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:background .15s,border-color .15s}
+    .radio-pill:hover{background:#f9fafb}
+    .radio-pill input{margin:0}
+    .radio-pill span{font-size:.95rem}
+    input[type="radio"]:checked+span{font-weight:600;color:#1d4ed8}
+    .dropzone{border:2px dashed #cbd5e1;border-radius:12px;background:#f8fafc;padding:14px;text-align:center;transition:background .2s,border-color .2s}
+    .dropzone.dragover{background:#eef2ff;border-color:#6366f1}
+    .kbd{background:#f3f4f6;border:1px solid #e5e7eb;border-bottom-width:2px;border-radius:.375rem;padding:.125rem .375rem;font-size:.75rem}
+    .underline{text-decoration:underline;color:#1d4ed8;background:none;border:none;padding:0;cursor:pointer}
+    .banner{margin-top:10px;padding:12px;border-radius:10px;display:none}
+    .banner.show{display:block}
+    .banner.blue{background:#eff6ff;color:#1e3a8a}
+    .banner.green{background:#ecfdf5;color:#065f46}
+    canvas{width:100%;max-width:100%;display:block;margin-top:10px}
+  </style>
+</head>
+
+<body>
+  <h1>Solar Energy Calculator</h1>
+
+  <!-- ===== System parameters ===== -->
+  <section class="collapsible-container" id="sys">
+    <div class="container-header">
+      <h2>System & Location</h2>
+      <button class="toggle-button" aria-label="toggle">▼</button>
+    </div>
+    <div class="container-content open">
+      <div class="grid">
+        <div class="input-group">
+          <label for="latitude">Latitude (°)</label>
+          <input class="input" type="number" id="latitude" value="45.169079">
+        </div>
+        <div class="input-group">
+          <label for="longitude">Longitude (°)</label>
+          <input class="input" type="number" id="longitude" value="25.771548">
+        </div>
+        <div class="input-group">
+          <label for="altitude">Altitude (m)</label>
+          <input class="input" type="number" id="altitude" value="500">
+        </div>
+
+        <div class="input-group">
+          <label for="panelPower">Panel (Wp)</label>
+          <input class="input" type="number" id="panelPower" value="300">
+        </div>
+        <div class="input-group">
+          <label for="numPanels">Panels No</label>
+          <input class="input" type="number" id="numPanels" value="10">
+        </div>
+        <div class="input-group">
+          <label for="systemLosses">Losses (%)</label>
+          <input class="input" type="number" id="systemLosses" value="14">
+        </div>
+
+        <div class="input-group">
+          <label for="azimuth">Az(°)</label>
+          <input class="input" type="number" id="azimuth" value="0">
+          <small class="muted">(0 S, -90 E, +90 W)</small>
+        </div>
+        <div class="input-group">
+          <label for="tilt">Tilt(°)</label>
+          <input class="input" type="number" id="tilt" value="35">
+        </div>
+        <div class="input-group">
+          <label for="startYear">Start Year</label>
+          <input class="input" type="number" id="startYear" value="2023" min="2005" max="2023" step="1">
+        </div>
+        <div class="input-group">
+          <label for="endYear">End Year</label>
+          <input class="input" type="number" id="endYear" value="2023" min="2005" max="2023" step="1">
+        </div>
+        <div class="input-group">
+          <label for="offUTC">UTC Offset</label>
+          <input class="input" type="number" id="offUTC" value="2" min="-12" max="12" step="1">
+        </div>		
+      </div>
+
+      <!-- Horizon JSON -->
+      <details style="margin-top:10px;">
+        <summary class="muted" style="font-weight:600;">Optional: Paste Horizon JSON (PVGIS format)</summary>
+        <textarea id="horizonJson" placeholder='{"horizon":[{"azimuth":0,"elevation":5},...]}'></textarea>
+        <small class="muted">If provided, it will be sent as <span class="kbd">userhorizon</span> with <span class="kbd">usehorizon=1</span>.</small>
+      </details>
+
+      <!-- Stellarium horizon upload -->
+      <div style="margin-top:12px;">
+        <label class="muted" style="font-weight:600; margin-bottom:6px; display:block;">Upload Stellarium Horizon (.txt)</label>
+        <div id="dropzone" class="dropzone">
+          <input id="horizonFile" type="file" accept=".txt" hidden>
+          <p class="muted">Drag & drop your <em>horizon.txt</em> here, or
+            <button id="browseBtn" type="button" class="underline">browse</button></p>
+          <p id="hzStatus" class="muted" style="margin-top:6px;"></p>
+        </div>
+      </div>
+
+      <!-- System type -->
+      <div style="margin-top:12px;">
+        <p class="muted" style="margin:0 0 6px; font-weight:600;">Select System Type:</p>
+        <div class="radio-row">
+          <!-- 0=fixed, 1=H axis N-S, 2=two-axis, 3=vertical axis, 4=H axis E-W, 5=inclined axis N-S -->
+          <label class="radio-pill"><input type="radio" name="trackingType" value="0" checked><span>Fixed System</span></label>
+          <label class="radio-pill"><input type="radio" name="trackingType" value="1"><span>H Axis N-S</span></label>
+          <label class="radio-pill"><input type="radio" name="trackingType" value="2"><span>2 Axis Tracker</span></label>
+          <label class="radio-pill"><input type="radio" name="trackingType" value="3"><span>V Axis E-W</span></label>
+          <label class="radio-pill"><input type="radio" name="trackingType" value="4"><span>H Axis E-W</span></label>
+          <label class="radio-pill"><input type="radio" name="trackingType" value="5"><span>I Axis N-S</span></label>
+        </div>
+      </div>
+
+      <!-- Actions & info -->
+      <div class="grid" style="margin-top:12px;">
+        <button id="calculateBtn" class="btn btn-primary btn-block btn-half">Calculate</button>
+        <button id="showSunPathBtn" class="btn btn-secondary btn-block btn-half">Show Sun Path</button>
+
+        <div id="optimum-angles" class="banner blue">
+          <p style="margin:0 0 6px; font-weight:700;">Optimal Fixed System Angles:</p>
+          <p id="optimum-azimuth" class="muted" style="margin:0;"></p>
+          <p id="optimum-tilt" class="muted" style="margin:0;"></p>
+        </div>
+
+        <div id="total-yield-display" class="banner green">
+          <p style="margin:0 0 6px; font-weight:700;">Annual Energy Yield:</p>
+          <p id="total-yield" class="muted" style="margin:0;"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Monthly ===== -->
+  <section class="collapsible-container" id="monthly">
+    <div class="container-header">
+      <h2>Monthly Energy Production</h2>
+      <button class="toggle-button" aria-label="toggle">▼</button>
+    </div>
+    <div class="container-content open">
+      <canvas id="monthlyEnergyChart"></canvas>
+    </div>
+  </section>
+
+  <!-- ===== Sun Path + Hourly Power ===== -->
+  <section class="collapsible-container" id="sunpath">
+    <div class="container-header">
+      <h2>Sun Path Diagram + Hourly Power</h2>
+      <button class="toggle-button" aria-label="toggle">▼</button>
+    </div>
+    <div class="container-content open">
+      <div class="grid">
+        <div class="input-group" style="max-width:240px;">
+          <label for="sunDate">Pick a date</label>
+          <input class="input" type="date" id="sunDate" min="2005-01-01" max="2023-12-31">
+        </div>
+        <label class="radio-pill">
+          <input id="horizonShadeToggle" type="checkbox" checked>
+          <span>Shade horizon</span>
+        </label>
+        <label class="radio-pill">
+          <input id="horizonLineToggle" type="checkbox" checked>
+          <span>Show horizon line</span>
+        </label>
+        <button id="plotDateBtn" class="btn btn-primary">Plot Selected Date</button>
+      </div>
+      <canvas id="sunPathChart" style="margin-top:10px;"></canvas>
+    </div>
+  </section>
+
+  <!-- ================== SCRIPT ================== -->
+  <script>
+    // Collapsibles
+    document.querySelectorAll('.collapsible-container').forEach(card => {
+      const header = card.querySelector('.container-header');
+      const btn    = header.querySelector('.toggle-button');
+      const body   = card.querySelector('.container-content');
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('button') && e.target !== btn) return;
+        body.classList.toggle('open');
+        btn.classList.toggle('expanded');
+      });
+    });
+
+    const API_BASE_URL = 'https://re.jrc.ec.europa.eu/api/v5_3';
+    const CORS_PROXY   = 'https://corsproxy.io/?';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const { DateTime } = luxon;
+      const offUTCEl = document.getElementById('offUTC'); // number input (-12..+12)
+      const calculateBtn = document.getElementById('calculateBtn');
+      const showSunPathBtn = document.getElementById('showSunPathBtn');
+      const plotDateBtn = document.getElementById('plotDateBtn');
+      const sunDateInput = document.getElementById('sunDate');
+      const horizonShadeToggle = document.getElementById('horizonShadeToggle');
+      const horizonLineToggle = document.getElementById('horizonLineToggle');
+
+      const monthlyEnergyChartCanvas = document.getElementById('monthlyEnergyChart');
+      const sunPathChartCanvas = document.getElementById('sunPathChart');
+
+      const optimumAnglesDiv = document.getElementById('optimum-angles');
+      const totalYieldDisplay = document.getElementById('total-yield-display');
+      const optimumAzimuthP = document.getElementById('optimum-azimuth');
+      const optimumTiltP = document.getElementById('optimum-tilt');
+      const totalYieldP = document.getElementById('total-yield');
+      const azimuthInput = document.getElementById('azimuth');
+      const tiltInput = document.getElementById('tilt');
+      const horizonJsonEl = document.getElementById('horizonJson');
+
+      // Stellarium widgets
+      const dropzone = document.getElementById('dropzone');
+      const horizonFileInput = document.getElementById('horizonFile');
+      const browseBtn = document.getElementById('browseBtn');
+      const hzStatus = document.getElementById('hzStatus');
+
+      let monthlyEnergyChart, sunPathChart;
+      let lastUserData = null, lastOptimalData = null;
+
+      Chart.defaults.plugins.decimation = { enabled: true, algorithm: 'lttb' };
+
+      // ---------- helpers ----------
+      function clamp(v, min, max){ v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : min; }
+      function hhmm(minutes){ const h=Math.floor(minutes/60), m=minutes%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
+
+      function getSelectedDateISO() {
+        const v = sunDateInput.value;
+        if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+        return DateTime.local().toISODate();
+      }
+
+      // radio "0..5" → JSON key in outputs.{monthly|totals}
+      function trackingKeyFromValue(v){
+        const map = { '0':'fixed','1':'singleaxis','2':'twoaxis','3':'verticalaxis','4':'horizontalaxis','5':'inclinedaxis' };
+        return map[String(v)] ?? 'fixed';
+      }
+
+      function pickMonthlySeries(monthlyObj, activeKey) {
+        if (!monthlyObj) return null;
+        if (activeKey && monthlyObj[activeKey]) return monthlyObj[activeKey];
+        const keys = ["fixed","singleaxis","inclinedaxis","twoaxis","horizontalaxis","verticalaxis"];
+        for (const k of keys) if (monthlyObj[k]) return monthlyObj[k];
+        const first = Object.values(monthlyObj).find(v => Array.isArray(v));
+        return first || null;
+      }
+
+      function getAnnualEnergy(outputs, activeKey) {
+        if (!outputs || !outputs.totals) return null;
+        if (activeKey && outputs.totals[activeKey]?.E_y != null) return outputs.totals[activeKey].E_y;
+        const keys = ["fixed","singleaxis","inclinedaxis","twoaxis","horizontalaxis","verticalaxis"];
+        for (const k of keys) if (outputs.totals[k]?.E_y != null) return outputs.totals[k].E_y;
+        const any = Object.values(outputs.totals).find(v => v && typeof v === "object" && "E_y" in v);
+        return any ? any.E_y : null;
+      }
+
+      async function fetchJsonWithProxy(url){
+        const tryUrls = [`${CORS_PROXY}${encodeURIComponent(url)}`, url];
+        for (const u of tryUrls) { try { const r = await fetch(u); if (r.ok) return await r.json(); } catch (_) {} }
+        throw new Error("All fetch attempts failed.");
+      }
+
+      async function fetchData(params) {
+        const url = `${API_BASE_URL}/PVcalc?${new URLSearchParams(params).toString()}`;
+        try { return await fetchJsonWithProxy(url); }
+        catch (error) { console.error(error); alert("Failed to fetch data from PVGIS."); return null; }
+      }
+
+      async function fetchHourly(params) {
+        const url = `${API_BASE_URL}/seriescalc?${new URLSearchParams(params).toString()}`;
+        try { return await fetchJsonWithProxy(url); }
+        catch (error) { console.error(error); alert("Failed to fetch hourly data from PVGIS."); return null; }
+      }
+
+      // Build a 360-point CSV (deg 0..359) from the JSON horizon
+      function buildUserHorizonCSVFromTextarea(textarea){
+        const interp = getHorizonInterpolatorFromTextarea(textarea);
+        if (!interp) return null;
+        const vals = [];
+        for (let az=0; az<360; az++) vals.push(Math.max(0, Math.min(90, interp(az))).toFixed(3));
+        return vals.join(',');
+      }
+
+      // Get optimal fixed angles + annual fixed yield
+      function extractOptimalAngles(data){
+        let az = null, tilt = null;
+        if (data?.outputs) {
+          if (data.outputs.optimal_azimuth != null)        az   = data.outputs.optimal_azimuth;
+          if (data.outputs.optimal_inclination != null)     tilt = data.outputs.optimal_inclination;
+          if (tilt == null && data.outputs.optimal_angle != null) tilt = data.outputs.optimal_angle;
+        }
+        const fx = data?.inputs?.mounting_system?.fixed;
+        if (fx) {
+          if (az == null && fx.azimuth?.optimal === true && Number.isFinite(fx.azimuth.value)) az   = fx.azimuth.value;
+          if (tilt == null && fx.slope?.optimal   === true && Number.isFinite(fx.slope.value)) tilt = fx.slope.value;
+        }
+        return { azimuth: az, tilt };
+      }
+
+      async function getOptimumAngles(lat, lon, peakpower, loss, userhorizonCsv) {
+        const base = {
+          lat, lon, peakpower, loss,
+          optimalinclination: 1, optimalangles: 1,
+          outputformat: 'json', browser: 0
+        };
+        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+        const url  = `${API_BASE_URL}/PVcalc?${new URLSearchParams(base).toString()}`;
+        const data = await fetchJsonWithProxy(url);
+        const { azimuth, tilt } = extractOptimalAngles(data);
+        const Ey = data?.outputs?.totals?.fixed?.E_y ?? null;
+        return (azimuth != null || tilt != null || Ey != null)
+          ? { azimuth, tilt, yield: Ey }
+          : null;
+      }
+
+      // Stellarium horizon parsing (to JSON used by our interpolator)
+      function parseStellariumHorizon(text) {
+        const map = new Map();
+        const lines = text.split(/\r?\n/);
+        for (let raw of lines) {
+          const line = raw.trim();
+          if (!line) continue;
+          if (/^(#|\/\/|;)/.test(line)) continue;
+          const parts = line.split(/[\s,;]+/).filter(Boolean);
+          if (parts.length < 2) continue;
+          const az = Number(parts[0]);
+          const el = Number(parts[1]);
+          if (!Number.isFinite(az) || !Number.isFinite(el)) continue;
+          let azNorm = az % 360; if (azNorm < 0) azNorm += 360;
+          const elClamp = Math.max(-90, Math.min(90, el));
+          const prev = map.get(azNorm);
+          if (prev == null || elClamp > prev) map.set(azNorm, elClamp);
+        }
+        let arr = Array.from(map.entries()).map(([azimuth, elevation]) => ({ azimuth, elevation }));
+        arr.sort((a,b) => a.azimuth - b.azimuth);
+        const MAX_POINTS = 4000;
+        if (arr.length > MAX_POINTS) {
+          const step = Math.ceil(arr.length / MAX_POINTS);
+          arr = arr.filter((_, i) => i % step === 0);
+        }
+        return { horizon: arr };
+      }
+
+      function setHzStatus(msg, ok=true) {
+        hzStatus.textContent = msg;
+        hzStatus.style.color = ok ? '#065f46' : '#b91c1c';
+      }
+      function handleHorizonText(text) {
+        try {
+          const json = parseStellariumHorizon(text);
+          horizonJsonEl.value = JSON.stringify(json);
+          setHzStatus(`Parsed ${json.horizon.length} points and loaded into Horizon JSON.`);
+          createOrUpdateCombinedSunChart(getSelectedDateISO());
+          saveState();
+        } catch (e) { console.error(e); setHzStatus("Failed to parse horizon file.", false); }
+      }
+
+      document.getElementById('browseBtn').addEventListener('click', () => horizonFileInput.click());
+      horizonFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const text = await file.text(); handleHorizonText(text);
+      });
+      ['dragenter','dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover'); });
+      });
+      ['dragleave','drop'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover'); });
+      });
+      dropzone.addEventListener('drop', async (e) => {
+        const file = e.dataTransfer?.files?.[0]; if (!file) return;
+        const text = await file.text(); handleHorizonText(text);
+      });
+
+      // Local storage
+      const fieldsToPersist = ["latitude","longitude","altitude","panelPower","numPanels","systemLosses","azimuth","tilt","startYear","endYear","horizonJson","sunDate","horizonShadeToggle","horizonLineToggle"];
+      function saveState() {
+        const st = {};
+        fieldsToPersist.forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          st[id] = (el.type === 'checkbox') ? el.checked : el.value;
+        });
+        st.trackingType = document.querySelector('input[name="trackingType"]:checked')?.value ?? "0";
+        localStorage.setItem("solarCalcState", JSON.stringify(st));
+      }
+      function loadState() {
+        const s = localStorage.getItem("solarCalcState");
+        if (!s) return;
+        try {
+          const st = JSON.parse(s);
+          fieldsToPersist.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el || st[id] == null) return;
+            if (el.type === 'checkbox') el.checked = !!st[id]; else el.value = st[id];
+          });
+          if (st.trackingType) {
+            const r = document.querySelector(`input[name="trackingType"][value="${st.trackingType}"]`);
+            if (r) r.checked = true;
+          }
+        } catch {}
+      }
+      loadState();
+      document.querySelectorAll("input,textarea").forEach(el => el.addEventListener("change", saveState));
+
+      // Enable/disable azimuth/tilt
+      function applytrackingTypeUI(val) {
+        const isFixed = (val === '0');
+        azimuthInput.disabled = !isFixed;
+        tiltInput.disabled = !(isFixed || val === '5');
+      }
+      document.querySelectorAll('input[name="trackingType"]').forEach(radio => {
+        radio.addEventListener('change', e => { applytrackingTypeUI(e.target.value); saveState(); });
+      });
+      applytrackingTypeUI(document.querySelector('input[name="trackingType"]:checked').value);
+
+      // Time zone
+      function getTimeZoneFor(lat, lon) {
+        try { if (typeof tzlookup === 'function') return tzlookup(lat, lon); } catch (_) {}
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
+
+      // Sun track helpers
+      function computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone) {
+        const start = luxon.DateTime.fromISO(`${dateStr}T00:00:00`, { zone: timeZone });
+        const end   = start.plus({ hours: 23, minutes: 59 });
+        const pts = [];
+        for (let dt = start; +dt <= +end; dt = dt.plus({ minutes: stepMin })) {
+          const pos   = SunCalc.getPosition(dt.toJSDate(), lat, lon);
+          const alt   = pos.altitude * 180/Math.PI;
+          const azDeg = pos.azimuth  * 180/Math.PI; // 0=South, +West
+          if (alt >= 0) pts.push({ x: dt.hour*60 + dt.minute, y: alt, azDeg, time: dt });
+        }
+        return pts;
+      }
+      function getHorizonInterpolatorFromTextarea(hzTextarea) {
+        if (!hzTextarea.value.trim()) return null;
+        let hz;
+        try { hz = JSON.parse(hzTextarea.value.trim()); } catch { return null; }
+        const src = (hz && Array.isArray(hz.horizon)) ? hz.horizon.slice() : null;
+        if (!src || src.length < 2) return null;
+
+        const pts = src.map(p => {
+          let az = Number(p.azimuth), el = Number(p.elevation);
+          if (!Number.isFinite(az) || !Number.isFinite(el)) return null;
+          az = ((az % 360) + 360) % 360;
+          return { az, el };
+        }).filter(Boolean).sort((a,b)=>a.az-b.az);
+
+        if (pts[0].az !== 0) pts.unshift({ az: 0, el: pts[0].el });
+        const last = pts[pts.length-1];
+        if (last.az !== 360) pts.push({ az: 360, el: pts[0].el });
+
+        return function elevAtAzNorth(azNorth) {
+          let a = ((azNorth % 360) + 360) % 360;
+          let i = 1;
+          while (i < pts.length && a > pts[i].az) i++;
+          const p1 = pts[i-1], p2 = pts[i];
+          const t = (a - p1.az) / Math.max(1e-9, (p2.az - p1.az));
+          return p1.el + t * (p2.el - p1.el);
+        };
+      }
+      function findHorizonIntersections(trackPts, hzInterp){
+        const hits = [];
+        if (!hzInterp || !trackPts?.length) return hits;
+        for (let i = 1; i < trackPts.length; i++){
+          const p1 = trackPts[i-1], p2 = trackPts[i];
+          const azN1 = ((p1.azDeg + 180) % 360 + 360) % 360;
+          const azN2 = ((p2.azDeg + 180) % 360 + 360) % 360;
+          const h1 = Math.max(0, Math.min(90, hzInterp(azN1)));
+          const h2 = Math.max(0, Math.min(90, hzInterp(azN2)));
+          const d1 = p1.y - h1, d2 = p2.y - h2;
+          if (d1 === 0) hits.push({ x: p1.x, y: p1.y });
+          if (d1 * d2 < 0){
+            const t = d1 / (d1 - d2);
+            const x = p1.x + t * (p2.x - p1.x);
+            const y = p1.y + t * (p2.y - p1.y);
+            hits.push({ x, y });
+          }
+        }
+        return hits;
+      }
+      const xMarkers = {
+        id: 'xMarkers',
+        afterDatasetsDraw(chart, args, opts){
+          const markers = opts?.markers || [];
+          if (!markers.length) return;
+          const { ctx, chartArea:{top,bottom} } = chart;
+          const xScale = chart.scales.x;
+          ctx.save();
+          markers.forEach(m=>{
+            const x = xScale.getPixelForValue(m.x);
+            ctx.setLineDash([5,5]);
+            ctx.strokeStyle = m.color || '#9ca3af';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = m.color || '#374151';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+            ctx.fillText(m.label, x, top - 4);
+          });
+          ctx.restore();
+        }
+      };
+      Chart.register(xMarkers);
+      function timeAtAz(points, targetDeg){
+        for (let i=1;i<points.length;i++){
+          const a = points[i-1], b = points[i];
+          if ((a.azDeg <= targetDeg && b.azDeg >= targetDeg) || (a.azDeg >= targetDeg && b.azDeg <= targetDeg)){
+            const t = (targetDeg - a.azDeg) / Math.max(1e-6, (b.azDeg - a.azDeg));
+            return a.x + t*(b.x - a.x);
+          }
+        }
+        return null;
+      }
+
+      // Hourly power series (UTC -> shift by offUTC -> filter by selected local date)
+      function getDayHourlyPower(pvgisData, dateStr) {
+        if (!pvgisData?.outputs?.hourly) return [];
+        const offMin = Math.round((parseFloat(offUTCEl?.value) || 0) * 60);
+        const targetISO = luxon.DateTime.fromISO(dateStr).toISODate();
+
+        const out = [];
+        for (const row of pvgisData.outputs.hourly) {
+          const m = String(row.time).trim().match(/^(\d{4})(\d{2})(\d{2}):(\d{2})(\d{2})$/);
+          let dtUTC;
+          if (m) {
+            dtUTC = luxon.DateTime.fromObject(
+              { year:+m[1], month:+m[2], day:+m[3], hour:+m[4], minute:+m[5] },
+              { zone:'UTC' }
+            );
+          } else {
+            let dt = luxon.DateTime.fromISO(String(row.time), { zone:'UTC' });
+            if (!dt.isValid) continue;
+            dtUTC = dt;
+          }
+          const dtLocal = dtUTC.plus({ minutes: offMin });
+          if (dtLocal.toISODate() !== targetISO) continue;
+
+          const x = dtLocal.hour * 60 + dtLocal.minute;
+          const y = (typeof row.P === 'number') ? row.P : 0;
+          out.push({ x, y });
+        }
+        return out;
+      }
+
+      function sumKWh(series) { return series.reduce((s, p) => s + p.y, 0) / 1000; }
+
+      // Build PVGIS params for current system/year
+      function buildPVGISParams(startYear, endYear){
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const alt = parseFloat(document.getElementById('altitude').value) || 0;
+        const panelPower = parseFloat(document.getElementById('panelPower').value) || 0;
+        const numPanels = parseFloat(document.getElementById('numPanels').value) || 0;
+        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+        const tiltValue = parseFloat(document.getElementById('tilt').value);
+        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+
+        const baseParams = {
+          lat, lon,
+          peakpower: (panelPower * numPanels) / 1000,
+          loss: systemLosses,
+          startyear: startYear,
+          endyear: endYear,
+          pvcalculation: 1,
+          outputformat: 'json',
+          browser: 0,
+          elevation: alt
+        };
+
+        // Horizon (CSV) if present
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+        if (userhorizonCsv) { baseParams.usehorizon = 1; baseParams.userhorizon = userhorizonCsv; }
+
+        // Selected system
+        if (trackingType === '0') {
+          return { ...baseParams, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
+        }
+        if (trackingType === '5') {
+          return { ...baseParams, trackingtype: 5, inclinedaxisangle: clamp(tiltValue, 0, 90) };
+        }
+        return { ...baseParams, trackingtype: parseInt(trackingType, 10) };
+      }
+
+      function buildSeriesParams(startYear, endYear) {
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const alt = parseFloat(document.getElementById('altitude').value) || 0;
+        const panelPower = parseFloat(document.getElementById('panelPower').value) || 0;
+        const numPanels = parseFloat(document.getElementById('numPanels').value) || 0;
+        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+        const tiltValue = parseFloat(document.getElementById('tilt').value);
+        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+
+        const base = {
+          lat, lon,
+          peakpower: (panelPower * numPanels) / 1000,
+          loss: systemLosses,
+          startyear: startYear,
+          endyear: endYear,
+          pvcalculation: 1,
+          outputformat: 'json',
+          browser: 0,
+          elevation: alt
+        };
+
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+
+        if (trackingType === '0') {
+          return { ...base, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
+        }
+        if (trackingType === '5') {
+          return { ...base, trackingtype: 5, angle: clamp(tiltValue, 0, 90) };
+        }
+        return { ...base, trackingtype: parseInt(trackingType, 10) };
+      }
+
+      // Combined chart creation
+      function createOrUpdateCombinedSunChart(dateStr) {
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const timeZone = getTimeZoneFor(lat, lon);
+        const step = 10;
+        const yr = new Date().getFullYear();
+
+        const summerDate  = `${yr}-06-21`;
+        const equinoxDate = `${yr}-03-20`;
+        const winterDate  = `${yr}-12-21`;
+
+        const summerPts  = computeSunTrackForDateZoned(lat, lon, summerDate,  step, timeZone);
+        const equinoxPts = computeSunTrackForDateZoned(lat, lon, equinoxDate, step, timeZone);
+        const winterPts  = computeSunTrackForDateZoned(lat, lon, winterDate,  step, timeZone);
+        const selPts     = computeSunTrackForDateZoned(lat, lon, dateStr,     step, timeZone);
+
+        const azAt = (min)=>{
+          if (!selPts.length) return 0;
+          if (min <= selPts[0].x) return selPts[0].azDeg;
+          for (let i=1;i<selPts.length;i++){
+            const a=selPts[i-1], b=selPts[i];
+            if (min <= b.x){ const t=(min-a.x)/Math.max(1e-6,(b.x-a.x)); return a.azDeg + t*(b.azDeg-a.azDeg); }
+          }
+          return selPts[selPts.length-1].azDeg;
+        };
+
+        const datasets = [
+          { label:`SS Jun 21 — Altitude`,  data:summerPts,  color:'rgb(255,153,51)'  },
+          { label:`Eq Mar 20/Sep 22 — Altitude`, data:equinoxPts, color:'rgb(0,204,0)' },
+          { label:`WS Dec 21 — Altitude`, data:winterPts,  color:'rgb(0,0,255)' },
+          { label:`Selected (${dateStr}) — Altitude`, data:selPts, color:'rgb(139,92,246)' }
+        ].map(s => ({
+          label:s.label, data:s.data, parsing:false, showLine:true, yAxisID:'altitude',
+          borderWidth:2, borderColor:s.color, backgroundColor:s.color,
+          pointRadius:2, pointHoverRadius:3, pointBorderWidth:0
+        }));
+
+        const hzInterp = getHorizonInterpolatorFromTextarea(horizonJsonEl);
+        if (hzInterp) {
+          const hzPts = summerPts.map(p => {
+            const azNorth = ((p.azDeg + 180) % 360 + 360) % 360;
+            const el = Math.max(0, Math.min(90, hzInterp(azNorth)));
+            return { x: p.x, y: el };
+          });
+          datasets.push({
+            label:'Horizon',
+            data:hzPts, parsing:false, showLine:true, yAxisID:'altitude',
+            borderWidth: horizonLineToggle.checked ? 1.5 : 0,
+            borderDash: horizonLineToggle.checked ? [6,4] : [],
+            borderColor:'rgb(100,116,139)',
+            pointRadius:0,
+            fill: horizonShadeToggle.checked ? { target:'origin' } : false,
+            backgroundColor: horizonShadeToggle.checked ? 'rgba(100,116,139,0.18)' : 'transparent'
+          });
+
+          [
+            {label:`Summer Solstice (Jun 21)`, color:'rgb(239,68,68)',  pts:summerPts},
+            {label:`Equinox (Mar 20)`,        color:'rgb(59,130,246)', pts:equinoxPts},
+            {label:`Winter Solstice (Dec 21)`,color:'rgb(16,185,129)', pts:winterPts},
+            {label:`Selected (${dateStr})`,   color:'rgb(139,92,246)', pts:selPts}
+          ].forEach(set => {
+            const hits = findHorizonIntersections(set.pts, hzInterp);
+            if (hits.length) {
+              datasets.push({
+                type:'scatter', label:`${set.label} ∩ Horizon`,
+                data:hits, parsing:false, yAxisID:'altitude',
+                pointRadius:4, pointHoverRadius:5, showLine:false,
+                backgroundColor:set.color, borderColor:set.color
+              });
+            }
+          });
+        }
+
+        // UTC-shifted hourly power overlays
+        const tz = timeZone; // left for label tooltips
+        const userSeries = getDayHourlyPower(lastUserData,   dateStr);
+        const optSeries  = getDayHourlyPower(lastOptimalData,dateStr);
+        const hasPower   = (userSeries.length || optSeries.length) > 0;
+
+        if (userSeries.length){
+          datasets.push({
+            label:'Your System Power (W)',
+            data:userSeries, parsing:false, showLine:true, yAxisID:'power',
+            borderWidth:2, borderColor:'rgb(59,130,246)', backgroundColor:'rgb(59,130,246)',
+            pointRadius:0, tension:0.15
+          });
+        }
+        if (optSeries.length){
+          datasets.push({
+            label:'Optimal Fixed Power (W)',
+            data:optSeries, parsing:false, showLine:true, yAxisID:'power',
+            borderWidth:2, borderColor:'rgb(16,185,129)', backgroundColor:'rgb(16,185,129)',
+            pointRadius:0, tension:0.15, borderDash:[6,4]
+          });
+        }
+
+        const userKWh = userSeries.length ? sumKWh(userSeries) : null;
+        const optKWh  = optSeries.length  ? sumKWh(optSeries)  : null;
+        const titleText =
+          `Sun Path (Altitude) + Hourly Power — ${dateStr}`
+          + (userKWh != null ? ` • Your: ${userKWh.toFixed(1)} kWh` : '')
+          + (optKWh  != null ? ` • Optimal: ${optKWh.toFixed(1)} kWh` : '');
+
+        const pad = 10;
+        const dayMin = summerPts.length ? Math.max(0, Math.floor(summerPts[0].x) - pad) : 0;
+        const dayMax = summerPts.length ? Math.min(1440, Math.ceil(summerPts[summerPts.length-1].x) + pad) : 1440;
+
+        const xE = timeAtAz(selPts, -90), xS = timeAtAz(selPts, 0), xW = timeAtAz(selPts, 90);
+        const markers = [];
+        if (xE != null) markers.push({ x:xE, label:'E', color:'#64748b' });
+        if (xS != null) markers.push({ x:xS, label:'S', color:'#64748b' });
+        if (xW != null) markers.push({ x:xW, label:'W', color:'#64748b' });
+
+        const config = {
+          type:'scatter',
+          data:{ datasets },
+          options:{
+            responsive:true,
+            interaction:{ mode:'nearest', intersect:false },
+            plugins:{
+              legend:{ position:'top', labels:{ filter:(item, chart) => {
+                const text = item.text || (chart?.data?.datasets?.[item.datasetIndex]?.label ?? '');
+                return !/∩ Horizon$/.test(String(text));
+              }}},
+              title:{ display:true, text:titleText },
+              decimation:{ enabled:true, algorithm:'lttb' },
+              tooltip:{
+                callbacks:{
+                  title:(items)=> `${dateStr} ${hhmm(items[0].parsed.x|0)}`,
+                  label:(ctx)=> ctx.dataset.yAxisID === 'power'
+                    ? `Power: ${Math.round(ctx.parsed.y)} W`
+                    : `Altitude: ${ctx.parsed.y.toFixed(1)}°`
+                }
+              },
+              xMarkers:{ markers }
+            },
+            scales:{
+              x:{ type:'linear', position:'bottom', min:dayMin, max:dayMax,
+                  title:{ display:true, text:'Local Time' },
+                  ticks:{ stepSize:60, callback:(v)=> hhmm(v) }, grid:{ display:false } },
+              xAz:{ type:'linear', position:'top', min:dayMin, max:dayMax,
+                    title:{ display:true, text:'Solar Azimuth (°; 0=South, -E, +W)' },
+                    grid:{ drawOnChartArea:false },
+                    ticks:{ stepSize:120, callback:(v)=> `${Math.round(azAt(v))}°` } },
+              altitude:{ type:'linear', position:'left', min:0, max:90, title:{ display:true, text:'Solar Altitude (°)' } },
+              power:{ type:'linear', position:'right', display:hasPower,
+                      title:{ display:true, text:'Power (W)' }, grid:{ drawOnChartArea:false } }
+            }
+          },
+          plugins:[xMarkers]
+        };
+        if (sunPathChart) sunPathChart.destroy();
+        sunPathChart = new Chart(sunPathChartCanvas, config);
+      }
+
+      // =========== PVGIS Calculate (monthly/annual + caches for power) ===========
+      async function updateGraph() {
+        const startYear = parseInt(document.getElementById('startYear').value, 10);
+        const endYear   = parseInt(document.getElementById('endYear').value, 10);
+        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) {
+          alert('Please enter valid start/end years.'); return;
+        }
+        if (startYear > endYear) {
+          alert('Start Year must be ≤ End Year.'); return;
+        }
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const trackingVal = document.querySelector('input[name="trackingType"]:checked').value;
+        const activeKey = trackingKeyFromValue(trackingVal);
+
+        calculateBtn.textContent = 'Calculating…';
+        calculateBtn.disabled = true;
+
+        // Build params (includes userhorizon if present)
+        const userParams = buildPVGISParams(startYear, endYear);
+        const userData = await fetchData(userParams);
+
+        // Optimal fixed (with same horizon)
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+        const optimalAngles = await getOptimumAngles(lat, lon, userParams.peakpower, userParams.loss, userhorizonCsv);
+        let optimalData = null;
+        if (optimalAngles) {
+          optimumAzimuthP.textContent = `Azimuth: ${optimalAngles.azimuth}°`;
+          optimumTiltP.textContent = `Tilt: ${optimalAngles.tilt}°`;
+          optimumAnglesDiv.classList.add('show');
+
+          const optimalParams = {
+            ...userParams,
+            trackingtype: 0,
+            angle: optimalAngles.tilt,
+            aspect: optimalAngles.azimuth
+          };
+          optimalData = await fetchData(optimalParams);
+        } else {
+          optimumAnglesDiv.classList.remove('show');
+        }
+
+        // Annual totals banner
+        totalYieldDisplay.classList.remove('show');
+        totalYieldP.textContent = '';
+        if (userData?.outputs) {
+          const userAnnual = getAnnualEnergy(userData.outputs, activeKey);
+          if (userAnnual != null) {
+            totalYieldP.textContent = `Your Annual Yield: ${Math.round(userAnnual)} kWh`;
+            if (optimalAngles?.yield != null) {
+              totalYieldP.textContent += ` | Optimal Fixed: ${Math.round(optimalAngles.yield)} kWh`;
+            }
+            totalYieldDisplay.classList.add('show');
+          }
+        }
+
+        // Cache for overlay
+        lastUserData = userData;
+        lastOptimalData = optimalData;
+
+        // Monthly chart — line curves to match sunpath style
+        const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        if (userData?.outputs?.monthly) {
+          const series = pickMonthlySeries(userData.outputs.monthly, activeKey);
+          const optSeries = optimalData?.outputs?.monthly ? pickMonthlySeries(optimalData.outputs.monthly, 'fixed') : null;
+          if (series) {
+            const monthlyLabels = series.map(m => MONTH_NAMES[m.month - 1]);
+            const monthlyYields = series.map(item => item.E_m);
+            const monthlyDatasets = [{
+              label:'Your System Monthly Yield (kWh)',
+              data: monthlyYields,
+              borderColor:'rgb(59,130,246)',
+              backgroundColor:'rgb(59,130,246)'
+            }];
+            if (optSeries) monthlyDatasets.push({
+              label:'Optimal Fixed Monthly Yield (kWh)',
+              data: optSeries.map(i => i.E_m),
+              borderColor:'rgb(16,185,129)',
+              backgroundColor:'rgb(16,185,129)',
+              borderDash:[6,4]
+            });
+            const monthlyConfig = {
+              type:'line',
+              data:{ labels: monthlyLabels, datasets: monthlyDatasets.map(ds => ({
+                ...ds, fill:false, tension:0.15, pointRadius:3, pointHoverRadius:5, borderWidth:2
+              })) },
+              options:{
+                responsive:true,
+                plugins:{ legend:{ position:'top' }, title:{ display:true, text:'Monthly Energy Production' } },
+                scales:{ x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
+                         y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true } }
+              }
+            };
+            if (monthlyEnergyChart) monthlyEnergyChart.destroy();
+            monthlyEnergyChart = new Chart(monthlyEnergyChartCanvas, monthlyConfig);
+          }
+        }
+
+        // Re-render combined chart for currently selected date (will show power)
+        createOrUpdateCombinedSunChart(getSelectedDateISO());
+
+        calculateBtn.textContent = 'Calculate';
+        calculateBtn.disabled = false;
+      }
+
+      // ======== When pressing "Plot Selected Date" ========
+      async function fetchPowerForSelectedDateAndPlot() {
+        const dateStr = getSelectedDateISO();
+        const y = luxon.DateTime.fromISO(dateStr).year;
+        const params = buildSeriesParams(y, y);
+
+        const old = plotDateBtn.textContent;
+        plotDateBtn.textContent = 'Loading…';
+        plotDateBtn.disabled = true;
+
+        const data = await fetchHourly(params);   // <-- seriescalc (hourly)
+        lastUserData = data;                      // cached for overlay
+
+        createOrUpdateCombinedSunChart(dateStr);
+
+        plotDateBtn.textContent = old;
+        plotDateBtn.disabled = false;
+      }
+
+      // UI wires
+      function handleShowSunPath(){ createOrUpdateCombinedSunChart(getSelectedDateISO()); }
+      function handlePlotDate(){ fetchPowerForSelectedDateAndPlot(); }
+
+      horizonShadeToggle.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
+      horizonLineToggle.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
+      horizonJsonEl.addEventListener('input', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
+      offUTCEl.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
+
+      calculateBtn.addEventListener('click', updateGraph);
+      showSunPathBtn.addEventListener('click', handleShowSunPath);
+      plotDateBtn.addEventListener('click', handlePlotDate);
+
+      // Initial render
+      createOrUpdateCombinedSunChart(getSelectedDateISO());
+    });
+  </script>
+</body>
+</html>
