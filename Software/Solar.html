@@ -146,6 +146,10 @@
           <label class="radio-pill"><input type="radio" name="trackingType" value="3"><span>V Axis E-W</span></label>
           <label class="radio-pill"><input type="radio" name="trackingType" value="4"><span>H Axis E-W</span></label>
           <label class="radio-pill"><input type="radio" name="trackingType" value="5"><span>I Axis N-S</span></label>
+          <input type="checkbox" id="optimTilt" name="optimTilt" value="Bike">
+          <label for="optimTilt">Optimize Tilt</label>
+          <input type="checkbox" id="optimTiltAz" name="optimTiltAz" value="Car">
+          <label for="optimTiltAz">Optimize Tilt Az</label>
         </div>
       </div>
 
@@ -234,7 +238,8 @@
 
       const monthlyEnergyChartCanvas = document.getElementById('monthlyEnergyChart');
       const sunPathChartCanvas = document.getElementById('sunPathChart');
-
+      const optimTiltEl   = document.getElementById('optimTilt');
+      const optimTiltAzEl = document.getElementById('optimTiltAz');
       const optimumAnglesDiv = document.getElementById('optimum-angles');
       const totalYieldDisplay = document.getElementById('total-yield-display');
       const optimumAzimuthP = document.getElementById('optimum-azimuth');
@@ -264,7 +269,32 @@
         if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
         return DateTime.local().toISODate();
       }
+		function parseSeriesUTC(timeStr){
+		  const m = String(timeStr).trim().match(/^(\d{4})(\d{2})(\d{2}):(\d{2})(\d{2})$/);
+		  if (m) return luxon.DateTime.fromObject(
+			{ year:+m[1], month:+m[2], day:+m[3], hour:+m[4], minute:+m[5] },
+			{ zone:'UTC' }
+		  );
+		  const dt = luxon.DateTime.fromISO(String(timeStr), { zone:'UTC' });
+		  return dt.isValid ? dt : null;
+		}
 
+		function makeMonthlyFromSeriescalc(hourlyRows, keyName){
+		  const months = Array.from({length:12}, (_,i)=>({ month: i+1, E_m: 0 }));
+		  const rows = hourlyRows
+			.map(r => ({ t: parseSeriesUTC(r.time), P: Number(r.P) || 0 }))
+			.filter(x => x.t);
+
+		  for (let i=0; i<rows.length-1; i++){
+			const dtH = (rows[i+1].t.toMillis() - rows[i].t.toMillis()) / 3600000;
+			if (dtH <= 0 || dtH > 3) continue; // sanity
+			months[rows[i].t.month - 1].E_m += rows[i].P * dtH / 1000; // kWh
+		  }
+		  months.forEach(m => m.E_m = Math.round(m.E_m));
+		  const Ey = Math.round(months.reduce((s,m)=>s+m.E_m, 0));
+
+		  return { outputs: { monthly: { [keyName]: months }, totals: { [keyName]: { E_y: Ey } } } };
+		}
       // radio "0..5" → JSON key in outputs.{monthly|totals}
       function trackingKeyFromValue(v){
         const map = { '0':'fixed','1':'singleaxis','2':'twoaxis','3':'verticalaxis','4':'horizontalaxis','5':'inclinedaxis' };
@@ -332,21 +362,21 @@
         return { azimuth: az, tilt };
       }
 
-      async function getOptimumAngles(lat, lon, peakpower, loss, userhorizonCsv) {
-        const base = {
-          lat, lon, peakpower, loss,
-          optimalinclination: 1, optimalangles: 1,
-          outputformat: 'json', browser: 0
-        };
-        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
-        const url  = `${API_BASE_URL}/PVcalc?${new URLSearchParams(base).toString()}`;
-        const data = await fetchJsonWithProxy(url);
-        const { azimuth, tilt } = extractOptimalAngles(data);
-        const Ey = data?.outputs?.totals?.fixed?.E_y ?? null;
-        return (azimuth != null || tilt != null || Ey != null)
-          ? { azimuth, tilt, yield: Ey }
-          : null;
-      }
+		async function getOptimumAngles(lat, lon, peakpower, loss, userhorizonCsv) {
+		  const base = {
+			lat, lon, peakpower, loss,
+			raddatabase: 'PVGIS-SARAH3',          // << add
+			optimalinclination: optimTiltEl.checked ? 1 : 0,
+			optimalangles:      optimTiltAzEl.checked ? 1 : 0,
+			outputformat: 'json', browser: 0
+		  };
+		  if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+		  const url  = `${API_BASE_URL}/PVcalc?${new URLSearchParams(base).toString()}`;
+		  const data = await fetchJsonWithProxy(url);
+		  const { azimuth, tilt } = extractOptimalAngles(data);
+		  const Ey = data?.outputs?.totals?.fixed?.E_y ?? null;
+		  return (azimuth != null || tilt != null || Ey != null) ? { azimuth, tilt, yield: Ey } : null;
+		}
 
       // Stellarium horizon parsing (to JSON used by our interpolator)
       function parseStellariumHorizon(text) {
@@ -453,6 +483,19 @@
         try { if (typeof tzlookup === 'function') return tzlookup(lat, lon); } catch (_) {}
         return Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
+	  
+		// Monthly solar-noon-ish max altitude (°) for each month of 'year'
+		function computeMonthlyMaxSunAltitudes(lat, lon, year, timeZone) {
+		  const res = [];
+		  const stepMin = 5; // 5-min resolution is fine
+		  for (let m = 1; m <= 12; m++) {
+			const dateStr = `${year}-${String(m).padStart(2,'0')}-15`; // mid-month
+			const pts = computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone);
+			const maxAlt = pts.reduce((mx,p)=> p.y > mx ? p.y : mx, 0);
+			res.push(Number(maxAlt.toFixed(1))); // 1 decimal
+		  }
+		  return res;
+		}
 
       // Sun track helpers
       function computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone) {
@@ -581,79 +624,79 @@
       }
 
       function sumKWh(series) { return series.reduce((s, p) => s + p.y, 0) / 1000; }
-
+		function sumMonthlyKWh(series) {
+		  if (!Array.isArray(series)) return null;
+		  return series.reduce((s, m) => s + (Number(m.E_m) || 0), 0);
+		}
       // Build PVGIS params for current system/year
-      function buildPVGISParams(startYear, endYear){
-        const lat = parseFloat(document.getElementById('latitude').value) || 0;
-        const lon = parseFloat(document.getElementById('longitude').value) || 0;
-        const alt = parseFloat(document.getElementById('altitude').value) || 0;
-        const panelPower = parseFloat(document.getElementById('panelPower').value) || 0;
-        const numPanels = parseFloat(document.getElementById('numPanels').value) || 0;
-        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
-        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
-        const tiltValue = parseFloat(document.getElementById('tilt').value);
-        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+		function buildPVGISParams(/* startYear, endYear — not used for PVcalc */){
+		  const lat = parseFloat(document.getElementById('latitude').value) || 0;
+		  const lon = parseFloat(document.getElementById('longitude').value) || 0;
+		  const alt = parseFloat(document.getElementById('altitude').value) || 0;
+		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+		  const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+		  const tiltValue    = parseFloat(document.getElementById('tilt').value);
 
-        const baseParams = {
-          lat, lon,
-          peakpower: (panelPower * numPanels) / 1000,
-          loss: systemLosses,
-          startyear: startYear,
-          endyear: endYear,
-          pvcalculation: 1,
-          outputformat: 'json',
-          browser: 0,
-          elevation: alt
-        };
+		  const baseParams = {
+			lat, lon,
+			peakpower: (panelPower * numPanels) / 1000,
+			loss: systemLosses,
+			pvcalculation: 1,
+			raddatabase: 'PVGIS-SARAH3',         // text parameter – fixed here
+			outputformat: 'json',
+			browser: 0,
+			elevation: alt
+		  };
 
-        // Horizon (CSV) if present
-        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-        if (userhorizonCsv) { baseParams.usehorizon = 1; baseParams.userhorizon = userhorizonCsv; }
+		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+		  if (userhorizonCsv) { baseParams.usehorizon = 1; baseParams.userhorizon = userhorizonCsv; }
 
-        // Selected system
-        if (trackingType === '0') {
-          return { ...baseParams, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
-        }
-        if (trackingType === '5') {
-          return { ...baseParams, trackingtype: 5, inclinedaxisangle: clamp(tiltValue, 0, 90) };
-        }
-        return { ...baseParams, trackingtype: parseInt(trackingType, 10) };
-      }
+		  return {
+			...baseParams,
+			fixed: 1,
+			angle:  clamp(tiltValue, 0, 90),
+			aspect: clamp(azimuthValue, -180, 180)
+		  };
+		}
 
-      function buildSeriesParams(startYear, endYear) {
-        const lat = parseFloat(document.getElementById('latitude').value) || 0;
-        const lon = parseFloat(document.getElementById('longitude').value) || 0;
-        const alt = parseFloat(document.getElementById('altitude').value) || 0;
-        const panelPower = parseFloat(document.getElementById('panelPower').value) || 0;
-        const numPanels = parseFloat(document.getElementById('numPanels').value) || 0;
-        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
-        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
-        const tiltValue = parseFloat(document.getElementById('tilt').value);
-        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+		function buildSeriesParams(startYear, endYear) {
+		  const lat = parseFloat(document.getElementById('latitude').value) || 0;
+		  const lon = parseFloat(document.getElementById('longitude').value) || 0;
+		  const alt = parseFloat(document.getElementById('altitude').value) || 0;
+		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+		  const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+		  const tiltValue    = parseFloat(document.getElementById('tilt').value);
+		  const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
 
-        const base = {
-          lat, lon,
-          peakpower: (panelPower * numPanels) / 1000,
-          loss: systemLosses,
-          startyear: startYear,
-          endyear: endYear,
-          pvcalculation: 1,
-          outputformat: 'json',
-          browser: 0,
-          elevation: alt
-        };
+		  const base = {
+			lat, lon,
+			peakpower: (panelPower * numPanels) / 1000,
+			loss: systemLosses,
+			startyear: startYear,
+			endyear: endYear,
+			pvcalculation: 1,
+			raddatabase: 'PVGIS-SARAH3',          // << add
+			outputformat: 'json',
+			browser: 0,
+			elevation: alt
+		  };
 
-        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+		  if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
 
-        if (trackingType === '0') {
-          return { ...base, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
-        }
-        if (trackingType === '5') {
-          return { ...base, trackingtype: 5, angle: clamp(tiltValue, 0, 90) };
-        }
-        return { ...base, trackingtype: parseInt(trackingType, 10) };
-      }
+		  // seriescalc supports trackingtype for all modes (including fixed=0)
+		  if (trackingType === '0') {
+			return { ...base, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
+		  }
+		  if (trackingType === '5') {
+			return { ...base, trackingtype: 5, angle: clamp(tiltValue, 0, 90) };
+		  }
+		  return { ...base, trackingtype: parseInt(trackingType, 10) };
+		}
 
       // Combined chart creation
       function createOrUpdateCombinedSunChart(dateStr) {
@@ -812,109 +855,193 @@
       }
 
       // =========== PVGIS Calculate (monthly/annual + caches for power) ===========
-      async function updateGraph() {
-        const startYear = parseInt(document.getElementById('startYear').value, 10);
-        const endYear   = parseInt(document.getElementById('endYear').value, 10);
-        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) {
-          alert('Please enter valid start/end years.'); return;
-        }
-        if (startYear > endYear) {
-          alert('Start Year must be ≤ End Year.'); return;
-        }
-        const lat = parseFloat(document.getElementById('latitude').value) || 0;
-        const lon = parseFloat(document.getElementById('longitude').value) || 0;
-        const trackingVal = document.querySelector('input[name="trackingType"]:checked').value;
-        const activeKey = trackingKeyFromValue(trackingVal);
+		async function updateGraph() {
+		  const startYear = parseInt(document.getElementById('startYear').value, 10);
+		  const endYear   = parseInt(document.getElementById('endYear').value, 10);
+		  if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) { alert('Please enter valid start/end years.'); return; }
+		  if (startYear > endYear) { alert('Start Year must be ≤ End Year.'); return; }
 
-        calculateBtn.textContent = 'Calculating…';
-        calculateBtn.disabled = true;
+		  // Inputs needed throughout
+		  const lat          = parseFloat(document.getElementById('latitude').value) || 0;
+		  const lon          = parseFloat(document.getElementById('longitude').value) || 0;
+		  const alt          = parseFloat(document.getElementById('altitude').value) || 0;
+		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0; // W per panel
+		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
 
-        // Build params (includes userhorizon if present)
-        const userParams = buildPVGISParams(startYear, endYear);
-        const userData = await fetchData(userParams);
+		  const trackingVal    = document.querySelector('input[name="trackingType"]:checked').value;
+		  const activeKey      = trackingKeyFromValue(trackingVal);
+		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl); // << declared ONCE
 
-        // Optimal fixed (with same horizon)
-        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-        const optimalAngles = await getOptimumAngles(lat, lon, userParams.peakpower, userParams.loss, userhorizonCsv);
-        let optimalData = null;
-        if (optimalAngles) {
-          optimumAzimuthP.textContent = `Azimuth: ${optimalAngles.azimuth}°`;
-          optimumTiltP.textContent = `Tilt: ${optimalAngles.tilt}°`;
-          optimumAnglesDiv.classList.add('show');
+		  calculateBtn.textContent = 'Calculating…';
+		  calculateBtn.disabled = true;
 
-          const optimalParams = {
-            ...userParams,
-            trackingtype: 0,
-            angle: optimalAngles.tilt,
-            aspect: optimalAngles.azimuth
-          };
-          optimalData = await fetchData(optimalParams);
-        } else {
-          optimumAnglesDiv.classList.remove('show');
-        }
+		  // ----- USER SYSTEM (monthly/annual) -----
+		  let userDataMonthly = null;         // PVcalc result OR aggregated monthly from seriescalc
+		  let seriesRespForOverlay = null;    // raw seriescalc (hourly) only for H-axis radios (1,4)
 
-        // Annual totals banner
-        totalYieldDisplay.classList.remove('show');
-        totalYieldP.textContent = '';
-        if (userData?.outputs) {
-          const userAnnual = getAnnualEnergy(userData.outputs, activeKey);
-          if (userAnnual != null) {
-            totalYieldP.textContent = `Your Annual Yield: ${Math.round(userAnnual)} kWh`;
-            if (optimalAngles?.yield != null) {
-              totalYieldP.textContent += ` | Optimal Fixed: ${Math.round(optimalAngles.yield)} kWh`;
-            }
-            totalYieldDisplay.classList.add('show');
-          }
-        }
+			// PVcalc ONLY for Fixed; everything else via seriescalc
+			if (trackingVal === '0') {
+			  const userParams = buildPVGISParams(startYear, endYear);  // PVcalc, fixed only
+			  userDataMonthly  = await fetchData(userParams);           // PVcalc
+			} else {
+			  const seriesParams = buildSeriesParams(startYear, endYear); // seriescalc (with raddatabase)
+			  const seriesResp   = await fetchHourly(seriesParams);
+			  if (seriesResp?.outputs?.hourly?.length) {
+				userDataMonthly      = makeMonthlyFromSeriescalc(seriesResp.outputs.hourly, activeKey);
+				seriesRespForOverlay = seriesResp; // keep hourly for Sun Path overlay
+			  }
+			}
 
-        // Cache for overlay
-        lastUserData = userData;
-        lastOptimalData = optimalData;
+		  // ----- OPTIMAL (fixed) ANGLES -----
+		  let optimalAngles = null;
+		  let optimalDataMonthly = null;
 
-        // Monthly chart — line curves to match sunpath style
-        const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        if (userData?.outputs?.monthly) {
-          const series = pickMonthlySeries(userData.outputs.monthly, activeKey);
-          const optSeries = optimalData?.outputs?.monthly ? pickMonthlySeries(optimalData.outputs.monthly, 'fixed') : null;
-          if (series) {
-            const monthlyLabels = series.map(m => MONTH_NAMES[m.month - 1]);
-            const monthlyYields = series.map(item => item.E_m);
-            const monthlyDatasets = [{
-              label:'Your System Monthly Yield (kWh)',
-              data: monthlyYields,
-              borderColor:'rgb(59,130,246)',
-              backgroundColor:'rgb(59,130,246)'
-            }];
-            if (optSeries) monthlyDatasets.push({
-              label:'Optimal Fixed Monthly Yield (kWh)',
-              data: optSeries.map(i => i.E_m),
-              borderColor:'rgb(16,185,129)',
-              backgroundColor:'rgb(16,185,129)',
-              borderDash:[6,4]
-            });
-            const monthlyConfig = {
-              type:'line',
-              data:{ labels: monthlyLabels, datasets: monthlyDatasets.map(ds => ({
-                ...ds, fill:false, tension:0.15, pointRadius:3, pointHoverRadius:5, borderWidth:2
-              })) },
-              options:{
-                responsive:true,
-                plugins:{ legend:{ position:'top' }, title:{ display:true, text:'Monthly Energy Production' } },
-                scales:{ x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
-                         y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true } }
-              }
-            };
-            if (monthlyEnergyChart) monthlyEnergyChart.destroy();
-            monthlyEnergyChart = new Chart(monthlyEnergyChartCanvas, monthlyConfig);
-          }
-        }
+		  if (optimTiltEl.checked || optimTiltAzEl.checked) {
+			optimalAngles = await getOptimumAngles(
+			  lat, lon,
+			  (panelPower * numPanels) / 1000,  // kW
+			  systemLosses,
+			  userhorizonCsv
+			);
+			if (optimalAngles) {
+			  optimumAzimuthP.textContent = `Azimuth: ${optimalAngles.azimuth ?? '-'}°`;
+			  optimumTiltP.textContent    = `Tilt: ${optimalAngles.tilt ?? '-'}°`;
+			  optimumAnglesDiv.classList.add('show');
 
-        // Re-render combined chart for currently selected date (will show power)
-        createOrUpdateCombinedSunChart(getSelectedDateISO());
+				const optimalParams = {
+				  lat, lon,
+				  peakpower: (panelPower * numPanels) / 1000,
+				  loss: systemLosses,
+				  pvcalculation: 1,
+				  raddatabase: 'PVGIS-SARAH3',     // << add
+				  outputformat: 'json',
+				  browser: 0,
+				  elevation: alt,
+				  fixed: 1
+				};
+			  if (userhorizonCsv) { optimalParams.usehorizon = 1; optimalParams.userhorizon = userhorizonCsv; }
+			  if (optimalAngles.tilt    != null) optimalParams.angle  = optimalAngles.tilt;
+			  if (optimalAngles.azimuth != null) optimalParams.aspect = optimalAngles.azimuth;
 
-        calculateBtn.textContent = 'Calculate';
-        calculateBtn.disabled = false;
-      }
+			  optimalDataMonthly = await fetchData(optimalParams);
+			} else {
+			  optimumAnglesDiv.classList.remove('show');
+			}
+		  } else {
+			optimumAnglesDiv.classList.remove('show');
+		  }
+
+		  // ----- Annual totals banner -----
+		  totalYieldDisplay.classList.remove('show');
+		  totalYieldP.textContent = '';
+		  if (userDataMonthly?.outputs) {
+			const userAnnual = getAnnualEnergy(userDataMonthly.outputs, activeKey);
+			if (userAnnual != null) {
+			  totalYieldP.textContent = `Your Annual Yield: ${Math.round(userAnnual)} kWh`;
+			  const optAnnual = optimalDataMonthly?.outputs
+				? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed')
+				: (optimalAngles?.yield ?? null);
+			  if (optAnnual != null) totalYieldP.textContent += ` | Optimal Fixed: ${Math.round(optAnnual)} kWh`;
+			  totalYieldDisplay.classList.add('show');
+			}
+		  }
+
+		  // ----- Cache hourly for Sun Path overlay -----
+		  lastUserData    = seriesRespForOverlay || null; // only non-null for tracking 1 & 4
+		  lastOptimalData = null; // not fetching hourly for optimal fixed
+
+		  // ----- Monthly chart (add sun altitude on right axis) -----
+		  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+		  if (userDataMonthly?.outputs?.monthly) {
+			const series    = pickMonthlySeries(userDataMonthly.outputs.monthly, activeKey);
+			const optSeries = optimalDataMonthly?.outputs?.monthly
+			  ? pickMonthlySeries(optimalDataMonthly.outputs.monthly, 'fixed')
+			  : null;
+
+			if (series) {
+			  const monthlyLabels = series.map(m => MONTH_NAMES[m.month - 1]);
+			  const monthlyYields = series.map(item => item.E_m);
+
+			  // Monthly max sun altitude for endYear (right axis)
+			  const timeZone      = getTimeZoneFor(lat, lon);
+			  const monthlyAltDeg = computeMonthlyMaxSunAltitudes(lat, lon, endYear, timeZone);
+
+			  // Annuals for chart title
+			  const userAnnualFromTotals  = getAnnualEnergy(userDataMonthly.outputs, activeKey);
+			  const userAnnualFromMonthly = sumMonthlyKWh(series);
+			  const userAnnual            = Math.round((userAnnualFromTotals ?? userAnnualFromMonthly ?? 0));
+
+			  let optAnnual = null;
+			  const optAnnualFromTotals  = optimalDataMonthly?.outputs ? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed') : null;
+			  const optAnnualFromMonthly = sumMonthlyKWh(optSeries);
+			  if (optAnnualFromTotals != null)       optAnnual = Math.round(optAnnualFromTotals);
+			  else if (optAnnualFromMonthly != null) optAnnual = Math.round(optAnnualFromMonthly);
+			  else if (optimalAngles?.yield != null) optAnnual = Math.round(optimalAngles.yield);
+
+			  const monthlyDatasets = [
+				{
+				  label:'Your System Monthly Yield (kWh)',
+				  data: monthlyYields,
+				  borderColor:'rgb(59,130,246)',
+				  backgroundColor:'rgb(59,130,246)'
+				}
+			  ];
+			  if (optSeries) {
+				monthlyDatasets.push({
+				  label:'Optimal Fixed Monthly Yield (kWh)',
+				  data: optSeries.map(i => i.E_m),
+				  borderColor:'rgb(16,185,129)',
+				  backgroundColor:'rgb(16,185,129)',
+				  borderDash:[6,4]
+				});
+			  }
+			  // Sun altitude series (right axis)
+			  monthlyDatasets.push({
+				label:'Max Sun Altitude (°)',
+				data: monthlyAltDeg,
+				yAxisID: 'alt',
+				borderColor:'rgb(234,179,8)',
+				backgroundColor:'rgb(234,179,8)',
+				borderDash:[4,3]
+			  });
+
+			  let monthlyTitle = 'Monthly Energy Production';
+			  if (Number.isFinite(userAnnual) && userAnnual > 0) monthlyTitle += ` — Your annual: ${userAnnual} kWh`;
+			  if (Number.isFinite(optAnnual) && optAnnual > 0)   monthlyTitle += ` | Optimal: ${optAnnual} kWh`;
+
+			  const monthlyConfig = {
+				type: 'line',
+				data: {
+				  labels: monthlyLabels,
+				  datasets: monthlyDatasets.map(ds => ({
+					...ds, fill:false, tension:0.15, pointRadius:3, pointHoverRadius:5, borderWidth:2
+				  }))
+				},
+				options: {
+				  responsive:true,
+				  plugins: { legend:{ position:'top' }, title:{ display:true, text: monthlyTitle } },
+				  scales: {
+					x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
+					y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true },
+					alt:{ type:'linear', position:'right', min:0, max:90,
+						  title:{ display:true, text:'Max Sun Altitude (°)' },
+						  grid:{ drawOnChartArea:false } }
+				  }
+				}
+			  };
+
+			  if (monthlyEnergyChart) monthlyEnergyChart.destroy();
+			  monthlyEnergyChart = new Chart(monthlyEnergyChartCanvas, monthlyConfig);
+			}
+		  }
+
+		  // Sun Path (and hourly power if cached)
+		  createOrUpdateCombinedSunChart(getSelectedDateISO());
+
+		  calculateBtn.textContent = 'Calculate';
+		  calculateBtn.disabled = false;
+		}
 
       // ======== When pressing "Plot Selected Date" ========
       async function fetchPowerForSelectedDateAndPlot() {
