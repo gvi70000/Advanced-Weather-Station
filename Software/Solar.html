@@ -154,8 +154,6 @@
       <!-- Actions & info -->
       <div class="grid" style="margin-top:12px;">
         <button id="calculateBtn" class="btn btn-primary btn-block btn-half">Calculate</button>
-        <button id="showSunPathBtn" class="btn btn-secondary btn-block btn-half">Show Sun Path</button>
-
         <div id="optimum-angles" class="banner blue">
           <p style="margin:0 0 6px; font-weight:700;">Optimal Fixed System Angles:</p>
           <p id="optimum-azimuth" class="muted" style="margin:0;"></p>
@@ -228,7 +226,6 @@
       const { DateTime } = luxon;
 
       const calculateBtn = document.getElementById('calculateBtn');
-      const showSunPathBtn = document.getElementById('showSunPathBtn');
       const plotDateBtn = document.getElementById('plotDateBtn');
       const sunDateInput = document.getElementById('sunDate');
       const horizonShadeToggle = document.getElementById('horizonShadeToggle');
@@ -277,21 +274,83 @@
       }
 
       // Integrate hourly power (W) into monthly kWh using local timestamps
-      function makeMonthlyFromSeriescalc(hourly, keyName, timeZone){
-        const months = Array.from({length:12}, (_,i)=>({ month: i+1, E_m: 0 }));
-        const rows = hourly.map(r => ({ t: parseSeriesLocal(r.time, timeZone), P: Number(r.P) || 0 }))
-                           .filter(x => x.t);
+      
+      // Integrate hourly power (W) into monthly kWh averaged across years,
+      // and compute monthly averages for T2m (°C) and WS10m (m/s)
+      function makeMonthlyFromSeriescalcAvg(hourly, keyName, timeZone){
+        const rows = hourly.map(r => ({
+            t: parseSeriesLocal(r.time, timeZone),
+            P: Number(r.P) || 0,
+            T2m: (r.T2m != null ? Number(r.T2m) : null),
+            WS10m: (r.WS10m != null ? Number(r.WS10m) : null)
+          }))
+          .filter(x => x.t);
 
-        for (let i=0; i<rows.length-1; i++){
-          const dtH = (rows[i+1].t.toMillis() - rows[i].t.toMillis()) / 3600000;
-          if (dtH <= 0 || dtH > 3) continue; // guard: PVGIS is 1h or 2h
-          months[rows[i].t.month - 1].E_m += rows[i].P * dtH / 1000; // kWh
+        // accumulate by (year, month)
+        const byYM = new Map(); // "YYYY-MM" -> { y, m, eKWh, tSum, wSum, n }
+        function keyOf(dt){ return `${dt.year}-${String(dt.month).padStart(2,'0')}`; }
+
+        for (let i=0; i<rows.length; i++){
+          const cur = rows[i];
+          const ymk = keyOf(cur.t);
+          if (!byYM.has(ymk)) byYM.set(ymk, { y: cur.t.year, m: cur.t.month, eKWh:0, tSum:0, wSum:0, n:0 });
+
+          // temp & wind sample means (hourly)
+          if (Number.isFinite(cur.T2m))  byYM.get(ymk).tSum += cur.T2m;
+          if (Number.isFinite(cur.WS10m)) byYM.get(ymk).wSum += cur.WS10m;
+          byYM.get(ymk).n += 1;
+
+          // energy integrate to next timestamp (left Riemann)
+          if (i < rows.length - 1){
+            const next = rows[i+1];
+            const dtH = (next.t.toMillis() - cur.t.toMillis()) / 3600000;
+            if (dtH > 0 && dtH <= 3) {
+              byYM.get(ymk).eKWh += cur.P * dtH / 1000; // kWh
+            }
+          }
         }
-        months.forEach(m => m.E_m = Math.round(m.E_m));
-        const Ey = Math.round(months.reduce((s,m)=>s+m.E_m, 0));
 
-        return { outputs: { monthly: { [keyName]: months }, totals: { [keyName]: { E_y: Ey } } } };
+        // per-year arrays
+        const perYear = new Map(); // y -> { energy:[12], temp:[12], wind:[12] }
+        for (const obj of byYM.values()){
+          const y = obj.y, mIdx = obj.m - 1;
+          if (!perYear.has(y)) perYear.set(y, { energy: Array(12).fill(0), temp: Array(12).fill(null), wind: Array(12).fill(null) });
+          perYear.get(y).energy[mIdx] = obj.eKWh;
+          const tAvg = obj.n ? (obj.tSum / obj.n) : null;
+          const wAvg = obj.n ? (obj.wSum / obj.n) : null;
+          perYear.get(y).temp[mIdx] = tAvg;
+          perYear.get(y).wind[mIdx] = wAvg;
+        }
+
+        const years = Array.from(perYear.keys()).sort();
+        const nYears = years.length || 1;
+
+        // average across years (skip nulls for temp/wind)
+        const monthsEnergy = Array.from({length:12}, (_,i)=>{
+          let s = 0; for (const y of years) s += perYear.get(y).energy[i] || 0;
+          return Math.round(s / nYears);
+        });
+        const monthsTemp = Array.from({length:12}, (_,i)=>{
+          let s = 0, c = 0; for (const y of years){ const v = perYear.get(y).temp[i]; if (Number.isFinite(v)) { s+=v; c++; } }
+          return c ? Number((s/c).toFixed(1)) : null;
+        });
+        const monthsWind = Array.from({length:12}, (_,i)=>{
+          let s = 0, c = 0; for (const y of years){ const v = perYear.get(y).wind[i]; if (Number.isFinite(v)) { s+=v; c++; } }
+          return c ? Number((s/c).toFixed(2)) : null;
+        });
+
+        const Ey = Math.round(monthsEnergy.reduce((a,b)=>a+b, 0));
+        const months = monthsEnergy.map((E_m, idx) => ({ month: idx+1, E_m }));
+
+        return {
+          outputs: {
+            monthly: { [keyName]: months },
+            monthly_avg: { T2m: monthsTemp, WS10m: monthsWind },
+            totals: { [keyName]: { E_y: Ey } }
+          }
+        };
       }
+
 
       function trackingKeyFromValue(v){
         const map = { '0':'fixed','1':'singleaxis','2':'twoaxis','3':'verticalaxis','4':'horizontalaxis','5':'inclinedaxis' };
@@ -900,7 +959,7 @@
 
         let userDataMonthly = null;
         if (seriesResp?.outputs?.hourly?.length) {
-          userDataMonthly = makeMonthlyFromSeriescalc(seriesResp.outputs.hourly, activeKey, timeZone);
+          userDataMonthly = makeMonthlyFromSeriescalcAvg(seriesResp.outputs.hourly, activeKey, timeZone);
         }
 
         // ----- OPTIMAL (fixed): get angles from PVcalc; keep monthly from PVcalc for comparison -----
@@ -974,6 +1033,9 @@
 
             const monthlyAltDeg = computeMonthlyMaxSunAltitudes(lat, lon, endYear, timeZone);
 
+            const monthlyTempC = (userDataMonthly.outputs.monthly_avg && userDataMonthly.outputs.monthly_avg.T2m) ? userDataMonthly.outputs.monthly_avg.T2m : null;
+            const monthlyWind = (userDataMonthly.outputs.monthly_avg && userDataMonthly.outputs.monthly_avg.WS10m) ? userDataMonthly.outputs.monthly_avg.WS10m : null;
+
             const userAnnualFromTotals  = getAnnualEnergy(userDataMonthly.outputs, activeKey);
             const userAnnualFromMonthly = sumMonthlyKWh(series);
             const userAnnual            = Math.round((userAnnualFromTotals ?? userAnnualFromMonthly ?? 0));
@@ -1002,6 +1064,31 @@
                 borderDash:[6,4]
               });
             }
+            if (monthlyTempC) {
+              monthlyDatasets.push({
+                label:'Avg Air Temp (°C)',
+                data: monthlyTempC,
+                yAxisID: 'temp',
+                borderColor:'rgb(239,68,68)',
+                backgroundColor:'rgb(239,68,68)',
+                tension:0.3,
+                pointRadius:3,
+                pointHoverRadius:5
+              });
+            }
+            if (monthlyWind) {
+              monthlyDatasets.push({
+                label:'Avg Wind (m/s)',
+                data: monthlyWind,
+                yAxisID: 'wind',
+                borderColor:'rgb(99,102,241)',
+                backgroundColor:'rgb(99,102,241)',
+                borderDash:[6,3],
+                tension:0.3,
+                pointRadius:3,
+                pointHoverRadius:5
+              });
+            }
             monthlyDatasets.push({
               label:'Max Sun Altitude (°)',
               data: monthlyAltDeg,
@@ -1011,7 +1098,7 @@
               borderDash:[4,3]
             });
 
-            let monthlyTitle = 'Monthly Energy Production';
+            let monthlyTitle = 'Monthly Energy Production (avg across years)';
             if (Number.isFinite(userAnnual) && userAnnual > 0) monthlyTitle += ` — Your annual: ${userAnnual} kWh`;
             if (Number.isFinite(optAnnual) && optAnnual > 0)   monthlyTitle += ` | Optimal: ${optAnnual} kWh`;
 
@@ -1029,7 +1116,13 @@
                 scales: {
                   x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
                   y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true },
-                  alt:{ type:'linear', position:'right', min:0, max:90,
+                  temp:{ type:'linear', position:'right', min:-30, max:45, offset:true,
+                        title:{ display:true, text:'Air Temp (°C)' },
+                        grid:{ drawOnChartArea:false } },
+                  wind:{ type:'linear', position:'right', min:0, max:15, offset:true,
+                        title:{ display:true, text:'Wind (m/s)' },
+                        grid:{ drawOnChartArea:false } },
+                  alt:{ type:'linear', position:'right', min:0, max:90, offset:true,
                         title:{ display:true, text:'Max Sun Altitude (°)' },
                         grid:{ drawOnChartArea:false } }
                 }
@@ -1068,7 +1161,6 @@
       }
 
       // UI wires
-      function handleShowSunPath(){ createOrUpdateCombinedSunChart(getSelectedDateISO()); }
       function handlePlotDate(){ fetchPowerForSelectedDateAndPlot(); }
 
       horizonShadeToggle.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
@@ -1076,7 +1168,6 @@
       horizonJsonEl.addEventListener('input', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
 
       calculateBtn.addEventListener('click', updateGraph);
-      showSunPathBtn.addEventListener('click', handleShowSunPath);
       plotDateBtn.addEventListener('click', handlePlotDate);
 
       // Initial render
