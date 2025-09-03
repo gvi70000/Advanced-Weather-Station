@@ -24,8 +24,8 @@
     .toggle-button.expanded{transform:rotate(180deg)}
     .container-content{padding:16px 18px 20px;display:none}
     .container-content.open{display:block}
-    .grid{display:flex;flex-wrap:wrap;gap:14px}
-    .input-group{flex:1 1 220px;min-width:190px}
+    .grid{display:flex;flex-wrap:wrap;gap:10px}
+    .input-group { position: relative; }
     label{display:block;font-size:.9rem;margin-bottom:6px;color:#374151}
     .input,textarea,select{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;outline:none;transition:box-shadow .15s,border-color .15s;background:#fff}
     .input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--ring)}
@@ -54,6 +54,11 @@
     .banner.blue{background:#eff6ff;color:#1e3a8a}
     .banner.green{background:#ecfdf5;color:#065f46}
     canvas{width:100%;max-width:100%;display:block;margin-top:10px}
+	.check-inline{display:inline-flex;align-items:center;gap:.5rem;margin-left:.5rem;cursor:pointer}
+	.check-inline input{margin:0}
+	.grid-6{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:14px;align-items:end}
+	@media (max-width:1200px){.grid-6{grid-template-columns:repeat(3,minmax(180px,1fr))}}
+	@media (max-width:720px){.grid-6{grid-template-columns:repeat(2,minmax(180px,1fr))}}
   </style>
 </head>
 
@@ -67,7 +72,7 @@
       <button class="toggle-button" aria-label="toggle">▼</button>
     </div>
     <div class="container-content open">
-      <div class="grid">
+      <div class="grid grid-6">
         <div class="input-group">
           <label for="latitude">Latitude (°)</label>
           <input class="input" type="number" id="latitude" value="45.169079">
@@ -80,7 +85,6 @@
           <label for="altitude">Altitude (m)</label>
           <input class="input" type="number" id="altitude" value="500">
         </div>
-
         <div class="input-group">
           <label for="panelPower">Panel (Wp)</label>
           <input class="input" type="number" id="panelPower" value="300">
@@ -93,28 +97,22 @@
           <label for="systemLosses">Losses (%)</label>
           <input class="input" type="number" id="systemLosses" value="14">
         </div>
-
-        <div class="input-group">
-          <label for="azimuth">Az(°)</label>
-          <input class="input" type="number" id="azimuth" value="0">
-          <small class="muted">(0 S, -90 E, +90 W)</small>
-        </div>
+		<div class="input-group">
+		  <label for="azimuth">Az(°)-90E +90W</label>
+		  <input class="input" type="number" id="azimuth" value="0">
+		</div>
         <div class="input-group">
           <label for="tilt">Tilt(°)</label>
           <input class="input" type="number" id="tilt" value="35">
         </div>
         <div class="input-group">
           <label for="startYear">Start Year</label>
-          <input class="input" type="number" id="startYear" value="2023" min="2005" max="2023" step="1">
+          <input class="input" type="number" id="startYear" value="2013" min="2005" max="2023" step="1">
         </div>
         <div class="input-group">
           <label for="endYear">End Year</label>
-          <input class="input" type="number" id="endYear" value="2023" min="2005" max="2023" step="1">
+          <input class="input" type="number" id="endYear" value="2013" min="2005" max="2023" step="1">
         </div>
-        <div class="input-group">
-          <label for="offUTC">UTC Offset</label>
-          <input class="input" type="number" id="offUTC" value="2" min="-12" max="12" step="1">
-        </div>		
       </div>
 
       <!-- Horizon JSON -->
@@ -146,10 +144,10 @@
           <label class="radio-pill"><input type="radio" name="trackingType" value="3"><span>V Axis E-W</span></label>
           <label class="radio-pill"><input type="radio" name="trackingType" value="4"><span>H Axis E-W</span></label>
           <label class="radio-pill"><input type="radio" name="trackingType" value="5"><span>I Axis N-S</span></label>
-          <input type="checkbox" id="optimTilt" name="optimTilt" value="Bike">
-          <label for="optimTilt">Optimize Tilt</label>
-          <input type="checkbox" id="optimTiltAz" name="optimTiltAz" value="Car">
-          <label for="optimTiltAz">Optimize Tilt Az</label>
+		  <label class="radio-pill">
+			<input type="checkbox" id="optimTilt" name="optimTilt"><span>Optimize Tilt</span>
+			<input type="checkbox" id="optimTiltAz" name="optimTiltAz"><span>Optimize Tilt Az</span>
+		  </label>
         </div>
       </div>
 
@@ -203,7 +201,7 @@
           <input id="horizonLineToggle" type="checkbox" checked>
           <span>Show horizon line</span>
         </label>
-        <button id="plotDateBtn" class="btn btn-primary">Plot Selected Date</button>
+        <button id="plotDateBtn" class="btn btn-primary">Plot Date</button>
       </div>
       <canvas id="sunPathChart" style="margin-top:10px;"></canvas>
     </div>
@@ -224,11 +222,11 @@
     });
 
     const API_BASE_URL = 'https://re.jrc.ec.europa.eu/api/v5_3';
-    const CORS_PROXY   = 'https://corsproxy.io/?';
+    const RAD_DB = 'PVGIS-SARAH3';
 
     document.addEventListener('DOMContentLoaded', () => {
       const { DateTime } = luxon;
-      const offUTCEl = document.getElementById('offUTC'); // number input (-12..+12)
+
       const calculateBtn = document.getElementById('calculateBtn');
       const showSunPathBtn = document.getElementById('showSunPathBtn');
       const plotDateBtn = document.getElementById('plotDateBtn');
@@ -269,33 +267,32 @@
         if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
         return DateTime.local().toISODate();
       }
-		function parseSeriesUTC(timeStr){
-		  const m = String(timeStr).trim().match(/^(\d{4})(\d{2})(\d{2}):(\d{2})(\d{2})$/);
-		  if (m) return luxon.DateTime.fromObject(
-			{ year:+m[1], month:+m[2], day:+m[3], hour:+m[4], minute:+m[5] },
-			{ zone:'UTC' }
-		  );
-		  const dt = luxon.DateTime.fromISO(String(timeStr), { zone:'UTC' });
-		  return dt.isValid ? dt : null;
-		}
 
-		function makeMonthlyFromSeriescalc(hourlyRows, keyName){
-		  const months = Array.from({length:12}, (_,i)=>({ month: i+1, E_m: 0 }));
-		  const rows = hourlyRows
-			.map(r => ({ t: parseSeriesUTC(r.time), P: Number(r.P) || 0 }))
-			.filter(x => x.t);
+      // Parse PVGIS series time string (now local time, thanks to localtime=1)
+      function parseSeriesLocal(timeStr, timeZone){
+        const m = String(timeStr).trim().match(/^(\d{4})(\d{2})(\d{2}):(\d{2})(\d{2})$/);
+        if (m) return DateTime.fromObject({ year:+m[1], month:+m[2], day:+m[3], hour:+m[4], minute:+m[5] }, { zone: timeZone });
+        const dt = DateTime.fromISO(String(timeStr), { zone: timeZone });
+        return dt.isValid ? dt : null;
+      }
 
-		  for (let i=0; i<rows.length-1; i++){
-			const dtH = (rows[i+1].t.toMillis() - rows[i].t.toMillis()) / 3600000;
-			if (dtH <= 0 || dtH > 3) continue; // sanity
-			months[rows[i].t.month - 1].E_m += rows[i].P * dtH / 1000; // kWh
-		  }
-		  months.forEach(m => m.E_m = Math.round(m.E_m));
-		  const Ey = Math.round(months.reduce((s,m)=>s+m.E_m, 0));
+      // Integrate hourly power (W) into monthly kWh using local timestamps
+      function makeMonthlyFromSeriescalc(hourly, keyName, timeZone){
+        const months = Array.from({length:12}, (_,i)=>({ month: i+1, E_m: 0 }));
+        const rows = hourly.map(r => ({ t: parseSeriesLocal(r.time, timeZone), P: Number(r.P) || 0 }))
+                           .filter(x => x.t);
 
-		  return { outputs: { monthly: { [keyName]: months }, totals: { [keyName]: { E_y: Ey } } } };
-		}
-      // radio "0..5" → JSON key in outputs.{monthly|totals}
+        for (let i=0; i<rows.length-1; i++){
+          const dtH = (rows[i+1].t.toMillis() - rows[i].t.toMillis()) / 3600000;
+          if (dtH <= 0 || dtH > 3) continue; // guard: PVGIS is 1h or 2h
+          months[rows[i].t.month - 1].E_m += rows[i].P * dtH / 1000; // kWh
+        }
+        months.forEach(m => m.E_m = Math.round(m.E_m));
+        const Ey = Math.round(months.reduce((s,m)=>s+m.E_m, 0));
+
+        return { outputs: { monthly: { [keyName]: months }, totals: { [keyName]: { E_y: Ey } } } };
+      }
+
       function trackingKeyFromValue(v){
         const map = { '0':'fixed','1':'singleaxis','2':'twoaxis','3':'verticalaxis','4':'horizontalaxis','5':'inclinedaxis' };
         return map[String(v)] ?? 'fixed';
@@ -319,10 +316,39 @@
         return any ? any.E_y : null;
       }
 
-      async function fetchJsonWithProxy(url){
-        const tryUrls = [`${CORS_PROXY}${encodeURIComponent(url)}`, url];
-        for (const u of tryUrls) { try { const r = await fetch(u); if (r.ok) return await r.json(); } catch (_) {} }
-        throw new Error("All fetch attempts failed.");
+      // Robust CORS helper
+      async function fetchJsonWithProxy(url) {
+        const chain = [
+          (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+          (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+          (u) => `https://r.jina.ai/http://${u.replace(/^https?:\/\//,'')}`,
+          (u) => `https://thingproxy.freeboard.io/fetch/${u}`,
+          (u) => `https://cors.isomorphic-git.org/${u}`,
+          (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        ];
+        let lastErr;
+        for (const make of chain) {
+          const target = make(url);
+          try {
+            const resp = await fetch(target, { method:'GET', mode:'cors', cache:'no-store' });
+            if (!resp.ok) { lastErr = new Error(`HTTP ${resp.status}`); continue; }
+
+            const isAllOriginsGet = target.includes('/get?url=');
+            if (isAllOriginsGet) {
+              const wrapper = await resp.json();
+              try { return JSON.parse(wrapper.contents); } catch (e) { lastErr = e; continue; }
+            }
+
+            const ct = (resp.headers.get('content-type') || '').toLowerCase();
+            if (ct.includes('application/json')) return await resp.json();
+
+            const text = await resp.text();
+            try { return JSON.parse(text); } catch (e) { lastErr = e; continue; }
+          } catch (e) {
+            lastErr = e; continue;
+          }
+        }
+        throw new Error(`All fetch attempts failed. Last error: ${lastErr?.message || 'unknown'}`);
       }
 
       async function fetchData(params) {
@@ -330,55 +356,62 @@
         try { return await fetchJsonWithProxy(url); }
         catch (error) { console.error(error); alert("Failed to fetch data from PVGIS."); return null; }
       }
-
       async function fetchHourly(params) {
         const url = `${API_BASE_URL}/seriescalc?${new URLSearchParams(params).toString()}`;
         try { return await fetchJsonWithProxy(url); }
         catch (error) { console.error(error); alert("Failed to fetch hourly data from PVGIS."); return null; }
       }
 
-      // Build a 360-point CSV (deg 0..359) from the JSON horizon
+      // Compact userhorizon CSV
       function buildUserHorizonCSVFromTextarea(textarea){
         const interp = getHorizonInterpolatorFromTextarea(textarea);
         if (!interp) return null;
-        const vals = [];
-        for (let az=0; az<360; az++) vals.push(Math.max(0, Math.min(90, interp(az))).toFixed(3));
-        return vals.join(',');
+        function gen(step){
+          const vals = [];
+          for (let az=0; az<360; az+=step){
+            const el = Math.max(0, Math.min(90, interp(az)));
+            vals.push(el.toFixed(1));
+          }
+          return vals.join(',');
+        }
+        let csv = gen(10);
+        if (csv.length > 1200) csv = gen(20);
+        return csv;
       }
 
-      // Get optimal fixed angles + annual fixed yield
+      // Extract optimal angles from PVcalc result
       function extractOptimalAngles(data){
         let az = null, tilt = null;
         if (data?.outputs) {
-          if (data.outputs.optimal_azimuth != null)        az   = data.outputs.optimal_azimuth;
-          if (data.outputs.optimal_inclination != null)     tilt = data.outputs.optimal_inclination;
+          if (data.outputs.optimal_azimuth != null) az = data.outputs.optimal_azimuth;
+          if (data.outputs.optimal_inclination != null) tilt = data.outputs.optimal_inclination;
           if (tilt == null && data.outputs.optimal_angle != null) tilt = data.outputs.optimal_angle;
         }
         const fx = data?.inputs?.mounting_system?.fixed;
         if (fx) {
-          if (az == null && fx.azimuth?.optimal === true && Number.isFinite(fx.azimuth.value)) az   = fx.azimuth.value;
+          if (az == null && fx.azimuth?.optimal === true && Number.isFinite(fx.azimuth.value)) az = fx.azimuth.value;
           if (tilt == null && fx.slope?.optimal   === true && Number.isFinite(fx.slope.value)) tilt = fx.slope.value;
         }
         return { azimuth: az, tilt };
       }
 
-		async function getOptimumAngles(lat, lon, peakpower, loss, userhorizonCsv) {
-		  const base = {
-			lat, lon, peakpower, loss,
-			raddatabase: 'PVGIS-SARAH3',          // << add
-			optimalinclination: optimTiltEl.checked ? 1 : 0,
-			optimalangles:      optimTiltAzEl.checked ? 1 : 0,
-			outputformat: 'json', browser: 0
-		  };
-		  if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
-		  const url  = `${API_BASE_URL}/PVcalc?${new URLSearchParams(base).toString()}`;
-		  const data = await fetchJsonWithProxy(url);
-		  const { azimuth, tilt } = extractOptimalAngles(data);
-		  const Ey = data?.outputs?.totals?.fixed?.E_y ?? null;
-		  return (azimuth != null || tilt != null || Ey != null) ? { azimuth, tilt, yield: Ey } : null;
-		}
+      async function getOptimumAngles(lat, lon, peakpower, loss, userhorizonCsv) {
+        const base = {
+          lat, lon, peakpower, loss,
+          raddatabase: RAD_DB,
+          optimalinclination: optimTiltEl.checked ? 1 : 0,
+          optimalangles:      optimTiltAzEl.checked ? 1 : 0,
+          outputformat: 'json', browser: 0
+        };
+        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+        const url  = `${API_BASE_URL}/PVcalc?${new URLSearchParams(base).toString()}`;
+        const data = await fetchJsonWithProxy(url);
+        const { azimuth, tilt } = extractOptimalAngles(data);
+        const Ey = data?.outputs?.totals?.fixed?.E_y ?? null;
+        return (azimuth != null || tilt != null || Ey != null) ? { azimuth, tilt, yield: Ey } : null;
+      }
 
-      // Stellarium horizon parsing (to JSON used by our interpolator)
+      // Stellarium horizon parsing
       function parseStellariumHorizon(text) {
         const map = new Map();
         const lines = text.split(/\r?\n/);
@@ -467,7 +500,7 @@
       loadState();
       document.querySelectorAll("input,textarea").forEach(el => el.addEventListener("change", saveState));
 
-      // Enable/disable azimuth/tilt
+      // Enable/disable azimuth/tilt depending on mode
       function applytrackingTypeUI(val) {
         const isFixed = (val === '0');
         azimuthInput.disabled = !isFixed;
@@ -478,24 +511,24 @@
       });
       applytrackingTypeUI(document.querySelector('input[name="trackingType"]:checked').value);
 
-      // Time zone
+      // Time zone for the site
       function getTimeZoneFor(lat, lon) {
         try { if (typeof tzlookup === 'function') return tzlookup(lat, lon); } catch (_) {}
         return Intl.DateTimeFormat().resolvedOptions().timeZone;
       }
-	  
-		// Monthly solar-noon-ish max altitude (°) for each month of 'year'
-		function computeMonthlyMaxSunAltitudes(lat, lon, year, timeZone) {
-		  const res = [];
-		  const stepMin = 5; // 5-min resolution is fine
-		  for (let m = 1; m <= 12; m++) {
-			const dateStr = `${year}-${String(m).padStart(2,'0')}-15`; // mid-month
-			const pts = computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone);
-			const maxAlt = pts.reduce((mx,p)=> p.y > mx ? p.y : mx, 0);
-			res.push(Number(maxAlt.toFixed(1))); // 1 decimal
-		  }
-		  return res;
-		}
+
+      // Monthly solar-noon-ish max altitude (°) for each month of 'year'
+      function computeMonthlyMaxSunAltitudes(lat, lon, year, timeZone) {
+        const res = [];
+        const stepMin = 5;
+        for (let m = 1; m <= 12; m++) {
+          const dateStr = `${year}-${String(m).padStart(2,'0')}-15`;
+          const pts = computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone);
+          const maxAlt = pts.reduce((mx,p)=> p.y > mx ? p.y : mx, 0);
+          res.push(Number(maxAlt.toFixed(1)));
+        }
+        return res;
+      }
 
       // Sun track helpers
       function computeSunTrackForDateZoned(lat, lon, dateStr, stepMin, timeZone) {
@@ -510,6 +543,7 @@
         }
         return pts;
       }
+
       function getHorizonInterpolatorFromTextarea(hzTextarea) {
         if (!hzTextarea.value.trim()) return null;
         let hz;
@@ -557,6 +591,7 @@
         }
         return hits;
       }
+
       const xMarkers = {
         id: 'xMarkers',
         afterDatasetsDraw(chart, args, opts){
@@ -582,6 +617,7 @@
         }
       };
       Chart.register(xMarkers);
+
       function timeAtAz(points, targetDeg){
         for (let i=1;i<points.length;i++){
           const a = points[i-1], b = points[i];
@@ -593,30 +629,15 @@
         return null;
       }
 
-      // Hourly power series (UTC -> shift by offUTC -> filter by selected local date)
-      function getDayHourlyPower(pvgisData, dateStr) {
+      // Hourly power series for a specific local date (no UTC shifting)
+      function getDayHourlyPower(pvgisData, dateStr, timeZone) {
         if (!pvgisData?.outputs?.hourly) return [];
-        const offMin = Math.round((parseFloat(offUTCEl?.value) || 0) * 60);
-        const targetISO = luxon.DateTime.fromISO(dateStr).toISODate();
-
+        const wanted = luxon.DateTime.fromISO(dateStr, { zone: timeZone }).toFormat('yyyyLLdd');
         const out = [];
         for (const row of pvgisData.outputs.hourly) {
-          const m = String(row.time).trim().match(/^(\d{4})(\d{2})(\d{2}):(\d{2})(\d{2})$/);
-          let dtUTC;
-          if (m) {
-            dtUTC = luxon.DateTime.fromObject(
-              { year:+m[1], month:+m[2], day:+m[3], hour:+m[4], minute:+m[5] },
-              { zone:'UTC' }
-            );
-          } else {
-            let dt = luxon.DateTime.fromISO(String(row.time), { zone:'UTC' });
-            if (!dt.isValid) continue;
-            dtUTC = dt;
-          }
-          const dtLocal = dtUTC.plus({ minutes: offMin });
-          if (dtLocal.toISODate() !== targetISO) continue;
-
-          const x = dtLocal.hour * 60 + dtLocal.minute;
+          const dt = parseSeriesLocal(row.time, timeZone);
+          if (!dt || dt.toFormat('yyyyLLdd') !== wanted) continue;
+          const x = dt.hour * 60 + dt.minute;
           const y = (typeof row.P === 'number') ? row.P : 0;
           out.push({ x, y });
         }
@@ -624,81 +645,80 @@
       }
 
       function sumKWh(series) { return series.reduce((s, p) => s + p.y, 0) / 1000; }
-		function sumMonthlyKWh(series) {
-		  if (!Array.isArray(series)) return null;
-		  return series.reduce((s, m) => s + (Number(m.E_m) || 0), 0);
-		}
-      // Build PVGIS params for current system/year
-		function buildPVGISParams(/* startYear, endYear — not used for PVcalc */){
-		  const lat = parseFloat(document.getElementById('latitude').value) || 0;
-		  const lon = parseFloat(document.getElementById('longitude').value) || 0;
-		  const alt = parseFloat(document.getElementById('altitude').value) || 0;
-		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
-		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
-		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
-		  const azimuthValue = parseFloat(document.getElementById('azimuth').value);
-		  const tiltValue    = parseFloat(document.getElementById('tilt').value);
+      function sumMonthlyKWh(series) {
+        if (!Array.isArray(series)) return null;
+        return series.reduce((s, m) => s + (Number(m.E_m) || 0), 0);
+      }
 
-		  const baseParams = {
-			lat, lon,
-			peakpower: (panelPower * numPanels) / 1000,
-			loss: systemLosses,
-			pvcalculation: 1,
-			raddatabase: 'PVGIS-SARAH3',         // text parameter – fixed here
-			outputformat: 'json',
-			browser: 0,
-			elevation: alt
-		  };
+      // PVcalc params (fixed only)
+      function buildPVGISParams(){
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+        const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+        const tiltValue    = parseFloat(document.getElementById('tilt').value);
 
-		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-		  if (userhorizonCsv) { baseParams.usehorizon = 1; baseParams.userhorizon = userhorizonCsv; }
+        const baseParams = {
+          lat, lon,
+          peakpower: (panelPower * numPanels) / 1000,
+          loss: systemLosses,
+          pvcalculation: 1,
+          raddatabase: RAD_DB,
+          outputformat: 'json',
+          browser: 0
+        };
 
-		  return {
-			...baseParams,
-			fixed: 1,
-			angle:  clamp(tiltValue, 0, 90),
-			aspect: clamp(azimuthValue, -180, 180)
-		  };
-		}
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+        if (userhorizonCsv) { baseParams.usehorizon = 1; baseParams.userhorizon = userhorizonCsv; }
 
-		function buildSeriesParams(startYear, endYear) {
-		  const lat = parseFloat(document.getElementById('latitude').value) || 0;
-		  const lon = parseFloat(document.getElementById('longitude').value) || 0;
-		  const alt = parseFloat(document.getElementById('altitude').value) || 0;
-		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
-		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
-		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
-		  const azimuthValue = parseFloat(document.getElementById('azimuth').value);
-		  const tiltValue    = parseFloat(document.getElementById('tilt').value);
-		  const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+        return {
+          ...baseParams,
+          fixed: 1,
+          angle:  clamp(tiltValue, 0, 90),
+          aspect: clamp(azimuthValue, -180, 180)
+        };
+      }
 
-		  const base = {
-			lat, lon,
-			peakpower: (panelPower * numPanels) / 1000,
-			loss: systemLosses,
-			startyear: startYear,
-			endyear: endYear,
-			pvcalculation: 1,
-			raddatabase: 'PVGIS-SARAH3',          // << add
-			outputformat: 'json',
-			browser: 0,
-			elevation: alt
-		  };
+      // seriescalc params (always localtime=1)
+      function buildSeriesParams(startYear, endYear) {
+        const lat = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon = parseFloat(document.getElementById('longitude').value) || 0;
+        const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+        const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+        const tiltValue    = parseFloat(document.getElementById('tilt').value);
+        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
 
-		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-		  if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+        const base = {
+          lat, lon,
+          peakpower: (panelPower * numPanels) / 1000,
+          loss: systemLosses,
+          startyear: startYear,
+          endyear: endYear,
+          pvcalculation: 1,
+          raddatabase: RAD_DB,
+          localtime: 1,
+          outputformat: 'json',
+          browser: 0
+        };
 
-		  // seriescalc supports trackingtype for all modes (including fixed=0)
-		  if (trackingType === '0') {
-			return { ...base, trackingtype: 0, angle: clamp(tiltValue, 0, 90), aspect: clamp(azimuthValue, -180, 180) };
-		  }
-		  if (trackingType === '5') {
-			return { ...base, trackingtype: 5, angle: clamp(tiltValue, 0, 90) };
-		  }
-		  return { ...base, trackingtype: parseInt(trackingType, 10) };
-		}
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
 
-      // Combined chart creation
+        const t = String(trackingType);
+        if (t === '0') return { ...base, trackingtype: 0, angle: clamp(tiltValue,0,90), aspect: clamp(azimuthValue,-180,180) };
+        if (t === '1') return { ...base, trackingtype: 1 };
+        if (t === '2') return { ...base, trackingtype: 2 };
+        if (t === '3') return { ...base, trackingtype: 3, angle: clamp(tiltValue,0,90) };
+        if (t === '4') return { ...base, trackingtype: 4 };
+        if (t === '5') return { ...base, trackingtype: 5, angle: clamp(tiltValue,0,90) };
+        return { ...base, trackingtype: parseInt(trackingType, 10) };
+      }
+
+      // Combined sun path + power chart
       function createOrUpdateCombinedSunChart(dateStr) {
         const lat = parseFloat(document.getElementById('latitude').value) || 0;
         const lon = parseFloat(document.getElementById('longitude').value) || 0;
@@ -772,10 +792,9 @@
           });
         }
 
-        // UTC-shifted hourly power overlays
-        const tz = timeZone; // left for label tooltips
-        const userSeries = getDayHourlyPower(lastUserData,   dateStr);
-        const optSeries  = getDayHourlyPower(lastOptimalData,dateStr);
+        // Local-time hourly power overlays
+        const userSeries = getDayHourlyPower(lastUserData,   dateStr, timeZone);
+        const optSeries  = getDayHourlyPower(lastOptimalData,dateStr, timeZone);
         const hasPower   = (userSeries.length || optSeries.length) > 0;
 
         if (userSeries.length){
@@ -822,7 +841,7 @@
               legend:{ position:'top', labels:{ filter:(item, chart) => {
                 const text = item.text || (chart?.data?.datasets?.[item.datasetIndex]?.label ?? '');
                 return !/∩ Horizon$/.test(String(text));
-              }}},
+              } } },
               title:{ display:true, text:titleText },
               decimation:{ enabled:true, algorithm:'lttb' },
               tooltip:{
@@ -854,207 +873,193 @@
         sunPathChart = new Chart(sunPathChartCanvas, config);
       }
 
-      // =========== PVGIS Calculate (monthly/annual + caches for power) ===========
-		async function updateGraph() {
-		  const startYear = parseInt(document.getElementById('startYear').value, 10);
-		  const endYear   = parseInt(document.getElementById('endYear').value, 10);
-		  if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) { alert('Please enter valid start/end years.'); return; }
-		  if (startYear > endYear) { alert('Start Year must be ≤ End Year.'); return; }
+      // =========== Calculate (ALWAYS via seriescalc for monthly) ===========
+      async function updateGraph() {
+        const startYear = parseInt(document.getElementById('startYear').value, 10);
+        const endYear   = parseInt(document.getElementById('endYear').value, 10);
+        if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) { alert('Please enter valid start/end years.'); return; }
+        if (startYear > endYear) { alert('Start Year must be ≤ End Year.'); return; }
 
-		  // Inputs needed throughout
-		  const lat          = parseFloat(document.getElementById('latitude').value) || 0;
-		  const lon          = parseFloat(document.getElementById('longitude').value) || 0;
-		  const alt          = parseFloat(document.getElementById('altitude').value) || 0;
-		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0; // W per panel
-		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
-		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const lat          = parseFloat(document.getElementById('latitude').value) || 0;
+        const lon          = parseFloat(document.getElementById('longitude').value) || 0;
+        const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+        const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+        const timeZone     = getTimeZoneFor(lat, lon);
 
-		  const trackingVal    = document.querySelector('input[name="trackingType"]:checked').value;
-		  const activeKey      = trackingKeyFromValue(trackingVal);
-		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl); // << declared ONCE
+        const trackingVal    = document.querySelector('input[name="trackingType"]:checked').value;
+        const activeKey      = trackingKeyFromValue(trackingVal);
+        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
 
-		  calculateBtn.textContent = 'Calculating…';
-		  calculateBtn.disabled = true;
+        calculateBtn.textContent = 'Calculating…';
+        calculateBtn.disabled = true;
 
-		  // ----- USER SYSTEM (monthly/annual) -----
-		  let userDataMonthly = null;         // PVcalc result OR aggregated monthly from seriescalc
-		  let seriesRespForOverlay = null;    // raw seriescalc (hourly) only for H-axis radios (1,4)
+        // ----- USER (seriescalc → monthly integration) -----
+        const seriesParams = buildSeriesParams(startYear, endYear);
+        const seriesResp   = await fetchHourly(seriesParams);
 
-			// PVcalc ONLY for Fixed; everything else via seriescalc
-			if (trackingVal === '0') {
-			  const userParams = buildPVGISParams(startYear, endYear);  // PVcalc, fixed only
-			  userDataMonthly  = await fetchData(userParams);           // PVcalc
-			} else {
-			  const seriesParams = buildSeriesParams(startYear, endYear); // seriescalc (with raddatabase)
-			  const seriesResp   = await fetchHourly(seriesParams);
-			  if (seriesResp?.outputs?.hourly?.length) {
-				userDataMonthly      = makeMonthlyFromSeriescalc(seriesResp.outputs.hourly, activeKey);
-				seriesRespForOverlay = seriesResp; // keep hourly for Sun Path overlay
-			  }
-			}
+        let userDataMonthly = null;
+        if (seriesResp?.outputs?.hourly?.length) {
+          userDataMonthly = makeMonthlyFromSeriescalc(seriesResp.outputs.hourly, activeKey, timeZone);
+        }
 
-		  // ----- OPTIMAL (fixed) ANGLES -----
-		  let optimalAngles = null;
-		  let optimalDataMonthly = null;
+        // ----- OPTIMAL (fixed): get angles from PVcalc; keep monthly from PVcalc for comparison -----
+        let optimalAngles = null;
+        let optimalDataMonthly = null;
 
-		  if (optimTiltEl.checked || optimTiltAzEl.checked) {
-			optimalAngles = await getOptimumAngles(
-			  lat, lon,
-			  (panelPower * numPanels) / 1000,  // kW
-			  systemLosses,
-			  userhorizonCsv
-			);
-			if (optimalAngles) {
-			  optimumAzimuthP.textContent = `Azimuth: ${optimalAngles.azimuth ?? '-'}°`;
-			  optimumTiltP.textContent    = `Tilt: ${optimalAngles.tilt ?? '-'}°`;
-			  optimumAnglesDiv.classList.add('show');
+        if (optimTiltEl.checked || optimTiltAzEl.checked) {
+          optimalAngles = await getOptimumAngles(
+            lat, lon,
+            (panelPower * numPanels) / 1000,
+            systemLosses,
+            userhorizonCsv
+          );
+          if (optimalAngles) {
+            optimumAzimuthP.textContent = `Azimuth: ${optimalAngles.azimuth ?? '-'}°`;
+            optimumTiltP.textContent    = `Tilt: ${optimalAngles.tilt ?? '-'}°`;
+            optimumAnglesDiv.classList.add('show');
 
-				const optimalParams = {
-				  lat, lon,
-				  peakpower: (panelPower * numPanels) / 1000,
-				  loss: systemLosses,
-				  pvcalculation: 1,
-				  raddatabase: 'PVGIS-SARAH3',     // << add
-				  outputformat: 'json',
-				  browser: 0,
-				  elevation: alt,
-				  fixed: 1
-				};
-			  if (userhorizonCsv) { optimalParams.usehorizon = 1; optimalParams.userhorizon = userhorizonCsv; }
-			  if (optimalAngles.tilt    != null) optimalParams.angle  = optimalAngles.tilt;
-			  if (optimalAngles.azimuth != null) optimalParams.aspect = optimalAngles.azimuth;
+            const optimalParams = {
+              lat, lon,
+              peakpower: (panelPower * numPanels) / 1000,
+              loss: systemLosses,
+              pvcalculation: 1,
+              raddatabase: RAD_DB,
+              outputformat: 'json',
+              browser: 0,
+              fixed: 1
+            };
+            if (userhorizonCsv) { optimalParams.usehorizon = 1; optimalParams.userhorizon = userhorizonCsv; }
+            if (optimalAngles.tilt    != null) optimalParams.angle  = optimalAngles.tilt;
+            if (optimalAngles.azimuth != null) optimalParams.aspect = optimalAngles.azimuth;
 
-			  optimalDataMonthly = await fetchData(optimalParams);
-			} else {
-			  optimumAnglesDiv.classList.remove('show');
-			}
-		  } else {
-			optimumAnglesDiv.classList.remove('show');
-		  }
+            optimalDataMonthly = await fetchData(optimalParams);
+          } else {
+            optimumAnglesDiv.classList.remove('show');
+          }
+        } else {
+          optimumAnglesDiv.classList.remove('show');
+        }
 
-		  // ----- Annual totals banner -----
-		  totalYieldDisplay.classList.remove('show');
-		  totalYieldP.textContent = '';
-		  if (userDataMonthly?.outputs) {
-			const userAnnual = getAnnualEnergy(userDataMonthly.outputs, activeKey);
-			if (userAnnual != null) {
-			  totalYieldP.textContent = `Your Annual Yield: ${Math.round(userAnnual)} kWh`;
-			  const optAnnual = optimalDataMonthly?.outputs
-				? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed')
-				: (optimalAngles?.yield ?? null);
-			  if (optAnnual != null) totalYieldP.textContent += ` | Optimal Fixed: ${Math.round(optAnnual)} kWh`;
-			  totalYieldDisplay.classList.add('show');
-			}
-		  }
+        // ----- Annual totals banner -----
+        totalYieldDisplay.classList.remove('show');
+        totalYieldP.textContent = '';
+        if (userDataMonthly?.outputs) {
+          const userAnnual = getAnnualEnergy(userDataMonthly.outputs, activeKey);
+          if (userAnnual != null) {
+            totalYieldP.textContent = `Your Annual Yield: ${Math.round(userAnnual)} kWh`;
+            const optAnnual = optimalDataMonthly?.outputs
+              ? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed')
+              : (optimalAngles?.yield ?? null);
+            if (optAnnual != null) totalYieldP.textContent += ` | Optimal Fixed: ${Math.round(optAnnual)} kWh`;
+            totalYieldDisplay.classList.add('show');
+          }
+        }
 
-		  // ----- Cache hourly for Sun Path overlay -----
-		  lastUserData    = seriesRespForOverlay || null; // only non-null for tracking 1 & 4
-		  lastOptimalData = null; // not fetching hourly for optimal fixed
+        // Cache hourly for Sun Path overlay
+        lastUserData    = seriesResp || null;
+        lastOptimalData = null; // not fetching hourly for optimal fixed
 
-		  // ----- Monthly chart (add sun altitude on right axis) -----
-		  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-		  if (userDataMonthly?.outputs?.monthly) {
-			const series    = pickMonthlySeries(userDataMonthly.outputs.monthly, activeKey);
-			const optSeries = optimalDataMonthly?.outputs?.monthly
-			  ? pickMonthlySeries(optimalDataMonthly.outputs.monthly, 'fixed')
-			  : null;
+        // ----- Monthly chart (Energy + Max Sun Altitude) -----
+        const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        if (userDataMonthly?.outputs?.monthly) {
+          const series    = pickMonthlySeries(userDataMonthly.outputs.monthly, activeKey);
+          const optSeries = optimalDataMonthly?.outputs?.monthly
+            ? pickMonthlySeries(optimalDataMonthly.outputs.monthly, 'fixed')
+            : null;
 
-			if (series) {
-			  const monthlyLabels = series.map(m => MONTH_NAMES[m.month - 1]);
-			  const monthlyYields = series.map(item => item.E_m);
+          if (series) {
+            const monthlyLabels = series.map(m => MONTH_NAMES[m.month - 1]);
+            const monthlyYields = series.map(item => item.E_m);
 
-			  // Monthly max sun altitude for endYear (right axis)
-			  const timeZone      = getTimeZoneFor(lat, lon);
-			  const monthlyAltDeg = computeMonthlyMaxSunAltitudes(lat, lon, endYear, timeZone);
+            const monthlyAltDeg = computeMonthlyMaxSunAltitudes(lat, lon, endYear, timeZone);
 
-			  // Annuals for chart title
-			  const userAnnualFromTotals  = getAnnualEnergy(userDataMonthly.outputs, activeKey);
-			  const userAnnualFromMonthly = sumMonthlyKWh(series);
-			  const userAnnual            = Math.round((userAnnualFromTotals ?? userAnnualFromMonthly ?? 0));
+            const userAnnualFromTotals  = getAnnualEnergy(userDataMonthly.outputs, activeKey);
+            const userAnnualFromMonthly = sumMonthlyKWh(series);
+            const userAnnual            = Math.round((userAnnualFromTotals ?? userAnnualFromMonthly ?? 0));
 
-			  let optAnnual = null;
-			  const optAnnualFromTotals  = optimalDataMonthly?.outputs ? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed') : null;
-			  const optAnnualFromMonthly = sumMonthlyKWh(optSeries);
-			  if (optAnnualFromTotals != null)       optAnnual = Math.round(optAnnualFromTotals);
-			  else if (optAnnualFromMonthly != null) optAnnual = Math.round(optAnnualFromMonthly);
-			  else if (optimalAngles?.yield != null) optAnnual = Math.round(optimalAngles.yield);
+            let optAnnual = null;
+            const optAnnualFromTotals  = optimalDataMonthly?.outputs ? getAnnualEnergy(optimalDataMonthly.outputs, 'fixed') : null;
+            const optAnnualFromMonthly = sumMonthlyKWh(optSeries);
+            if (optAnnualFromTotals != null)       optAnnual = Math.round(optAnnualFromTotals);
+            else if (optAnnualFromMonthly != null) optAnnual = Math.round(optAnnualFromMonthly);
+            else if (optimalAngles?.yield != null) optAnnual = Math.round(optimalAngles.yield);
 
-			  const monthlyDatasets = [
-				{
-				  label:'Your System Monthly Yield (kWh)',
-				  data: monthlyYields,
-				  borderColor:'rgb(59,130,246)',
-				  backgroundColor:'rgb(59,130,246)'
-				}
-			  ];
-			  if (optSeries) {
-				monthlyDatasets.push({
-				  label:'Optimal Fixed Monthly Yield (kWh)',
-				  data: optSeries.map(i => i.E_m),
-				  borderColor:'rgb(16,185,129)',
-				  backgroundColor:'rgb(16,185,129)',
-				  borderDash:[6,4]
-				});
-			  }
-			  // Sun altitude series (right axis)
-			  monthlyDatasets.push({
-				label:'Max Sun Altitude (°)',
-				data: monthlyAltDeg,
-				yAxisID: 'alt',
-				borderColor:'rgb(234,179,8)',
-				backgroundColor:'rgb(234,179,8)',
-				borderDash:[4,3]
-			  });
+            const monthlyDatasets = [
+              {
+                label:'Your System Monthly Yield (kWh)',
+                data: monthlyYields,
+                borderColor:'rgb(59,130,246)',
+                backgroundColor:'rgb(59,130,246)'
+              }
+            ];
+            if (optSeries) {
+              monthlyDatasets.push({
+                label:'Optimal Fixed Monthly Yield (kWh)',
+                data: optSeries.map(i => i.E_m),
+                borderColor:'rgb(16,185,129)',
+                backgroundColor:'rgb(16,185,129)',
+                borderDash:[6,4]
+              });
+            }
+            monthlyDatasets.push({
+              label:'Max Sun Altitude (°)',
+              data: monthlyAltDeg,
+              yAxisID: 'alt',
+              borderColor:'rgb(234,179,8)',
+              backgroundColor:'rgb(234,179,8)',
+              borderDash:[4,3]
+            });
 
-			  let monthlyTitle = 'Monthly Energy Production';
-			  if (Number.isFinite(userAnnual) && userAnnual > 0) monthlyTitle += ` — Your annual: ${userAnnual} kWh`;
-			  if (Number.isFinite(optAnnual) && optAnnual > 0)   monthlyTitle += ` | Optimal: ${optAnnual} kWh`;
+            let monthlyTitle = 'Monthly Energy Production';
+            if (Number.isFinite(userAnnual) && userAnnual > 0) monthlyTitle += ` — Your annual: ${userAnnual} kWh`;
+            if (Number.isFinite(optAnnual) && optAnnual > 0)   monthlyTitle += ` | Optimal: ${optAnnual} kWh`;
 
-			  const monthlyConfig = {
-				type: 'line',
-				data: {
-				  labels: monthlyLabels,
-				  datasets: monthlyDatasets.map(ds => ({
-					...ds, fill:false, tension:0.15, pointRadius:3, pointHoverRadius:5, borderWidth:2
-				  }))
-				},
-				options: {
-				  responsive:true,
-				  plugins: { legend:{ position:'top' }, title:{ display:true, text: monthlyTitle } },
-				  scales: {
-					x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
-					y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true },
-					alt:{ type:'linear', position:'right', min:0, max:90,
-						  title:{ display:true, text:'Max Sun Altitude (°)' },
-						  grid:{ drawOnChartArea:false } }
-				  }
-				}
-			  };
+            const monthlyConfig = {
+              type: 'line',
+              data: {
+                labels: monthlyLabels,
+                datasets: monthlyDatasets.map(ds => ({
+                  ...ds, fill:false, tension:0.15, pointRadius:3, pointHoverRadius:5, borderWidth:2
+                }))
+              },
+              options: {
+                responsive:true,
+                plugins: { legend:{ position:'top' }, title:{ display:true, text: monthlyTitle } },
+                scales: {
+                  x:{ title:{ display:true, text:'Month' }, grid:{ display:false } },
+                  y:{ title:{ display:true, text:'Energy Output (kWh)' }, beginAtZero:true },
+                  alt:{ type:'linear', position:'right', min:0, max:90,
+                        title:{ display:true, text:'Max Sun Altitude (°)' },
+                        grid:{ drawOnChartArea:false } }
+                }
+              }
+            };
 
-			  if (monthlyEnergyChart) monthlyEnergyChart.destroy();
-			  monthlyEnergyChart = new Chart(monthlyEnergyChartCanvas, monthlyConfig);
-			}
-		  }
+            if (monthlyEnergyChart) monthlyEnergyChart.destroy();
+            monthlyEnergyChart = new Chart(monthlyEnergyChartCanvas, monthlyConfig);
+          }
+        }
 
-		  // Sun Path (and hourly power if cached)
-		  createOrUpdateCombinedSunChart(getSelectedDateISO());
+        // Sun Path (and hourly power if cached)
+        createOrUpdateCombinedSunChart(getSelectedDateISO());
 
-		  calculateBtn.textContent = 'Calculate';
-		  calculateBtn.disabled = false;
-		}
+        calculateBtn.textContent = 'Calculate';
+        calculateBtn.disabled = false;
+      }
 
-      // ======== When pressing "Plot Selected Date" ========
+      // ===== Plot Selected Date (fetch hourly & overlay) =====
       async function fetchPowerForSelectedDateAndPlot() {
         const dateStr = getSelectedDateISO();
         const y = luxon.DateTime.fromISO(dateStr).year;
-        const params = buildSeriesParams(y, y);
+        const params = buildSeriesParams(y, y); // includes localtime=1
 
         const old = plotDateBtn.textContent;
         plotDateBtn.textContent = 'Loading…';
         plotDateBtn.disabled = true;
 
-        const data = await fetchHourly(params);   // <-- seriescalc (hourly)
-        lastUserData = data;                      // cached for overlay
+        const data = await fetchHourly(params);
+        lastUserData = data;
 
         createOrUpdateCombinedSunChart(dateStr);
 
@@ -1069,7 +1074,6 @@
       horizonShadeToggle.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
       horizonLineToggle.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
       horizonJsonEl.addEventListener('input', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
-      offUTCEl.addEventListener('change', () => createOrUpdateCombinedSunChart(getSelectedDateISO()));
 
       calculateBtn.addEventListener('click', updateGraph);
       showSunPathBtn.addEventListener('click', handleShowSunPath);
