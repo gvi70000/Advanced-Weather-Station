@@ -741,41 +741,50 @@
       }
 
       // seriescalc params (always localtime=1)
-      function buildSeriesParams(startYear, endYear) {
-        const lat = parseFloat(document.getElementById('latitude').value) || 0;
-        const lon = parseFloat(document.getElementById('longitude').value) || 0;
-        const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
-        const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
-        const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
-        const azimuthValue = parseFloat(document.getElementById('azimuth').value);
-        const tiltValue    = parseFloat(document.getElementById('tilt').value);
-        const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
+		function buildSeriesParams(startYear, endYear) {
+		  const lat = parseFloat(document.getElementById('latitude').value) || 0;
+		  const lon = parseFloat(document.getElementById('longitude').value) || 0;
+		  const panelPower   = parseFloat(document.getElementById('panelPower').value) || 0;
+		  const numPanels    = parseFloat(document.getElementById('numPanels').value) || 0;
+		  const systemLosses = parseFloat(document.getElementById('systemLosses').value) || 0;
+		  const azimuthValue = parseFloat(document.getElementById('azimuth').value);
+		  const tiltValue    = parseFloat(document.getElementById('tilt').value);
+		  const trackingType = document.querySelector('input[name="trackingType"]:checked').value;
 
-        const base = {
-          lat, lon,
-          peakpower: (panelPower * numPanels) / 1000,
-          loss: systemLosses,
-          startyear: startYear,
-          endyear: endYear,
-          pvcalculation: 1,
-          raddatabase: RAD_DB,
-          localtime: 1,
-          outputformat: 'json',
-          browser: 0
-        };
+		  // Build base object first
+		  const base = {
+			lat, lon,
+			peakpower: (panelPower * numPanels) / 1000,
+			loss: systemLosses,
+			startyear: startYear,
+			endyear: endYear,
+			pvcalculation: 1,
+			raddatabase: RAD_DB,
+			localtime: 1,
+			// flags requested
+			optimalinclination: document.getElementById('optimTilt').checked ? 1 : 0,
+			optimalangles:      document.getElementById('optimTiltAz').checked ? 1 : 0,
+			outputformat: 'json',
+			browser: 0
+		  };
 
-        const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
-        if (userhorizonCsv) { base.usehorizon = 1; base.userhorizon = userhorizonCsv; }
+		  // Add horizon only if we have valid JSON -> CSV
+		  const userhorizonCsv = buildUserHorizonCSVFromTextarea(horizonJsonEl);
+		  if (userhorizonCsv) {
+			base.usehorizon  = 1;
+			base.userhorizon = userhorizonCsv;
+		  }
 
-        const t = String(trackingType);
-        if (t === '0') return { ...base, trackingtype: 0, angle: clamp(tiltValue,0,90), aspect: clamp(azimuthValue,-180,180) };
-        if (t === '1') return { ...base, trackingtype: 1 };
-        if (t === '2') return { ...base, trackingtype: 2 };
-        if (t === '3') return { ...base, trackingtype: 3, angle: clamp(tiltValue,0,90) };
-        if (t === '4') return { ...base, trackingtype: 4 };
-        if (t === '5') return { ...base, trackingtype: 5, angle: clamp(tiltValue,0,90) };
-        return { ...base, trackingtype: parseInt(trackingType, 10) };
-      }
+		  // Return with tracking-specific extras
+		  const t = String(trackingType);
+		  if (t === '0') return { ...base, trackingtype: 0, angle: clamp(tiltValue,0,90), aspect: clamp(azimuthValue,-180,180) };
+		  if (t === '1') return { ...base, trackingtype: 1 };
+		  if (t === '2') return { ...base, trackingtype: 2 };
+		  if (t === '3') return { ...base, trackingtype: 3, angle: clamp(tiltValue,0,90) };
+		  if (t === '4') return { ...base, trackingtype: 4 };
+		  if (t === '5') return { ...base, trackingtype: 5, angle: clamp(tiltValue,0,90) };
+		  return { ...base, trackingtype: parseInt(trackingType, 10) };
+		}
 
       // Combined sun path + power chart
       function createOrUpdateCombinedSunChart(dateStr) {
