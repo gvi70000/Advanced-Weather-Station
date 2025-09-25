@@ -4,6 +4,18 @@
 
 #include "stm32f3xx_hal.h"
 
+	// --- Geometry (your setup) ---------------------------------------------------
+	// 3 transducers on a circle: base Ø = 98.314 mm; spacing is an equilateral triangle.
+	// Baseline between any pair (center-to-center) = D * v3 / 2.
+	#define PGA460_BASE_DIAMETER_MM  (98.314f)
+	// default baseline in meters; you can override at runtime with PGA460_SetBaseline()
+	// base diameter ? edge length L = D * sqrt(3)/2; we store (0.5 * L)
+	#define S_BASELINE_HALF_M  ( (0.5f * (PGA460_BASE_DIAMETER_MM * 0.86602540378f)) / 1000.0f )
+	// Conversion factor: half round-trip, microseconds ? seconds
+	#define TOF_US_TO_S   (0.5e-6f)   // = 0.5f * 1e-6f
+	#define PGA460_CAPTURE_DELAY_MS				70        // Delay for sensor measurement to complete
+	#define PGA460_EEPROM_WRITE_DELAY_MS	100       // Delay required after writing to EEPROM
+
 	#define PGA_CMD_SIZE			3
 	#define PGA_READ_SIZE			4
 	#define PGA_WRITE_SIZE			5
@@ -332,9 +344,10 @@ typedef struct __attribute__((packed)) {
 } Thresholds_t;
 
 typedef struct __attribute__((packed)) {
-    uint16_t tof_us;   // Time-of-flight in microseconds (2 bytes)
-    uint8_t width;		// Echo width (1 byte)
+    uint16_t tof_us;		// Time-of-flight in microseconds (2 bytes)
+    uint8_t width;			// Echo width (1 byte)
     uint8_t amplitude;	// Echo amplitude (1 byte)
+		float distance;
 } PGA460_Measure_t;
 
 // View of EEPROM bulk image [0x00..0x2B] = userData + TVG + Settings (44 bytes)
@@ -351,7 +364,8 @@ typedef struct __attribute__((packed)) {
     TEST_MUX_t    TestMux;      // 0x4B
     DEV_STAT0_t   Stat0;      // 0x4C
     DEV_STAT1_t   Stat1;      // 0x4D
-    Thresholds_t  THR;   // 0x5F..0x7F
+    Thresholds_t  THR;   // 0x5F..0x7Fz
+		uint8_t eepromUnlocked;
 } PGA460_Regs_t;
 
 typedef struct __attribute__((packed)) {
@@ -380,10 +394,6 @@ typedef struct __attribute__((packed)) {
 } PGA460_Wind_t;
 
 // Public Function Prototypes
-void calculateSpeedOfSound(void);
-void calculateWind(uint32_t ToF_up[3], uint32_t ToF_down[3], float speed_of_sound, float *wind_speed, float *wind_direction);
-
-
 /* -------------------------------------------------
  * Initialization Functions
  * ------------------------------------------------- */
@@ -395,12 +405,11 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM);
 HAL_StatusTypeDef PGA460_RegisterRead(uint8_t sensorID, uint8_t regAddr, uint8_t *regValue);
 HAL_StatusTypeDef PGA460_RegisterWrite(uint8_t sensorID, uint8_t regAddr, uint8_t regValue);
 
-HAL_StatusTypeDef PGA460_CheckStatus(const uint8_t sensorID);
+HAL_StatusTypeDef PGA460_CheckStatus(uint8_t sensorID);
 
 /* -------------------------------------------------
  * EEPROM Functions
  * ------------------------------------------------- */
-HAL_StatusTypeDef PGA460_EEPROMBulkRead(const uint8_t sensorID);
 HAL_StatusTypeDef PGA460_EEPROMBulkWrite(uint8_t sensorID);
 HAL_StatusTypeDef PGA460_BurnEEPROM(uint8_t sensorID);
 
@@ -410,10 +419,7 @@ HAL_StatusTypeDef PGA460_SetTVG(uint8_t sensorID, PGA460_GainRange_t gain_range,
 HAL_StatusTypeDef PGA460_GetThresholds(uint8_t sensorID);
 HAL_StatusTypeDef PGA460_SetThresholds(uint8_t sensorID);
 
-HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd);
-
-HAL_StatusTypeDef PGA460_AutoThreshold(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops);
-HAL_StatusTypeDef PGA460_AutoThreshold_Internal(uint8_t sensorID, PGA460_Command_t cmd, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, Thresholds_t *thr);
+HAL_StatusTypeDef PGA460_UltrasonicCmd(const uint8_t sensorID, const PGA460_Command_t cmd, const uint8_t noWait);
 
 HAL_StatusTypeDef PGA460_GetUltrasonicMeasurement(const uint8_t sensorID);
 HAL_StatusTypeDef PGA460_GetEchoDataDump(uint8_t sensorID, uint8_t preset, uint8_t *echoOut);
@@ -423,9 +429,6 @@ HAL_StatusTypeDef PGA460_GetSystemDiagnostics(const uint8_t sensorID, const uint
 
 float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType_t mode);
 
-TVG_t PGA460_AutoTVG(uint8_t sensorID, PGA460_Command_t preset, uint8_t targetAmp, uint8_t noiseGuard, uint8_t loops);
-HAL_StatusTypeDef PGA460_AutoTune(uint8_t sensorID, uint8_t noiseMargin, uint8_t windowIndex, uint8_t autoMax, uint8_t loops, uint8_t targetAmp);
-HAL_StatusTypeDef PGA460_AutoWindSetup(uint8_t loops, uint8_t windowIndex, uint8_t noiseMargin, uint8_t autoMax, uint8_t targetAmp);
 HAL_StatusTypeDef PGA460_MeasureWind(PGA460_Wind_t *out);
-
+float PGA460_MeasureDistance_Avg(void);
 #endif // PGA460_H
