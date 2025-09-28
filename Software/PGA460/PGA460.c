@@ -57,128 +57,115 @@ const uint8_t pga460_cmd_threshold_bulk_read[PGA_CMD_SIZE] =            {PGA460_
 const uint8_t pga460_cmd_threshold_bulk_write[PGA_CMD_SIZE] =           {PGA460_SYNC, PGA460_CMD_THRESHOLD_BULK_WRITE,           255 - PGA460_CMD_THRESHOLD_BULK_WRITE};
 
 const PGA460_Regs_t s1 = {
-.EEData.UserData = {0},    // 0x00..0x13
-.EEData.TVG = {            // keep your proven TVG shape
-	.TVGAIN0 = 131, .TVGAIN1 = 15, .TVGAIN2 = 85,
-	.TVGAIN3 = 3,  .TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
-},
-.EEData.Sett = {
-	.INIT_GAIN    = 0,          // low initial gain (near target)
-	.FREQUENCY    = 144,          // 58.0 kHz (0.2*140+30)  ? CUSA center freq
-	.DEADTIME     = 0,          // deglitch=32 µs, pulse DT=0
-	.PULSE_P1     = 68,          // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
-	.PULSE_P2     = 8,          // P2=8 pulses (addr=0)
-	.CURR_LIM_P1  = 2,          // keep your hardware-safe limits
-	.CURR_LIM_P2  = 2,
-	.REC_LENGTH   = 0,          // 4.096 ms window per preset
-	.FREQ_DIAG    = 32,          // standard diag enable
-	.SAT_FDIAG_TH = 238,          // TI typical
-	.FVOLT_DEC    = 124,          // TI typical
-	.DECPL_TEMP   = 79,          // TI typical
-	.DSP_SCALE    = 0,
-	.TEMP_TRIM    = 136,
-	.P1_GAIN_CTRL = 0,
-	.P2_GAIN_CTRL = 0
-},
-.eeCtrl = { .Val.Value = 0 },
-.Filters = {                   // fine to leave as you had them
-	.BPF_A2_MSB=137, .BPF_A2_LSB=97,
-	.BPF_A3_MSB=252, .BPF_A3_LSB=206,
-	.BPF_B1_MSB=1,  .BPF_B1_LSB=153,
-	.LPF_A2_MSB=128,.LPF_A2_LSB=205,
-	.LPF_B1_MSB=0,  .LPF_B1_LSB=103
-},
-.TestMux = { .Val.Value = 0 },
-.Stat0   = { .Val.Value = 0 },
-.Stat1   = { .Val.Value = 0 },
-.THR = {
-	// keep your short-range threshold profile
-	.P1_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7},
-	.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
-}
-};
+		.EEData.UserData = {0}, // 0x00..0x13
+		.EEData.TVG = { // keep your proven TVG shape
+		.TVGAIN0 = 0, .TVGAIN1 = 0, .TVGAIN2 = 0, .TVGAIN3 = 255,
+		.TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
+	},
+	.EEData.Sett = { .INIT_GAIN = 0, // low initial gain (near target)
+		.FREQUENCY = 144, // 58.0 kHz (0.2*140+30) ? CUSA center freq
+		.DEADTIME = 0, // deglitch=32 µs, pulse DT=0
+		.PULSE_P1 = 67, // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
+		.PULSE_P2 = 3, // P2=8 pulses (addr=0)
+		.CURR_LIM_P1 = 7, // keep your hardware-safe limits
+		.CURR_LIM_P2 = 135,
+		.REC_LENGTH = 0, // 4.096 ms window per preset
+		.FREQ_DIAG = 32, // standard diag enable
+		.SAT_FDIAG_TH = 238, // TI typical
+		.FVOLT_DEC = 124, // TI typical
+		.DECPL_TEMP = 79, // TI typical
+		.DSP_SCALE = 0,
+		.TEMP_TRIM = 136,
+		.P1_GAIN_CTRL = 0,
+		.P2_GAIN_CTRL = 0
+	},
+		.eeCtrl = { .Val.Value = 0 },
+		.Filters = { // fine to leave as you had them
+		.BPF_A2_MSB=137, .BPF_A2_LSB=97, .BPF_A3_MSB=252, .BPF_A3_LSB=206, .BPF_B1_MSB=1,
+		.BPF_B1_LSB=153, .LPF_A2_MSB=128, .LPF_A2_LSB=205, .LPF_B1_MSB=0, .LPF_B1_LSB=103
+	},
+		.TestMux = { .Val.Value = 0 },
+		.Stat0 = { .Val.Value = 0 },
+		.Stat1 = { .Val.Value = 0 },
+		.THR = { // keep your short-range threshold profile
+		.P1_THR = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8},
+		.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
+		}
+	};
+
 const PGA460_Regs_t s2 = {
-.EEData.UserData = {0},    // 0x00..0x13
-.EEData.TVG = {            // keep your proven TVG shape
-	.TVGAIN0 = 131, .TVGAIN1 = 15, .TVGAIN2 = 85,
-	.TVGAIN3 = 3,  .TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
-},
-.EEData.Sett = {
-	.INIT_GAIN    = 0,          // low initial gain (near target)
-	.FREQUENCY    = 144,          // 58.0 kHz (0.2*140+30)  ? CUSA center freq
-	.DEADTIME     = 0,          // deglitch=32 µs, pulse DT=0
-	.PULSE_P1     = 68,          // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
-	.PULSE_P2     = 8,          // P2=8 pulses (addr=0)
-	.CURR_LIM_P1  = 8,          // keep your hardware-safe limits
-	.CURR_LIM_P2  = 8,
-	.REC_LENGTH   = 0,          // 4.096 ms window per preset
-	.FREQ_DIAG    = 32,          // standard diag enable
-	.SAT_FDIAG_TH = 238,          // TI typical
-	.FVOLT_DEC    = 124,          // TI typical
-	.DECPL_TEMP   = 79,          // TI typical
-	.DSP_SCALE    = 0,
-	.TEMP_TRIM    = 136,
-	.P1_GAIN_CTRL = 0,
-	.P2_GAIN_CTRL = 0
-},
-.eeCtrl = { .Val.Value = 0 },
-.Filters = {                   // fine to leave as you had them
-	.BPF_A2_MSB=137, .BPF_A2_LSB=97,
-	.BPF_A3_MSB=252, .BPF_A3_LSB=206,
-	.BPF_B1_MSB=1,  .BPF_B1_LSB=153,
-	.LPF_A2_MSB=128,.LPF_A2_LSB=205,
-	.LPF_B1_MSB=0,  .LPF_B1_LSB=103
-},
-.TestMux = { .Val.Value = 0 },
-.Stat0   = { .Val.Value = 0 },
-.Stat1   = { .Val.Value = 0 },
-.THR = {
-	// keep your short-range threshold profile
-	.P1_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7},
-	.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
-}
-};
+		.EEData.UserData = {0}, // 0x00..0x13
+		.EEData.TVG = { // keep your proven TVG shape
+		.TVGAIN0 = 0, .TVGAIN1 = 0, .TVGAIN2 = 0, .TVGAIN3 = 255,
+		.TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
+	},
+	.EEData.Sett = { .INIT_GAIN = 0, // low initial gain (near target)
+		.FREQUENCY = 144, // 58.0 kHz (0.2*140+30) ? CUSA center freq
+		.DEADTIME = 0, // deglitch=32 µs, pulse DT=0
+		.PULSE_P1 = 70, // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
+		.PULSE_P2 = 6, // P2=8 pulses (addr=0)
+		.CURR_LIM_P1 = 0, // keep your hardware-safe limits
+		.CURR_LIM_P2 = 64,
+		.REC_LENGTH = 0, // 4.096 ms window per preset
+		.FREQ_DIAG = 32, // standard diag enable
+		.SAT_FDIAG_TH = 238, // TI typical
+		.FVOLT_DEC = 124, // TI typical
+		.DECPL_TEMP = 79, // TI typical
+		.DSP_SCALE = 0,
+		.TEMP_TRIM = 136,
+		.P1_GAIN_CTRL = 0,
+		.P2_GAIN_CTRL = 0
+	},
+		.eeCtrl = { .Val.Value = 0 },
+		.Filters = { // fine to leave as you had them
+		.BPF_A2_MSB=137, .BPF_A2_LSB=97, .BPF_A3_MSB=252, .BPF_A3_LSB=206, .BPF_B1_MSB=1,
+		.BPF_B1_LSB=153, .LPF_A2_MSB=128, .LPF_A2_LSB=205, .LPF_B1_MSB=0, .LPF_B1_LSB=103
+	},
+		.TestMux = { .Val.Value = 0 },
+		.Stat0 = { .Val.Value = 0 },
+		.Stat1 = { .Val.Value = 0 },
+		.THR = { // keep your short-range threshold profile
+		.P1_THR = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8},
+		.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
+		}
+	};
+
 const PGA460_Regs_t s3 = {
-.EEData.UserData = {0},    // 0x00..0x13
-.EEData.TVG = {            // keep your proven TVG shape
-	.TVGAIN0 = 131, .TVGAIN1 = 15, .TVGAIN2 = 85,
-	.TVGAIN3 = 3,  .TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
-},
-.EEData.Sett = {
-	.INIT_GAIN    = 0,          // low initial gain (near target)
-	.FREQUENCY    = 144,          // 58.0 kHz (0.2*140+30)  ? CUSA center freq
-	.DEADTIME     = 0,          // deglitch=32 µs, pulse DT=0
-	.PULSE_P1     = 68,          // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
-	.PULSE_P2     = 8,          // P2=8 pulses (addr=0)
-	.CURR_LIM_P1  = 8,          // keep your hardware-safe limits
-	.CURR_LIM_P2  = 8,
-	.REC_LENGTH   = 0,          // 4.096 ms window per preset
-	.FREQ_DIAG    = 32,          // standard diag enable
-	.SAT_FDIAG_TH = 238,          // TI typical
-	.FVOLT_DEC    = 124,          // TI typical
-	.DECPL_TEMP   = 79,          // TI typical
-	.DSP_SCALE    = 0,
-	.TEMP_TRIM    = 136,
-	.P1_GAIN_CTRL = 0,
-	.P2_GAIN_CTRL = 0
-},
-.eeCtrl = { .Val.Value = 0 },
-.Filters = {                   // fine to leave as you had them
-	.BPF_A2_MSB=137, .BPF_A2_LSB=97,
-	.BPF_A3_MSB=252, .BPF_A3_LSB=206,
-	.BPF_B1_MSB=1,  .BPF_B1_LSB=153,
-	.LPF_A2_MSB=128,.LPF_A2_LSB=205,
-	.LPF_B1_MSB=0,  .LPF_B1_LSB=103
-},
-.TestMux = { .Val.Value = 0 },
-.Stat0   = { .Val.Value = 0 },
-.Stat1   = { .Val.Value = 0 },
-.THR = {
-	// keep your short-range threshold profile
-	.P1_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7},
-	.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
-}
-};
+		.EEData.UserData = {0}, // 0x00..0x13
+		.EEData.TVG = { // keep your proven TVG shape
+		.TVGAIN0 = 0, .TVGAIN1 = 0, .TVGAIN2 = 0, .TVGAIN3 = 255,
+		.TVGAIN4 = 255, .TVGAIN5 = 255, .TVGAIN6 = 252
+	},
+	.EEData.Sett = { .INIT_GAIN = 0, // low initial gain (near target)
+		.FREQUENCY = 144, // 58.0 kHz (0.2*140+30) ? CUSA center freq
+		.DEADTIME = 0, // deglitch=32 µs, pulse DT=0
+		.PULSE_P1 = 70, // IO_IF_SEL=0 (time-based), DIAG=1, P1=4 pulses
+		.PULSE_P2 = 6, // P2=8 pulses (addr=0)
+		.CURR_LIM_P1 = 0, // keep your hardware-safe limits
+		.CURR_LIM_P2 = 64,
+		.REC_LENGTH = 0, // 4.096 ms window per preset
+		.FREQ_DIAG = 32, // standard diag enable
+		.SAT_FDIAG_TH = 238, // TI typical
+		.FVOLT_DEC = 124, // TI typical
+		.DECPL_TEMP = 79, // TI typical
+		.DSP_SCALE = 0,
+		.TEMP_TRIM = 136,
+		.P1_GAIN_CTRL = 0,
+		.P2_GAIN_CTRL = 0
+	},
+		.eeCtrl = { .Val.Value = 0 },
+		.Filters = { // fine to leave as you had them
+		.BPF_A2_MSB=137, .BPF_A2_LSB=97, .BPF_A3_MSB=252, .BPF_A3_LSB=206, .BPF_B1_MSB=1,
+		.BPF_B1_LSB=153, .LPF_A2_MSB=128, .LPF_A2_LSB=205, .LPF_B1_MSB=0, .LPF_B1_LSB=103
+	},
+		.TestMux = { .Val.Value = 0 },
+		.Stat0 = { .Val.Value = 0 },
+		.Stat1 = { .Val.Value = 0 },
+		.THR = { // keep your short-range threshold profile
+		.P1_THR = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8},
+		.P2_THR = {6, 48, 0, 0, 0, 0, 255, 254, 16, 132, 33, 16, 16, 16, 16, 7}
+		}
+	};
 
 // --- Array with 3 elements(sensors): [0] TVG, [1] Settings, [2] Thresholds ---
 PGA460_Sensor_t sensors[ULTRASONIC_SENSOR_COUNT] = {
@@ -375,13 +362,13 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
 			DEBUG("Sensor %u: Threshold write failed!\n", i);
 			return HAL_ERROR;
 		}
-//		PGA460_ReadAndPrintEEPROM(i);
+		PGA460_ReadAndPrintEEPROM(i);
 //		// Step 2: EEPROM bulk write (shadow -> device)
 //		if (PGA460_EEPROMBulkWrite(i) != HAL_OK) {
 //			DEBUG("Sensor %u: EEPROM bulk write failed!\n", i);
 //			return HAL_ERROR;
 //		}
-//		PGA460_ReadAndPrintEEPROM(i);
+////		PGA460_ReadAndPrintEEPROM(i);
 //		if(burnEEPROM) {
 //			// Step 3: Optional EEPROM Burn
 //			if (PGA460_BurnEEPROM(i) != HAL_OK) {
@@ -415,10 +402,10 @@ HAL_StatusTypeDef PGA460_Init(uint8_t burnEEPROM) {
 			DEBUG("Sensor %u: Echo Data Dump failed!\n", i);
 			return HAL_ERROR;
 		}
-		DEBUG("Sensor %u: Echo Data Dump:\n", i);
-		for (uint8_t j = 0; j < 128; ++j) {
-			DEBUG("%u%s", echoBuf[j], (j < 127) ? "," : "\n");
-		}
+//		DEBUG("Sensor %u: Echo Data Dump:\n", i);
+//		for (uint8_t j = 0; j < 128; ++j) {
+//			DEBUG("%u%s", echoBuf[j], (j < 127) ? "," : "\n");
+//		}
 		DEBUG("-----\n");
 		HAL_Delay(PGA460_EEPROM_WRITE_DELAY_MS);
 	}
@@ -908,24 +895,32 @@ float PGA460_ReadTemperatureOrNoise(const uint8_t sensorID, const PGA460_CmdType
 	return result;
 }
 
-// --- Small helper: measure one directed path TX->RX, returns t [s] -----------
-static HAL_StatusTypeDef measure_direct_tof_s(uint8_t tx, uint8_t rx, float *t_s) {
-    if (!t_s) return HAL_ERROR;
+// -- measure one ping (tx) while two receivers (rxA, rxB) listen.
+// Returns TOFs in seconds for both receivers.
+static HAL_StatusTypeDef measure_direct_tof_s_dual(uint8_t tx, uint8_t rxA, uint8_t rxB, float *t_a_s, float *t_b_s){
+    if (!t_a_s || !t_b_s) return HAL_ERROR;
 
-    // RX in ListenOnly first (window armed), then TX Burst&Listen
-    if (PGA460_RunCmd_NoWait(rx, PGA460_CMD_LISTEN_ONLY_PRESET1) != HAL_OK) return HAL_ERROR;
-    // tiny arm lead; most UART stacks need a short guard
-    HAL_Delay(1);
-    if (PGA460_RunCmd_NoWait(tx, PGA460_CMD_BURST_AND_LISTEN_PRESET1) != HAL_OK) return HAL_ERROR;
+    // 1) Arm both receivers first (LISTEN_ONLY) so their windows overlap.
+    if (PGA460_RunCmd_NoWait(rxA, PGA460_CMD_LISTEN_ONLY_PRESET1) != HAL_OK) return HAL_ERROR;
+    if (PGA460_RunCmd_NoWait(rxB, PGA460_CMD_LISTEN_ONLY_PRESET1) != HAL_OK) return HAL_ERROR;
 
-    // recording window; long enough for ~0.2–1.0 ms paths
-    HAL_Delay(PGA460_CAPTURE_DELAY_MS);
+    // 2) Transmit (the TX will also listen itself; harmless).
+    if (PGA460_RunCmd_NoWait(tx,  PGA460_CMD_BURST_AND_LISTEN_PRESET1) != HAL_OK) return HAL_ERROR;
 
-    if (PGA460_GetUltrasonicMeasurement(rx) != HAL_OK) return HAL_ERROR;
+    // 3) Let the record windows complete (REC_LENGTH=0 ? 4.096 ms). Add margin.
+    HAL_Delay(70);
 
-    const uint16_t tof_us = sensors[rx].Measures.tof_us;  // first object; direct arrival
-    if (tof_us == 0 || tof_us == 0xFFFF) return HAL_ERROR;
-    *t_s = (float)tof_us * 1e-6f;
+    // 4) Read measurements from both receivers.
+    if (PGA460_GetUltrasonicMeasurement(rxA) != HAL_OK) return HAL_ERROR;
+    if (PGA460_GetUltrasonicMeasurement(rxB) != HAL_OK) return HAL_ERROR;
+
+    const uint16_t ta_us = sensors[rxA].Measures.tof_us;
+    const uint16_t tb_us = sensors[rxB].Measures.tof_us;
+
+    if (ta_us == 0 || ta_us == 0xFFFF || tb_us == 0 || tb_us == 0xFFFF) return HAL_ERROR;
+
+    *t_a_s = (float)ta_us * 1e-6f;
+    *t_b_s = (float)tb_us * 1e-6f;
     return HAL_OK;
 }
 
@@ -943,95 +938,92 @@ static HAL_StatusTypeDef measure_direct_tof_s(uint8_t tx, uint8_t rx, float *t_s
  Wind speed  = v(u_E² + u_N²)
  Direction FROM = bearing(towards) + 180°   (0/360=N, 90=E, 180=S, 270=W)
  */
-HAL_StatusTypeDef PGA460_MeasureWind(PGA460_Wind_t *out)
-{
+HAL_StatusTypeDef PGA460_MeasureWind(PGA460_Wind_t *out){
     if (!out) return HAL_ERROR;
 
-    float t01, t10, t02, t20, t12, t21;
-    if (measure_direct_tof_s(0, 1, &t01) != HAL_OK) return HAL_ERROR;
-    if (measure_direct_tof_s(1, 0, &t10) != HAL_OK) return HAL_ERROR;
-    if (measure_direct_tof_s(0, 2, &t02) != HAL_OK) return HAL_ERROR;
-    if (measure_direct_tof_s(2, 0, &t20) != HAL_OK) return HAL_ERROR;
-    if (measure_direct_tof_s(1, 2, &t12) != HAL_OK) return HAL_ERROR;
-    if (measure_direct_tof_s(2, 1, &t21) != HAL_OK) return HAL_ERROR;
+    float t01, t02, t10, t12, t20, t21;
 
-    // Basic validation (seconds, one-way)
+    // Ping 0, ears 1&2  -> t01, t02
+    if (measure_direct_tof_s_dual(0, 1, 2, &t01, &t02) != HAL_OK) return HAL_ERROR;
+    // Ping 1, ears 0&2  -> t10, t12
+    if (measure_direct_tof_s_dual(1, 0, 2, &t10, &t12) != HAL_OK) return HAL_ERROR;
+    // Ping 2, ears 0&1  -> t20, t21
+    if (measure_direct_tof_s_dual(2, 0, 1, &t20, &t21) != HAL_OK) return HAL_ERROR;
+
     #define VALID_TOF(t) ((t) > EPS_TOF && (t) < MAX_TOF)
-    if (!VALID_TOF(t01) || !VALID_TOF(t10) || !VALID_TOF(t02) || !VALID_TOF(t20) || !VALID_TOF(t12) || !VALID_TOF(t21)) {
-        return HAL_ERROR;
-    }
+    if (!VALID_TOF(t01) || !VALID_TOF(t10) ||
+        !VALID_TOF(t02) || !VALID_TOF(t20) ||
+        !VALID_TOF(t12) || !VALID_TOF(t21)) return HAL_ERROR;
 
-    // Precompute reciprocals
-    const float r01 = 1.0f / t01;
-    const float r10 = 1.0f / t10;
-    const float r02 = 1.0f / t02;
-    const float r20 = 1.0f / t20;
-    const float r12 = 1.0f / t12;
-    const float r21 = 1.0f / t21;
+    // Reciprocals
+    const float r01 = 1.0f/t01, r10 = 1.0f/t10;
+    const float r02 = 1.0f/t02, r20 = 1.0f/t20;
+    const float r12 = 1.0f/t12, r21 = 1.0f/t21;
 
-    // Axial wind components along each edge (positive along A?B)
+    // Edge-aligned wind components (positive A?B)
     const float w01 = S_BASELINE_HALF_M * (r01 - r10);
     const float w02 = S_BASELINE_HALF_M * (r02 - r20);
     const float w12 = S_BASELINE_HALF_M * (r12 - r21);
 
-    // Resolve to ENU components (bearing basis per your comment)
+    // Resolve to EN (East/North); bearings per your geometry
     const float u_E = -w12;
     const float u_N = -(w01 + w02) * INV_SQRT3;
 
-    // Speed (towards) and bearing (towards, 0=North, CW+)
     float speed = sqrtf(u_E*u_E + u_N*u_N);
-    float bearing_to_deg = atan2f(u_E, u_N) * DEG_PER_RAD;  // atan2(E, N)
-    if (bearing_to_deg < 0.0f) bearing_to_deg += 360.0f;
+    float bearing_to_deg = atan2f(u_E, u_N) * DEG_PER_RAD; if (bearing_to_deg < 0) bearing_to_deg += 360.0f;
 
-    // Convert to FROM direction
-    float dir_from = bearing_to_deg + 180.0f;
-    if (dir_from >= 360.0f) dir_from -= 360.0f;
-
-    // Sanity clamp (optional)
+    float dir_from = bearing_to_deg + 180.0f; if (dir_from >= 360.0f) dir_from -= 360.0f;
     if (speed > MAX_WIND_MS) speed = MAX_WIND_MS;
 
-    out->Speed     = speed;
+    out->Speed = speed;
     out->Direction = dir_from;
     return HAL_OK;
 }
 
 /**
- * Measure distance with 3 transducers:
- *  - TX=0, RX={1,2}; TX=1, RX={0,2}; TX=2, RX={0,1}
+ * @brief Attempts a single directed Time-of-Flight (TOF) measurement.
+ *
+ * This function performs two one-way TOF measurements (TX -> RXa and TX -> RXb)
+ * for a given transmitter and pair of receivers. It validates the TOF readings
+ * and calculates the corresponding distance (range).
+ *
+ * @param tx The ID of the transmitting transducer.
+ * @param rxA The ID of the first receiving transducer.
+ * @param rxB The ID of the second receiving transducer.
+ * @param soundSpeed The current speed of sound in the medium (m/s).
+ * @param out_range Pointer to store the calculated range in meters if successful.
+ * @return HAL_StatusTypeDef HAL_OK if the measurement was successful and valid,
+ * HAL_ERROR otherwise.
+ */
+static HAL_StatusTypeDef PGA460_TryDirectedMeasurement(uint8_t tx, uint8_t rxA, uint8_t rxB, float *out_range_m){
+    float t_a, t_b;
+    if (measure_direct_tof_s_dual(tx, rxA, rxB, &t_a, &t_b) != HAL_OK) return HAL_ERROR;
+
+    #define IS_VALID_TOF(t) ((t) > EPS_TOF && (t) < MAX_TOF)
+    if (!IS_VALID_TOF(t_a) || !IS_VALID_TOF(t_b)) return HAL_ERROR;
+
+    // Symmetric bistatic estimate:
+    // R ˜ (c/4) * (t_tx->rxA + t_tx->rxB)
+    *out_range_m = 0.25f * externalData.SoundSpeed * (t_a + t_b);
+    return HAL_OK;
+}
+/*
+ * @brief Measures the average distance using all directed TOF measurements.
+ *
+ * The setup uses 3 transducers: TX=0, RX={1,2}; TX=1, RX={0,2}; TX=2, RX={0,1}.
  * For each TX, we measure directed one-way times t0a,t0b (seconds) and estimate range:
- *   R ˜ (c/4) * (t0a + t0b)
+ * R ˜ (c/4) * (t0a + t0b)
  * Returns the average of all valid ranges in meters.
  * Returns -1.0f if all attempts failed.
  */
 float PGA460_MeasureDistance_Avg(void) {
-    // Update speed of sound from environment
     PGA460_ComputeSoundSpeed(&externalData);
 
-    float sumR = 0.0f;
-    int   cnt  = 0;
+    float sum = 0.0f; int n = 0; float r;
 
-    // Local validity check (seconds, one-way)
-    #define VALID_TOF(t) ((t) > EPS_TOF && (t) < MAX_TOF)
+    if (PGA460_TryDirectedMeasurement(0, 1, 2, &r) == HAL_OK) { sum += r; n++; }
+    if (PGA460_TryDirectedMeasurement(1, 0, 2, &r) == HAL_OK) { sum += r; n++; }
+    if (PGA460_TryDirectedMeasurement(2, 0, 1, &r) == HAL_OK) { sum += r; n++; }
 
-    // Try one TX cycle: TX -> RXa and TX -> RXb (both one-way directed)
-    #define TRY_TX(tx, rxA, rxB) do {                             \
-        float t0a = 0.0f, t0b = 0.0f;                             \
-        if (measure_direct_tof_s((tx), (rxA), &t0a) == HAL_OK &&  \
-            measure_direct_tof_s((tx), (rxB), &t0b) == HAL_OK &&  \
-            VALID_TOF(t0a) && VALID_TOF(t0b)) {                   \
-            const float z = 0.25f * externalData.SoundSpeed * (t0a + t0b);              \
-            sumR += z;                                            \
-            cnt++;                                                \
-        }                                                         \
-    } while (0)
-
-    TRY_TX(0, 1, 2);
-    TRY_TX(1, 0, 2);
-    TRY_TX(2, 0, 1);
-
-    #undef TRY_TX
-    #undef VALID_TOF
-
-    if (cnt == 0) return -1.0f;     // no valid measurement
-    return sumR / (float)cnt;       // average meters
+    return n ? (sum / (float)n) : -1.0f;
 }

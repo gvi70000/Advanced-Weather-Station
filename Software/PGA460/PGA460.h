@@ -10,7 +10,7 @@
 	#define PGA460_BASE_DIAMETER_MM  (98.314f)
 	// default baseline in meters; you can override at runtime with PGA460_SetBaseline()
 	// base diameter ? edge length L = D * sqrt(3)/2; we store (0.5 * L)
-	#define S_BASELINE_HALF_M  ( (0.5f * (PGA460_BASE_DIAMETER_MM * 0.86602540378f)) / 1000.0f )
+	#define S_BASELINE_HALF_M ((0.5f * (PGA460_BASE_DIAMETER_MM * 0.86602540378f)) / 1000.0f)
 	// Conversion factor: half round-trip, microseconds ? seconds
 	#define TOF_US_TO_S   (0.5e-6f)   // = 0.5f * 1e-6f
 	#define PGA460_CAPTURE_DELAY_MS				70        // Delay for sensor measurement to complete
